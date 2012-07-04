@@ -195,6 +195,42 @@ class BehaviorActionKeepFleetDispersed(BehaviorAction):
 # Offensive Actions
 #	Actions used when there is a possibility to engage in combat with other players.
 #	It is also reasonable to flee from enemies if they are much stronger.
+def generate_certainty(equation):
+	"""
+	Generates custom certainty based on equation string.
+
+	These are allowed in equation (beside regular python math expressions):
+
+	pb - environment['power_balance'] (float)
+	dc - BehaviorAction.default_certainty (float)
+	sg - environment['ship_group'] (iterable of ships)
+	en - environment['enemies'] (iterable of ships)
+
+	Example:
+
+	my_cert_fun = generate_certainty("pb+dc**2-1.0")
+
+	is equivalent to:
+
+	def my_cert_fun(**environment):
+		environment['power_balance']+BehaviorAction.default_certainty**2-1.0
+
+	Purpose of this function is to provide somewhat flexible certainty definitions loaded from YAML
+
+	@param equation: string with variables defined above and any python symbols eg. "1.0 + 1./pb + dc**2"
+	@type equation: str
+	@return: returns a function taking one parameter (**kwargs) eg. fun(**environment) that does exactly what was provided in equation
+	@rtype: lambda
+	"""
+
+	def gen(eq, **env):
+		pb = env['power_balance']
+		dc = BehaviorAction.default_certainty
+		sg = env['ship_group']
+		en = env['enemies']
+		return eval(eq)
+
+	return lambda **environment:gen(equation, **environment)
 
 # Common certainty functions for offensive actions
 def certainty_power_balance_exp(**environment):
@@ -217,8 +253,8 @@ class BehaviorActionRegular(BehaviorAction):
 
 	def __init__(self, owner):
 		super(BehaviorActionRegular, self).__init__(owner)
-		self._certainty['pirates_in_sight'] = certainty_power_balance_exp
-		self._certainty['fighting_ships_in_sight'] = certainty_power_balance_exp
+		self._certainty['pirates_in_sight'] = generate_certainty("dc*(pb**2)")
+		self._certainty['fighting_ships_in_sight'] = generate_certainty("dc*(pb**2)")
 
 	def pirates_in_sight(self, **environment):
 		"""
@@ -262,7 +298,7 @@ class BehaviorActionCoward(BehaviorAction):
 		# (higher power_balance -> lesser chance of doing nothing)
 		# TODO: skip cowardice if already in war with pirates (pirates will attack anyway)
 		# TODO: figure out why it gives unusually high certainty
-		self._certainty['pirates_in_sight'] = certainty_power_balance_inverse
+		self._certainty['pirates_in_sight'] = generate_certainty("dc*(1./pb)")
 
 	def pirates_in_sight(self, **environment):
 		"""
