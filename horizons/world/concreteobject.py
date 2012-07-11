@@ -96,10 +96,11 @@ class ConcreteObject(WorldObject):
 		# Should be fixed as soon as we move concrete object to a component as well
 		# which ensures proper initialization order for loading and initing
 		if self._instance is not None:
+			UnitClass.ensure_action_loaded(self._action_set_id, action) # lazy
 			if facing_loc is None:
 				facing_loc = self._instance.getFacingLocation()
-			UnitClass.ensure_action_loaded(self._action_set_id, action) # lazy
-			self._instance.act(action+"_"+str(self._action_set_id), facing_loc, repeating)
+				self._instance.act(action+"_"+str(self._action_set_id), facing_loc, repeating)
+			self._instance.act(action+"_"+str(self._action_set_id), repeating)
 		self._action = action
 
 	def has_action(self, action):

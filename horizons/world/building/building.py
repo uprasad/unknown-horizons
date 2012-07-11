@@ -219,9 +219,7 @@ class BasicBuilding(ComponentHolder, ConcreteObject):
 		#rotation = cls.check_build_rotation(session, rotation, x, y)
 		# TODO: replace this with new buildable api
 		# IDEA: save rotation in savegame
-		facing_loc = fife.Location(session.view.layers[cls.layer])
 		instance_coords = list((x, y, 0))
-		layer_coords = list((x, y, 0))
 
 		# NOTE:
 		# nobody actually knows how the code below works.
@@ -233,7 +231,6 @@ class BasicBuilding(ComponentHolder, ConcreteObject):
 		# then fix that generally.
 
 		if rotation == 45:
-			layer_coords[0] = x+cls.size[0]+3
 
 			if cls.size[0] == 2 and cls.size[1] == 4:
 				# HACK: fix for 4x2 buildings
@@ -242,7 +239,6 @@ class BasicBuilding(ComponentHolder, ConcreteObject):
 
 		elif rotation == 135:
 			instance_coords[1] = y + cls.size[1] - 1
-			layer_coords[1] = y-cls.size[1]-3
 
 			if cls.size[0] == 2 and cls.size[1] == 4:
 				# HACK: fix for 4x2 buildings
@@ -251,7 +247,6 @@ class BasicBuilding(ComponentHolder, ConcreteObject):
 
 		elif rotation == 225:
 			instance_coords = list(( x + cls.size[0] - 1, y + cls.size[1] - 1, 0))
-			layer_coords[0] = x-cls.size[0]-3
 
 			if cls.size[0] == 2 and cls.size[1] == 4:
 				# HACK: fix for 4x2 buildings
@@ -260,22 +255,20 @@ class BasicBuilding(ComponentHolder, ConcreteObject):
 
 		elif rotation == 315:
 			instance_coords[0] = x + cls.size[0] - 1
-			layer_coords[1] = y+cls.size[1]+3
 
 			if cls.size[0] == 2 and cls.size[1] == 4:
 				# HACK: fix for 4x2 buildings
 				instance_coords[0] += 1
 				instance_coords[1] -= 1
-
 		else:
 			return None
+
 		instance = session.view.layers[cls.layer].createInstance(cls._object, \
-											                                       fife.ModelCoordinate(*instance_coords))
-		facing_loc.setLayerCoordinates(fife.ModelCoordinate(*layer_coords))
+																	fife.ModelCoordinate(*instance_coords))
+		fife.InstanceVisual.create(instance)
 
 		if action_set_id is None:
 			action_set_id = cls.get_random_action_set(level=level)
-		fife.InstanceVisual.create(instance)
 
 		action_sets = ActionSetLoader.get_sets()
 		if not action in action_sets[action_set_id]:
@@ -286,8 +279,7 @@ class BasicBuilding(ComponentHolder, ConcreteObject):
 			else:
 				# set first action
 				action = action_sets[action_set_id].keys()[0]
-
-		instance.act(action+"_"+str(action_set_id), facing_loc, True)
+		instance.act(action+"_"+str(action_set_id), rotation, True)
 		return (instance, action_set_id)
 
 	@classmethod

@@ -369,7 +369,7 @@ class Collector(Unit):
 		Picks up the resources.
 		Should be overridden to specify what the collector should do after this."""
 		self.log.debug("%s finished working", self)
-		self.act("idle", self._instance.getFacingLocation(), True)
+		self.act("idle", True)
 		# deregister at the target we're at
 		self.job.object.remove_incoming_collector(self)
 		# reconsider job now: there might now be more res available than there were when we started
