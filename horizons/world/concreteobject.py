@@ -98,9 +98,9 @@ class ConcreteObject(WorldObject):
 		if self._instance is not None:
 			UnitClass.ensure_action_loaded(self._action_set_id, action) # lazy
 			if facing_loc is None:
-				facing_loc = self._instance.getFacingLocation()
+				self._instance.act(action+"_"+str(self._action_set_id), repeating)
+			else:
 				self._instance.act(action+"_"+str(self._action_set_id), facing_loc, repeating)
-			self._instance.act(action+"_"+str(self._action_set_id), repeating)
 		self._action = action
 
 	def has_action(self, action):
