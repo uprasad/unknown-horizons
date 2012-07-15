@@ -102,22 +102,7 @@ class MapLoader:
 		fife.GenericRenderer.getInstance(cam).activateAllLayers(map)
 
 	def act(self, action, rotation, instance, layer, x, y):
-		instance.setRotation(rotation)
-
-		facing_loc = fife.Location(layer)
-		layer_coords = list((x, y, 0))
-
-		if rotation == 45:
-			layer_coords[0] = x+3
-		elif rotation == 135:
-			layer_coords[1] = y-3
-		elif rotation == 225:
-			layer_coords[0] = x-3
-		elif rotation == 315:
-			layer_coords[1] = y+3
-		facing_loc.setLayerCoordinates(fife.ModelCoordinate(*layer_coords))
-
-		instance.act(str(action), facing_loc, True)
+		instance.act(str(action), rotation, True)
 
 	def _loadIsland(self, ground_layer, model, ix, iy, file):
 		""" Loads an island from the given file """
@@ -132,7 +117,7 @@ class MapLoader:
 			y = iy + y
 			position = fife.ModelCoordinate(x, y, 0)
 			inst = ground_layer.createInstance(ground_tile, position)
-			self.act(action_id+"_"+str(groundTileName), rotation, inst, ground_layer, x, y)
+			self.act(action_id+"_"+str(groundTileName), rotation, inst)
 			fife.InstanceVisual.create(inst)
 
 	def _loadBuildings(self, building_layer, model, db):
@@ -143,9 +128,7 @@ class MapLoader:
 			object = model.getObject(name, util.BUILDING_NAMESPACE)
 			action_id = util.getBuildingActionId(id)
 
-			facing_loc = fife.Location(building_layer)
 			instance_coords = list((x, y, 0))
-			layer_coords = list((x, y, 0))
 
 			# NOTE:
 			# nobody actually knows how the code below works.
@@ -156,10 +139,10 @@ class MapLoader:
 			# unquadratic buildings, and figure out a pattern of the placement error,
 			# then fix that generally.
 
+			# TODO (nihathreal) size = 3,3?
 			size = (3, 3)
 
 			if rotation == 45:
-				layer_coords[0] = x+size[0]+3
 
 				if size[0] == 2 and size[1] == 4:
 					# HACK: fix for 4x2 buildings
@@ -168,7 +151,6 @@ class MapLoader:
 
 			elif rotation == 135:
 				instance_coords[1] = y + size[1] - 1
-				layer_coords[1] = y-size[1]-3
 
 				if size[0] == 2 and size[1] == 4:
 					# HACK: fix for 4x2 buildings
@@ -177,7 +159,6 @@ class MapLoader:
 
 			elif rotation == 225:
 				instance_coords = list(( x + size[0] - 1, y + size[1] - 1, 0))
-				layer_coords[0] = x-size[0]-3
 
 				if size[0] == 2 and size[1] == 4:
 					# HACK: fix for 4x2 buildings
@@ -186,7 +167,6 @@ class MapLoader:
 
 			elif rotation == 315:
 				instance_coords[0] = x + size[0] - 1
-				layer_coords[1] = y+size[1]+3
 
 				if size[0] == 2 and size[1] == 4:
 					# HACK: fix for 4x2 buildings
@@ -197,10 +177,8 @@ class MapLoader:
 				return None
 
 			inst = building_layer.createInstance(object, fife.ModelCoordinate(*instance_coords))
-			inst.setRotation(rotation)
-			facing_loc.setLayerCoordinates(fife.ModelCoordinate(*layer_coords))
 			fife.InstanceVisual.create(inst)
-			inst.act(action_id, facing_loc, True)
+			inst.act(action_id, rotation, True)
 
 class UHMapLoader(scripts.plugin.Plugin):
 	""" The B{UHMapLoader} allows to load the UH map format in FIFEdit """
