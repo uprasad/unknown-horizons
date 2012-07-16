@@ -81,7 +81,10 @@ class Path(ComponentHolder):
 
 		location = self._instance.getLocation()
 		location.setLayerCoordinates(fife.ModelCoordinate(int(origin.x + 1), int(origin.y), 0))
-		self.act(action, location, True)
+		# TODO check why this works
+		#self.act(action, location, True)
+		# and this does not
+		self.act(action,  True)
 
 class Road(Path, BasicBuilding, BuildableLine):
 	"""Actual buildable road."""

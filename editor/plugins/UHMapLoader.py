@@ -101,7 +101,7 @@ class MapLoader:
 		fife.LightRenderer.getInstance(cam).activateAllLayers(map)
 		fife.GenericRenderer.getInstance(cam).activateAllLayers(map)
 
-	def act(self, action, rotation, instance, layer, x, y):
+	def act(self, action, rotation, instance):
 		instance.act(str(action), rotation, True)
 
 	def _loadIsland(self, ground_layer, model, ix, iy, file):

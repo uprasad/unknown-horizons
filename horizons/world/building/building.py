@@ -231,31 +231,24 @@ class BasicBuilding(ComponentHolder, ConcreteObject):
 		# then fix that generally.
 
 		if rotation == 45:
-
 			if cls.size[0] == 2 and cls.size[1] == 4:
 				# HACK: fix for 4x2 buildings
 				instance_coords[0] -= 1
 				instance_coords[1] += 1
-
 		elif rotation == 135:
 			instance_coords[1] = y + cls.size[1] - 1
-
 			if cls.size[0] == 2 and cls.size[1] == 4:
 				# HACK: fix for 4x2 buildings
 				instance_coords[0] += 1
 				instance_coords[1] -= 1
-
 		elif rotation == 225:
 			instance_coords = list(( x + cls.size[0] - 1, y + cls.size[1] - 1, 0))
-
 			if cls.size[0] == 2 and cls.size[1] == 4:
 				# HACK: fix for 4x2 buildings
 				instance_coords[0] += 1
 				instance_coords[1] -= 1
-
 		elif rotation == 315:
 			instance_coords[0] = x + cls.size[0] - 1
-
 			if cls.size[0] == 2 and cls.size[1] == 4:
 				# HACK: fix for 4x2 buildings
 				instance_coords[0] += 1
