@@ -69,17 +69,23 @@ class View(ChangeListener):
 
 		self.cam.resetRenderers()
 		self.renderer = {}
-		for r in ('InstanceRenderer', 'GridRenderer', \
+		for r in ('InstanceRenderer', 'GridRenderer', 'CellRenderer', \
 		          'CellSelectionRenderer', 'BlockingInfoRenderer', 'FloatingTextRenderer', \
 		          'QuadTreeRenderer', 'CoordinateRenderer', 'GenericRenderer'):
 			self.renderer[r] = getattr(fife, r).getInstance(self.cam) if hasattr(fife, r) else self.cam.getRenderer(r)
 			self.renderer[r].clearActiveLayers()
-			self.renderer[r].setEnabled(r in ('InstanceRenderer','GenericRenderer'))
+			self.renderer[r].setEnabled(r in ('InstanceRenderer', 'GenericRenderer', 'CellRenderer'))
 		self.renderer['InstanceRenderer'].activateAllLayers(self.map)
 		self.renderer['GenericRenderer'].addActiveLayer(self.layers[LAYERS.OBJECTS])
 		self.renderer['GridRenderer'].addActiveLayer(self.layers[LAYERS.GROUND])
+		cellrenderer = self.renderer['CellRenderer']
+		cellrenderer.setMaskImage(horizons.main.fife.imagemanager.load(VIEW.MASK_IMAGE))
+		cellrenderer.setConcealImage(horizons.main.fife.imagemanager.load(VIEW.CONCEAL_IMAGE))
+		cellrenderer.activateAllLayers(self.map)
+		cellrenderer.setFogOfWarLayer(self.layers[LAYERS.FOG_OF_WAR])
+		cellrenderer.setEnabledFogOfWar(True)
 
-		#Setup autoscroll
+		# Setup autoscroll
 		horizons.main.fife.pump.append(self.do_autoscroll)
 		self.time_last_autoscroll = time.time()
 		self._autoscroll = [0, 0]

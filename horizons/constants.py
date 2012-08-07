@@ -101,6 +101,7 @@ class UNITS:
 	DISASTER_RECOVERY_COLLECTOR = 1000022
 
 	DIFFERENCE_BUILDING_UNIT_ID = 1000000
+	VISITOR_RADIUS = 8
 
 class WEAPONS:
 	CANNON = 40
@@ -313,6 +314,8 @@ class VIEW:
 	ROTATION = 45.0
 	TILT = -60
 	ZOOM = 1
+	MASK_IMAGE = 'content/gui/images/background/fow_mask.png'
+	CONCEAL_IMAGE = 'content/gui/images/background/fow_conceal.png'
 
 ## The Production States available in the game sorted by importance from least
 ## to most important
@@ -410,7 +413,7 @@ class LAYERS:
 	GROUND = 1
 	FIELDS = 2
 	OBJECTS = 3
-
+	FOG_OF_WAR = OBJECTS
 	NUM = 4 # number of layers
 
 ## PATHS

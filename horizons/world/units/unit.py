@@ -25,9 +25,8 @@ from fife import fife
 
 from horizons.world.units.movingobject import MovingObject
 from horizons.util import Point, WorldObject, WeakMethod, decorators, Callback
-from horizons.constants import LAYERS
+from horizons.constants import LAYERS, UNITS
 from horizons.component.healthcomponent import HealthComponent
-from horizons.component.storagecomponent import StorageComponent
 from horizons.extscheduler import ExtScheduler
 from horizons.world.resourcehandler import ResourceTransferHandler
 
@@ -60,6 +59,8 @@ class Unit(MovingObject, ResourceTransferHandler):
 		location.setExactLayerCoordinates(fife.ExactModelCoordinate(x + x, y + y, 0))
 		self.act(self._action, location, True)
 		self._instance.addActionListener(self.InstanceActionListener)
+		self._instance.setVisitor(True)
+		self._instance.setVisitorRadius(UNITS.VISITOR_RADIUS)
 
 		self.loading_area = self.position
 
