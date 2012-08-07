@@ -93,8 +93,9 @@ class BasicBuilding(ComponentHolder, ConcreteObject):
 		  self.getInstance(self.session, origin.x, origin.y, rotation=self.rotation,\
 		                   action_set_id=self._action_set_id)
 		self._instance.setId(str(self.worldid))
-		self._instance.setVisitor(True)
-		self._instance.setVisitorRadius(self.radius)
+		if self.owner and hasattr(self.owner, "is_local_player") and self.owner.is_local_player:
+			self._instance.setVisitor(True)
+			self._instance.setVisitorRadius(self.radius)
 
 		if self.has_running_costs: # Get payout every 30 seconds
 			interval = self.session.timer.get_ticks(GAME.INGAME_TICK_INTERVAL)

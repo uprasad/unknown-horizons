@@ -52,10 +52,15 @@ class View(ChangeListener):
 		for i in xrange(0, LAYERS.NUM):
 			self.layers.append(self.map.createLayer(str(i), cellgrid))
 			self.layers[i].setPathingStrategy(fife.CELL_EDGES_AND_DIAGONALS)
-			self.layers[i].setWalkable(True)
 
+		self.layers[LAYERS.FOG_OF_WAR].setWalkable(True)
 		self.map.initializeCellCaches()
 		self.map.finalizeCellCaches()
+
+		for i in xrange(0, LAYERS.NUM):
+			if i == LAYERS.FOG_OF_WAR:
+				continue
+			self.layers[i].setInteract(True, str(LAYERS.FOG_OF_WAR))
 
 		self.cam = self.map.addCamera("main", self.layers[len(self.layers) - 1], \
 		                               fife.Rect(0, 0, \
