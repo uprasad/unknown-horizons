@@ -80,12 +80,13 @@ class SettlerOverviewTab(OverviewTab):
 		"""Updates the container that displays the needed resources of the settler"""
 		container = self.widget.findChild(name="needed_res")
 		# remove icons from the container
-		container.removeChildren(*container.children)
+		container.removeAllChildren()
 
 		# create new ones
 		resources = self.instance.get_currently_not_consumed_resources()
 		for res in resources:
 			icon = create_resource_icon(res, self.instance.session.db)
+			icon.max_size = icon.min_size = icon.size = (32, 32)
 			container.addChild(icon)
 
 		container.adaptLayout()
@@ -99,6 +100,6 @@ def setup_tax_slider(slider, val_label, settlement, level):
 	slider.stylize('book')
 	def on_slider_change():
 		val_label.text = unicode(slider.value)
-		if(settlement.tax_settings[level] != slider.value):
+		if settlement.tax_settings[level] != slider.value:
 			SetTaxSetting(settlement, level, slider.value).execute(settlement.session)
 	slider.capture(on_slider_change)

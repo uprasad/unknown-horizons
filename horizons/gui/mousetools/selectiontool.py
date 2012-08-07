@@ -84,30 +84,30 @@ class SelectionTool(NavigationTool):
 			self.session.view.renderer['GenericRenderer'].removeAll(self.__class__._SELECTION_RECTANGLE_NAME)
 			if do_multi:
 				# draw a rectangle
-				a = fife.Point(min(self.select_begin[0], evt.getX()), \
+				a = fife.Point(min(self.select_begin[0], evt.getX()),
 											 min(self.select_begin[1], evt.getY()))
-				b = fife.Point(max(self.select_begin[0], evt.getX()), \
+				b = fife.Point(max(self.select_begin[0], evt.getX()),
 											 min(self.select_begin[1], evt.getY()))
-				c = fife.Point(max(self.select_begin[0], evt.getX()), \
+				c = fife.Point(max(self.select_begin[0], evt.getX()),
 											 max(self.select_begin[1], evt.getY()))
-				d = fife.Point(min(self.select_begin[0], evt.getX()), \
+				d = fife.Point(min(self.select_begin[0], evt.getX()),
 											 max(self.select_begin[1], evt.getY()))
-				self.session.view.renderer['GenericRenderer'].addLine(self.__class__._SELECTION_RECTANGLE_NAME, \
+				self.session.view.renderer['GenericRenderer'].addLine(self.__class__._SELECTION_RECTANGLE_NAME,
 				                                                      fife.RendererNode(a), fife.RendererNode(b), 200, 200, 200)
-				self.session.view.renderer['GenericRenderer'].addLine(self.__class__._SELECTION_RECTANGLE_NAME, \
+				self.session.view.renderer['GenericRenderer'].addLine(self.__class__._SELECTION_RECTANGLE_NAME,
 				                                                      fife.RendererNode(b), fife.RendererNode(c), 200, 200, 200)
-				self.session.view.renderer['GenericRenderer'].addLine(self.__class__._SELECTION_RECTANGLE_NAME, \
+				self.session.view.renderer['GenericRenderer'].addLine(self.__class__._SELECTION_RECTANGLE_NAME,
 				                                                      fife.RendererNode(d), fife.RendererNode(c), 200, 200, 200)
-				self.session.view.renderer['GenericRenderer'].addLine(self.__class__._SELECTION_RECTANGLE_NAME, \
+				self.session.view.renderer['GenericRenderer'].addLine(self.__class__._SELECTION_RECTANGLE_NAME,
 				                                                      fife.RendererNode(a), fife.RendererNode(d), 200, 200, 200)
 
-			instances = self.session.view.cam.getMatchingInstances(\
-				fife.Rect(min(self.select_begin[0], evt.getX()), \
-									min(self.select_begin[1], evt.getY()), \
-									abs(evt.getX() - self.select_begin[0]), \
-									abs(evt.getY() - self.select_begin[1])) if do_multi else fife.ScreenPoint(evt.getX(), evt.getY()),
-			  self.session.view.layers[LAYERS.OBJECTS],
-			  False) # False for accurate
+			instances = self.session.view.cam.getMatchingInstances(
+				fife.Rect(min(self.select_begin[0], evt.getX()),
+						min(self.select_begin[1], evt.getY()),
+						abs(evt.getX() - self.select_begin[0]),
+						abs(evt.getY() - self.select_begin[1])) if do_multi else fife.ScreenPoint(evt.getX(), evt.getY()),
+				self.session.view.layers[LAYERS.OBJECTS],
+				False) # False for accurate
 
 			# get selection components
 			instances = ( self.fife_instance_to_uh_instance(i) for i in instances )
@@ -118,12 +118,12 @@ class SelectionTool(NavigationTool):
 
 			#if there's at least one of player unit, we don't select any enemies
 			#applies both to buildings and ships
-			if( any((self.is_owned_by_player(instance) for instance in instances))):
+			if any((self.is_owned_by_player(instance) for instance in instances)):
 				instances = self.filter_owner(instances)
 
 			self._update_selection( instances, do_multi )
 
-		elif (evt.getButton() == fife.MouseEvent.RIGHT):
+		elif evt.getButton() == fife.MouseEvent.RIGHT:
 			pass
 		else:
 			super(SelectionTool, self).mouseDragged(evt)
@@ -135,7 +135,7 @@ class SelectionTool(NavigationTool):
 			self.apply_select()
 			del self.select_begin, self.select_old
 			self.session.view.renderer['GenericRenderer'].removeAll(self.__class__._SELECTION_RECTANGLE_NAME)
-		elif (evt.getButton() == fife.MouseEvent.RIGHT):
+		elif evt.getButton() == fife.MouseEvent.RIGHT:
 			pass
 		else:
 			super(SelectionTool, self).mouseReleased(evt)

@@ -29,7 +29,7 @@ from horizons.world.building.building import BasicBuilding
 from horizons.world.building.buildable import BuildableRect, BuildableSingle
 from horizons.constants import RES, BUILDINGS, GAME, TIER
 from horizons.world.building.buildingresourcehandler import BuildingResourceHandler
-from horizons.world.production.production import SettlerProduction, SingleUseProduction
+from horizons.world.production.production import SettlerProduction
 from horizons.command.building import Build
 from horizons.util import Callback
 from horizons.util.pathfinding.pather import StaticPather
@@ -66,7 +66,7 @@ class Settler(BuildableRect, BuildingResourceHandler, BasicBuilding):
 		kwargs['level'] = self.__class__.default_level_on_build # settlers always start in first level
 		super(Settler, self).__init__(x=x, y=y, owner=owner, instance=instance, **kwargs)
 
-	def __init(self, loading = False, last_tax_payed=0):
+	def __init(self, loading=False, last_tax_payed=0):
 		self.level_max = TIER.CURRENT_MAX # for now
 		self._update_level_data(loading=loading, initial=True)
 		self.last_tax_payed = last_tax_payed
@@ -89,10 +89,10 @@ class Settler(BuildableRect, BuildingResourceHandler, BasicBuilding):
 
 	def save(self, db):
 		super(Settler, self).save(db)
-		db("INSERT INTO settler(rowid, inhabitants, last_tax_payed) VALUES (?, ?, ?)", \
+		db("INSERT INTO settler(rowid, inhabitants, last_tax_payed) VALUES (?, ?, ?)",
 		   self.worldid, self.inhabitants, self.last_tax_payed)
 		remaining_ticks = Scheduler().get_remaining_ticks(self, self._tick)
-		db("INSERT INTO remaining_ticks_of_month(rowid, ticks) VALUES (?, ?)", \
+		db("INSERT INTO remaining_ticks_of_month(rowid, ticks) VALUES (?, ?)",
 		   self.worldid, remaining_ticks)
 
 	def load(self, db, worldid):
@@ -247,7 +247,7 @@ class Settler(BuildableRect, BuildingResourceHandler, BasicBuilding):
 		happiness_decrease -= 6
 		self.get_component(StorageComponent).inventory.alter(RES.HAPPINESS, happiness_decrease)
 		self._changed()
-		self.log.debug("%s: pays %s taxes, -happy: %s new happiness: %s", self, real_taxes, \
+		self.log.debug("%s: pays %s taxes, -happy: %s new happiness: %s", self, real_taxes,
 									 happiness_decrease, self.happiness)
 
 	def inhabitant_check(self):
@@ -278,8 +278,8 @@ class Settler(BuildableRect, BuildingResourceHandler, BasicBuilding):
 				if self.owner.is_local_player:
 					if not self.__class__._max_increment_reached_notification_displayed:
 						self.__class__._max_increment_reached_notification_displayed = True
-						self.session.ingame_gui.message_widget.add( \
-							x=self.position.center().x, y=self.position.center().y, string_id='MAX_INCR_REACHED')
+						self.session.ingame_gui.message_widget.add(
+							point=self.position.center(), string_id='MAX_INCR_REACHED')
 				return
 			if self._upgrade_production:
 				return # already waiting for res
@@ -294,7 +294,7 @@ class Settler(BuildableRect, BuildingResourceHandler, BasicBuilding):
 			self.level_down()
 			self._changed()
 
-	def level_up(self, production = None):
+	def level_up(self, production=None):
 		"""Actually level up (usually called when the upgrade material has arrived)"""
 
 		self._upgrade_production = None
@@ -318,7 +318,7 @@ class Settler(BuildableRect, BuildingResourceHandler, BasicBuilding):
 	def level_down(self):
 		if self.level == 0: # can't level down any more
 			# replace this building with a ruin
-			command = Build(BUILDINGS.SETTLER_RUIN, self.position.origin.x, \
+			command = Build(BUILDINGS.SETTLER_RUIN, self.position.origin.x,
 			                self.position.origin.y, island=self.island, settlement=self.settlement)
 
 			Scheduler().add_new_object(
@@ -328,7 +328,7 @@ class Settler(BuildableRect, BuildingResourceHandler, BasicBuilding):
 			self.log.debug("%s: Destroyed by lack of happiness", self)
 			if self.owner.is_local_player:
 				# check_duplicate: only trigger once for different settlers of a neighborhood
-				self.session.ingame_gui.message_widget.add(x=self.position.center().x, y=self.position.center().y, \
+				self.session.ingame_gui.message_widget.add(point=self.position.center(),
 			                                           string_id='SETTLERS_MOVED_OUT', check_duplicate=True)
 		else:
 			self.level -= 1
@@ -352,7 +352,7 @@ class Settler(BuildableRect, BuildingResourceHandler, BasicBuilding):
 					return
 		# no main square found
 		# check_duplicate: only trigger once for different settlers of a neighborhood
-		self.session.ingame_gui.message_widget.add(x=self.position.origin.x, y=self.position.origin.y, \
+		self.session.ingame_gui.message_widget.add(point=self.position.origin,
 		                                           string_id='NO_MAIN_SQUARE_IN_RANGE', check_duplicate=True)
 
 	def level_upgrade(self, lvl):
@@ -372,7 +372,7 @@ class Settler(BuildableRect, BuildingResourceHandler, BasicBuilding):
 
 	def __str__(self):
 		try:
-			return "%s(l:%s;ihab:%s;hap:%s)" % (super(Settler, self).__str__(), self.level, \
+			return "%s(l:%s;ihab:%s;hap:%s)" % (super(Settler, self).__str__(), self.level,
 																				self.inhabitants, self.happiness)
 		except AttributeError: # an attribute hasn't been set up
 			return super(Settler, self).__str__()

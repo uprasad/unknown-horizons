@@ -68,14 +68,14 @@ class BuildingCollector(Collector):
 
 		# save home_building and creation tick
 		translated_creation_tick = self._creation_tick - current_tick + 1 #  pre-translate the tick number for the loading process
-		db("INSERT INTO building_collector(rowid, home_building, creation_tick) VALUES(?, ?, ?)", \
+		db("INSERT INTO building_collector(rowid, home_building, creation_tick) VALUES(?, ?, ?)",
 			 self.worldid, self.home_building.worldid if self.home_building is not None else None, translated_creation_tick)
 
 		# save job history
 		for tick, utilisation in self._job_history:
 				# pre-translate the tick number for the loading process
 			translated_tick = tick - current_tick + Scheduler.FIRST_TICK_ID
-			db("INSERT INTO building_collector_job_history(collector, tick, utilisation) VALUES(?, ?, ?)", \
+			db("INSERT INTO building_collector_job_history(collector, tick, utilisation) VALUES(?, ?, ?)",
 				 self.worldid, translated_tick, utilisation)
 
 	def load(self, db, worldid):
@@ -99,7 +99,7 @@ class BuildingCollector(Collector):
 		assert Scheduler().cur_tick == Scheduler.FIRST_TICK_ID - 1
 		self._job_history = db.get_building_collector_job_history(worldid)
 
-	def register_at_home_building(self, unregister = False):
+	def register_at_home_building(self, unregister=False):
 		"""Creates reference for self at home building (only hard reference except for
 		in job.object)
 		@param unregister: whether to reverse registration
@@ -111,7 +111,7 @@ class BuildingCollector(Collector):
 			else:
 				self.home_building.get_component(CollectingComponent).add_local_collector(self)
 
-	def apply_state(self, state, remaining_ticks = None):
+	def apply_state(self, state, remaining_ticks=None):
 		super(BuildingCollector, self).apply_state(state, remaining_ticks)
 		if state == self.states.moving_home:
 			# collector is on its way home
@@ -167,8 +167,8 @@ class BuildingCollector(Collector):
 				if reslist: # we can do something here
 					jobs.append( Job(building, reslist) )
 
-		# TODO: find out why order of  self.get_buildings_in_range(..) and therefor order of jobs differs from client to client
-		# TODO: find out why WindAnimal.get_job(..) doesn't have this problem
+		# TODO: find out why order of  self.get_buildings_in_range(..) and therefore order of jobs differs from client to client
+		# TODO: find out why WildAnimal.get_job(..) doesn't have this problem
 		# for MP-Games the jobs must have the same ordering to ensure get_best_possible_job(..) returns the same result
 		jobs.sort(key=lambda job: job.object.worldid)
 
@@ -190,7 +190,7 @@ class BuildingCollector(Collector):
 		if not self._job_history or abs(self._job_history[-1][1]) > 1e-9:
 			self._job_history.append((Scheduler().cur_tick, 0))
 
-	def begin_current_job(self, job_location = None):
+	def begin_current_job(self, job_location=None):
 		super(BuildingCollector, self).begin_current_job(job_location)
 
 		"""
@@ -229,7 +229,7 @@ class BuildingCollector(Collector):
 		Overwrite in subclasses that need ranges around the pickup.
 		@param res: optional, only search for buildings that provide res"""
 		reach = RadiusRect(self.home_building.position, self.home_building.radius)
-		return self.home_building.island.get_providers_in_range(reach, reslist=reslist, \
+		return self.home_building.island.get_providers_in_range(reach, reslist=reslist,
 								                                            player=self.owner)
 
 	def handle_path_home_blocked(self):
@@ -261,7 +261,7 @@ class BuildingCollector(Collector):
 				# this is an unsolved problem also in reality, so we are forced to use an unconventional solution.
 				self.teleport(self.home_building, callback=callback, destination_in_building=True)
 
-	def cancel(self, continue_action = None):
+	def cancel(self, continue_action=None):
 		"""Cancels current job and moves back home"""
 		self.log.debug("%s cancel", self)
 		if continue_action is None:

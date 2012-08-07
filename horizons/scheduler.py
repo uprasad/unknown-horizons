@@ -217,7 +217,7 @@ class Scheduler(LivingObject):
 				if obj.callback == callback:
 					del self.calls_by_instance[instance][i]
 					test += 1
-			assert test == removed_calls,  "%s, %s" % (test, removed_calls)
+			assert test == removed_calls, "%s, %s" % (test, removed_calls)
 			if not self.calls_by_instance[instance]:
 				del self.calls_by_instance[instance]
 
@@ -229,7 +229,7 @@ class Scheduler(LivingObject):
 
 		return removed_calls
 
-	def get_classinst_calls(self, instance, callback = None):
+	def get_classinst_calls(self, instance, callback=None):
 		"""Returns all CallbackObjects of instance.
 		Optionally, a specific callback can be specified.
 		@param instance: the instance to execute the call

@@ -62,8 +62,8 @@ class Mission(WorldObject):
 		self.report_failure('Mission cancelled')
 
 	def __str__(self):
-		return '%s %s(%d)' % (self.owner if hasattr(self, 'owner') else 'unknown player', \
-				              self.__class__.__name__, self.worldid)
+		return '%s %s(%d)' % (self.owner if hasattr(self, 'owner') else 'unknown player',
+		                      self.__class__.__name__, self.worldid)
 
 class ShipMission(Mission):
 	def __init__(self, success_callback, failure_callback, ship):

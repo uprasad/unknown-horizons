@@ -231,7 +231,7 @@ class RES:
 	MEDICAL_HERBS    = 38
 	ACORNS           = 39
 	CANNON           = WEAPONS.CANNON
-	DAGGER           = 41
+	DAGGER           = WEAPONS.DAGGER
 	GRAIN            = 42
 	CORN             = 43
 	FLOUR            = 44
@@ -298,9 +298,12 @@ class GROUND:
 	DEEP_WATER_SOUTHWEST1 = (2, "curve_out", 45)
 	DEEP_WATER_NORTHWEST1 = (2, "curve_out", 315)
 
+class ACTION_SETS:
+	DEFAULT_ANIMATION_LENGTH = 500
+
 class GAME_SPEED:
 	TICKS_PER_SECOND = 16
-	TICK_RATES = [ int(i*16) for i in (0.5, 1, 2, 3, 4, 6, 8, 11, 20) ]
+	TICK_RATES = [ int(i * TICKS_PER_SECOND) for i in (0.5, 1, 2, 3, 4, 6, 8, 11, 20) ]
 
 class COLORS:
 	BLACK = 9
@@ -468,7 +471,7 @@ class PATHS:
 
 	CONFIG_TEMPLATE_FILE = os.path.join("content", "settings-template.xml")
 
-	DB_FILES = tuple(os.path.join("content", i) for i in \
+	DB_FILES = tuple(os.path.join("content", i) for i in
 	                 ("game.sql", "balance.sql", "names.sql"))
 
 	if GFX.USE_ATLASES:
@@ -507,40 +510,40 @@ class _LanguageNameDict(dict):
 
 
 LANGUAGENAMES = _LanguageNameDict({
-"" 			: u'System default',
-"af"    : u'Afrikaans',
-"bg"    : u'Български',
-"ca"    : u'Català',
-'ca@valencia' : u'Català de València',
-"cs"    : u'Čeština',
-"da"    : u'Danske',
-"de"    : u'Deutsch',
-"en"    : u'English',
-"es"    : u'Español',
-"et"    : u'Eesti',
-"el"    : u'Ελληνικά',
-"fi"    : u'Suomi',
-"fr"    : u'Français',
-"gl"    : u'Galego',
-"hi"    : u'मानक हिन्दी',
-"hr"    : u'Hrvatski',
-"hu"    : u'Magyar',
-"it"    : u'Italiano',
-"ja"    : u'日本語',
-"lt"    : u'Lietuvių',
-"ko"    : u'한국말/조선말',
-"nb"    : u'Norw. Bokmål',
-"nl"    : u'Nederlands',
-"pl"    : u'Polski',
-"pt_BR" : u'Português Br.',
-"pt"    : u'Português',
-"ro"    : u'Română',
-"ru"    : u'Русский',
-"sl"    : u'Slovenski',
-"sv"    : u'Svenska',
-"tr"    : u'Türkçe',
-"vi"    : u'Tiếng Việt',
-"zh_CN" : u'普通話',
+	""      : u'System default',
+	"af"    : u'Afrikaans',
+	"bg"    : u'Български',
+	"ca"    : u'Català',
+	'ca@valencia' : u'Català de València',
+	"cs"    : u'Čeština',
+	"da"    : u'Danske',
+	"de"    : u'Deutsch',
+	"en"    : u'English',
+	"es"    : u'Español',
+	"et"    : u'Eesti',
+	"el"    : u'Ελληνικά',
+	"fi"    : u'Suomi',
+	"fr"    : u'Français',
+	"gl"    : u'Galego',
+	"hi"    : u'मानक हिन्दी',
+	"hr"    : u'Hrvatski',
+	"hu"    : u'Magyar',
+	"it"    : u'Italiano',
+	"ja"    : u'日本語',
+	"lt"    : u'Lietuvių',
+	"ko"    : u'한국말/조선말',
+	"nb"    : u'Norw. Bokmål',
+	"nl"    : u'Nederlands',
+	"pl"    : u'Polski',
+	"pt_BR" : u'Português Br.',
+	"pt"    : u'Português',
+	"ro"    : u'Română',
+	"ru"    : u'Русский',
+	"sl"    : u'Slovenski',
+	"sv"    : u'Svenska',
+	"tr"    : u'Türkçe',
+	"vi"    : u'Tiếng Việt',
+	"zh_CN" : u'普通話',
 })
 
 FONTDEFS = {

@@ -25,7 +25,6 @@ from horizons.world.building.buildingresourcehandler import BuildingResourceHand
 from horizons.entities import Entities
 from horizons.scheduler import Scheduler
 from horizons.constants import LAYERS, BUILDINGS
-from horizons.component.storagecomponent import StorageComponent
 from horizons.world.production.producer import Producer
 
 class NatureBuilding(BuildableRect, BasicBuilding):
@@ -52,7 +51,7 @@ class Field(NatureBuildingResourceHandler):
 			prod_comp = self.get_component(Producer)
 			productions = prod_comp.get_productions()
 			if not productions:
-				print 'Warning: Field is assumed to always produce, but doesn\'t. ', self
+				print "Warning: Field is assumed to always produce, but doesn't.", self
 			else:
 				run_in = Scheduler().get_ticks(productions[0].get_production_time())
 				Scheduler().add_new_object(self._check_covered_by_farm, self, run_in=run_in)
@@ -63,7 +62,7 @@ class Field(NatureBuildingResourceHandler):
 		                     self.settlement.buildings_by_id[ BUILDINGS.FARM ] )
 		if not farm_in_range and self.owner.is_local_player:
 			pos = self.position.origin
-			self.session.ingame_gui.message_widget.add(x=pos.x, y=pos.y, string_id="FIELD_NEEDS_FARM",
+			self.session.ingame_gui.message_widget.add(point=pos, string_id="FIELD_NEEDS_FARM",
 			                                           check_duplicate=True)
 
 class AnimalField(Field):
@@ -106,23 +105,11 @@ class ResourceDeposit(NatureBuilding):
 	def __init__(self, *args, **kwargs):
 		super(ResourceDeposit, self).__init__(*args, **kwargs)
 
-	def initialize(self, inventory=None):
-		super(ResourceDeposit, self).initialize()
-		if inventory:
-			for res, amount in inventory.iteritems():
-				self.get_component(StorageComponent).inventory.alter(res, amount)
-		else: # new one
-			for resource, min_amount, max_amount in self.session.db.get_resource_deposit_resources(self.id):
-				self.get_component(StorageComponent).inventory.alter(resource, self.session.random.randint(min_amount, max_amount))
-
 class Fish(BuildableSingleEverywhere, BuildingResourceHandler, BasicBuilding):
 
 	def __init__(self, *args, **kwargs):
-		super(Fish,  self).__init__(*args, **kwargs)
+		super(Fish, self).__init__(*args, **kwargs)
 
 		# Make the fish run at different speeds
-		multiplier =  0.7 + self.session.random.random() * 0.6
+		multiplier = 0.7 + self.session.random.random() * 0.6
 		self._instance.setTimeMultiplier(multiplier)
-
-
-

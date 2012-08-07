@@ -42,7 +42,7 @@ class ColorMeta(type):
 		"""Gets a color by name or id in the db"""
 		if key == 0:
 			return None
-		r, g, b = horizons.main.db('SELECT red, green, blue FROM colors WHERE name = ? OR id = ?', \
+		r, g, b = horizons.main.db('SELECT red, green, blue FROM colors WHERE name = ? OR id = ?',
 		                           key, key)[0]
 		c = Color(r, g, b)
 		return c
@@ -61,7 +61,7 @@ class Color(object):
 	 name: name of the Color or None
 	"""
 	__metaclass__ = ColorMeta
-	def __init__(self, r = 0, g = 0, b = 0, a = 255):
+	def __init__(self, r=0, g=0, b=0, a=255):
 		"""
 		@params: float (0.0, 1.0) or int (0, 255)
 		"""
@@ -94,10 +94,7 @@ class Color(object):
 		return 'Color'+str(self.to_tuple())
 
 	def __eq__(self, other):
-		if self.r == other.r and self.g == other.g and self.b == other.b and self.a == other.a:
-			return True
-		else:
-			return False
+		return(self.r == other.r and self.g == other.g and self.b == other.b and self.a == other.a)
 
 	def __hash__(self):
 		return hash("%s%s%s%s" % (self.r, self.g, self.b, self.a))

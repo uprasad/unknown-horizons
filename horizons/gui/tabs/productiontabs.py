@@ -106,19 +106,11 @@ class ProductionOverviewTab(OverviewTab):
 			out_res_container = container.findChild(name="output_res")
 			self._add_resource_icons(out_res_container, production.get_produced_resources())
 
-			# fix pychans lack of dynamic container sizing
-			# the container in the xml must provide a height attribute, that is valid for
-			# one resource.
-			max_res_in_one_line = max(len(production.get_produced_resources()), \
-			                          len(production.get_consumed_resources()))
-			container.height = max_res_in_one_line * container.height
-
-
 			# active toggle_active button
-			container.mapEvents( \
-			  { 'toggle_active': \
-			    Callback(ToggleActive(self.instance.get_component(Producer), production).execute, self.instance.session) \
-			    } )
+			toggle_active = ToggleActive(self.instance.get_component(Producer), production)
+			container.mapEvents({
+				'toggle_active': Callback(toggle_active.execute, self.instance.session)
+			})
 			# NOTE: this command causes a refresh, so we needn't change the toggle_active-button-image
 			container.stylize('menu_black')
 			parent_container.addChild(container)

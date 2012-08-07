@@ -27,7 +27,6 @@ import horizons.main
 
 from horizons.extscheduler import ExtScheduler
 from horizons.gui.util import load_uh_widget
-from horizons.util import Callback
 
 class _Tooltip(object):
 	"""Base class for pychan widgets overloaded with tooltip functionality"""
@@ -57,7 +56,7 @@ class _Tooltip(object):
 		if isinstance(where, tuple):
 			x, y = where
 		else:
-			if (where.getButton() == fife.MouseEvent.MIDDLE):
+			if where.getButton() == fife.MouseEvent.MIDDLE:
 				return
 
 			x, y = where.getX(), where.getY()
@@ -72,7 +71,8 @@ class _Tooltip(object):
 		# by setting the top container's position to 0, 0.
 		# Since this position is currently unused, it can serve as invalid flag,
 		# and dropping these events seems to lead to the desired placements
-		def get_top(w): return get_top(w.parent) if w.parent else w
+		def get_top(w):
+			return get_top(w.parent) if w.parent else w
 		top_pos = get_top(self).position
 		if top_pos == (0, 0):
 			return
@@ -108,14 +108,14 @@ class _Tooltip(object):
 			top_image = pychan.widgets.Icon(image='content/gui/images/background/widgets/tooltip_bg_top.png', position=(0, 0))
 			self.gui.addChild(top_image)
 			for i in xrange(0, line_count):
-				middle_image = pychan.widgets.Icon( \
+				middle_image = pychan.widgets.Icon(
 				        image='content/gui/images/background/widgets/tooltip_bg_middle.png',
-				        position=(top_image.position[0], \
+				        position=(top_image.position[0],
 				                  top_image.position[1] + self.SIZE_BG_TOP + self.LINE_HEIGHT * i))
 				self.gui.addChild(middle_image)
-			bottom_image = pychan.widgets.Icon( \
+			bottom_image = pychan.widgets.Icon(
 			        image='content/gui/images/background/widgets/tooltip_bg_bottom.png',
-			        position=(top_image.position[0], \
+			        position=(top_image.position[0],
 			                  top_image.position[1] + self.SIZE_BG_TOP + self.LINE_HEIGHT * line_count))
 			self.gui.addChild(bottom_image)
 			label = pychan.widgets.Label(text=u"", position=(10, 5))

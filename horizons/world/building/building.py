@@ -56,7 +56,7 @@ class BasicBuilding(ComponentHolder, ConcreteObject):
 	"""
 	def __init__(self, x, y, rotation, owner, island, level=None, **kwargs):
 		self.__pre_init(owner, rotation, Point(x, y), level=level)
-		super(BasicBuilding, self).__init__(x=x, y=y, rotation=rotation, owner=owner, \
+		super(BasicBuilding, self).__init__(x=x, y=y, rotation=rotation, owner=owner,
 								                        island=island, **kwargs)
 		self.__init()
 		self.island = island
@@ -90,7 +90,7 @@ class BasicBuilding(ComponentHolder, ConcreteObject):
 
 		origin = self.position.origin
 		self._instance, _unused = \
-		  self.getInstance(self.session, origin.x, origin.y, rotation=self.rotation,\
+		  self.getInstance(self.session, origin.x, origin.y, rotation=self.rotation,
 		                   action_set_id=self._action_set_id)
 		self._instance.setId(str(self.worldid))
 		if self.owner and hasattr(self.owner, "is_local_player") and self.owner.is_local_player:
@@ -100,11 +100,11 @@ class BasicBuilding(ComponentHolder, ConcreteObject):
 		if self.has_running_costs: # Get payout every 30 seconds
 			interval = self.session.timer.get_ticks(GAME.INGAME_TICK_INTERVAL)
 			run_in = remaining_ticks_of_month if remaining_ticks_of_month is not None else interval
-			Scheduler().add_new_object(self.get_payout, self, \
+			Scheduler().add_new_object(self.get_payout, self,
 			                           run_in=run_in, loops=-1, loop_interval=interval)
 
 	def toggle_costs(self):
-		self.running_costs , self.running_costs_inactive = \
+		self.running_costs, self.running_costs_inactive = \
 				self.running_costs_inactive, self.running_costs
 
 	def running_costs_active(self):
@@ -129,9 +129,9 @@ class BasicBuilding(ComponentHolder, ConcreteObject):
 	def save(self, db):
 		super(BasicBuilding, self).save(db)
 		db("INSERT INTO building (rowid, type, x, y, rotation, location, level) \
-		   VALUES (?, ?, ?, ?, ?, ?, ?)", \
-		                                self.worldid, self.__class__.id, self.position.origin.x, \
-		                                self.position.origin.y, self.rotation, \
+		   VALUES (?, ?, ?, ?, ?, ?, ?)",
+		                                self.worldid, self.__class__.id, self.position.origin.x,
+		                                self.position.origin.y, self.rotation,
 		                                (self.settlement or self.island).worldid, self.level)
 		if self.has_running_costs:
 			remaining_ticks = Scheduler().get_remaining_ticks(self, self.get_payout)
@@ -259,8 +259,8 @@ class BasicBuilding(ComponentHolder, ConcreteObject):
 		else:
 			return None
 
-		instance = session.view.layers[cls.layer].createInstance(cls._object, \
-																	fife.ModelCoordinate(*instance_coords))
+		instance = session.view.layers[cls.layer].createInstance(cls._object,
+		                               fife.ModelCoordinate(*instance_coords))
 		fife.InstanceVisual.create(instance)
 
 		if action_set_id is None:

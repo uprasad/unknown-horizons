@@ -100,7 +100,7 @@ def start(_command_line_arguments):
 	fife = Fife()
 
 	if debug: # also True if a specific module is logged (but not 'fife')
-		if not (command_line_arguments.debug_module \
+		if not (command_line_arguments.debug_module
 		        and 'fife' not in command_line_arguments.debug_module):
 			fife._log.lm.setLogToPrompt(True)
 		# After the next FIFE release, we should use this instead which is possible as of r3960:
@@ -135,7 +135,7 @@ def start(_command_line_arguments):
 	client_id = fife.get_uh_setting("ClientID")
 	if not client_id:
 		# We need a new client id
-		client_id = "".join("-" if c in (8, 13, 18, 23) else \
+		client_id = "".join("-" if c in (8, 13, 18, 23) else
 		                    random.choice("0123456789abcdef") for c in xrange(0, 36))
 		fife.set_uh_setting("ClientID", client_id)
 		fife.save_settings()
@@ -184,17 +184,17 @@ def start(_command_line_arguments):
 	elif command_line_arguments.start_random_map:
 		startup_worked = _start_random_map(command_line_arguments.ai_players, command_line_arguments.human_ai, force_player_id=command_line_arguments.force_player_id)
 	elif command_line_arguments.start_specific_random_map is not None:
-		startup_worked = _start_random_map(command_line_arguments.ai_players, command_line_arguments.human_ai, \
+		startup_worked = _start_random_map(command_line_arguments.ai_players, command_line_arguments.human_ai,
 			seed=command_line_arguments.start_specific_random_map, force_player_id=command_line_arguments.force_player_id)
 	elif command_line_arguments.start_map is not None:
-		startup_worked = _start_map(command_line_arguments.start_map, command_line_arguments.ai_players, \
+		startup_worked = _start_map(command_line_arguments.start_map, command_line_arguments.ai_players,
 			command_line_arguments.human_ai, force_player_id=command_line_arguments.force_player_id)
 	elif command_line_arguments.start_scenario is not None:
 		startup_worked = _start_map(command_line_arguments.start_scenario, 0, False, True, force_player_id=command_line_arguments.force_player_id)
 	elif command_line_arguments.start_campaign is not None:
 		startup_worked = _start_campaign(command_line_arguments.start_campaign, force_player_id=command_line_arguments.force_player_id)
 	elif command_line_arguments.load_map is not None:
-		startup_worked = _load_map(command_line_arguments.load_map, command_line_arguments.ai_players, \
+		startup_worked = _load_map(command_line_arguments.load_map, command_line_arguments.ai_players,
 			command_line_arguments.human_ai, command_line_arguments.force_player_id)
 	elif command_line_arguments.load_quicksave is not None:
 		startup_worked = _load_last_quicksave()
@@ -202,7 +202,7 @@ def start(_command_line_arguments):
 		tiny = [ i for i in SavegameManager.get_maps()[0] if 'tiny' in i ]
 		if not tiny:
 			tiny = SavegameManager.get_map()[0]
-		startup_worked = _start_map(tiny[0], ai_players=0, human_ai=False, trader_enabled=False, pirate_enabled=False, \
+		startup_worked = _start_map(tiny[0], ai_players=0, human_ai=False, trader_enabled=False, pirate_enabled=False,
 			force_player_id=command_line_arguments.force_player_id)
 		from development.stringpreviewwidget import StringPreviewWidget
 		__string_previewer = StringPreviewWidget(_modules.session)
@@ -262,9 +262,9 @@ def quit():
 	global fife
 	fife.quit()
 
-def start_singleplayer(map_file, playername = "Player", playercolor = None, is_scenario = False, \
-		campaign = None, ai_players = 0, human_ai = False, trader_enabled = True, pirate_enabled = True, \
-		natural_resource_multiplier = 1, force_player_id = None, disasters_enabled = True):
+def start_singleplayer(map_file, playername="Player", playercolor=None, is_scenario=False,
+		campaign=None, ai_players=0, human_ai=False, trader_enabled=True, pirate_enabled=True,
+		natural_resource_multiplier=1, force_player_id=None, disasters_enabled=True):
 	"""Starts a singleplayer game
 	@param map_file: path to map file
 	@param ai_players: number of AI players to start (excludes possible human AI)
@@ -294,7 +294,14 @@ def start_singleplayer(map_file, playername = "Player", playercolor = None, is_s
 
 	# for now just make it a bit easier for the AI
 	difficulty_level = {False: DifficultySettings.DEFAULT_LEVEL, True: DifficultySettings.EASY_LEVEL}
-	players = [{ 'id' : 1, 'name' : playername, 'color' : playercolor, 'local' : True, 'ai': human_ai, 'difficulty': difficulty_level[bool(human_ai)]}]
+	players = [{
+		'id': 1,
+		'name': playername,
+		'color': playercolor,
+		'local': True,
+		'ai': human_ai,
+		'difficulty': difficulty_level[bool(human_ai)],
+	}]
 
 	# add AI players with a distinct color; if none can be found then use black
 	for num in xrange(ai_players):
@@ -302,21 +309,25 @@ def start_singleplayer(map_file, playername = "Player", playercolor = None, is_s
 		for possible_color in Color:
 			if possible_color == Color[COLORS.BLACK]:
 				continue # black is used by the trader and the pirate
-			available = True
-			for player in players:
-				if player['color'].to_tuple() == possible_color.to_tuple():
-					available = False
-					break
-			if available:
+			used = any(possible_color == player['color'] for player in players)
+			if not used:
 				color = possible_color
 				break
-		players.append({'id': num + 2, 'name' : 'AI' + str(num + 1), 'color' : color, 'local' : False, 'ai': True, 'difficulty': difficulty_level[True]})
+		players.append({
+			'id' : num + 2,
+			'name' : 'AI' + str(num + 1),
+			'color' : color,
+			'local' : False,
+			'ai' : True,
+			'difficulty' : difficulty_level[True],
+		})
 
 	from horizons.scenario import InvalidScenarioFileFormat # would create import loop at top
 	try:
-		_modules.session.load(map_file, players, trader_enabled, pirate_enabled, natural_resource_multiplier, \
-			is_scenario = is_scenario, campaign = campaign, force_player_id = force_player_id, disasters_enabled=disasters_enabled)
-	except InvalidScenarioFileFormat as e:
+		_modules.session.load(map_file, players, trader_enabled, pirate_enabled,
+			natural_resource_multiplier, is_scenario=is_scenario, campaign=campaign,
+			force_player_id=force_player_id, disasters_enabled=disasters_enabled)
+	except InvalidScenarioFileFormat:
 		raise
 	except Exception:
 		# don't catch errors when we should fail fast (used by tests)
@@ -334,12 +345,12 @@ def start_singleplayer(map_file, playername = "Player", playercolor = None, is_s
 		_modules.gui.show_main()
 		headline = _(u"Failed to start/load the game")
 		descr = _(u"The game you selected could not be started.") + u" " +\
-			      _("The savegame might be broken or has been saved with an earlier version.")
+		        _("The savegame might be broken or has been saved with an earlier version.")
 		_modules.gui.show_error_popup(headline, descr)
 		load_game(ai_players, human_ai, force_player_id=force_player_id)
 
 
-def prepare_multiplayer(game, trader_enabled = True, pirate_enabled = True, natural_resource_multiplier = 1):
+def prepare_multiplayer(game, trader_enabled=True, pirate_enabled=True, natural_resource_multiplier=1):
 	"""Starts a multiplayer game server
 	TODO: actual game data parameter passing
 	"""
@@ -385,8 +396,8 @@ def load_game(ai_players=0, human_ai=False, savegame=None, is_scenario=False, ca
 			return False # user aborted dialog
 	_modules.gui.show_loading_screen()
 #TODO
-	start_singleplayer(savegame, is_scenario = is_scenario, campaign = campaign, \
-		ai_players=ai_players, human_ai=human_ai, pirate_enabled=pirate_enabled, \
+	start_singleplayer(savegame, is_scenario=is_scenario, campaign=campaign,
+		ai_players=ai_players, human_ai=human_ai, pirate_enabled=pirate_enabled,
 		trader_enabled=trader_enabled, force_player_id=force_player_id)
 	return True
 
@@ -401,55 +412,23 @@ def _start_dev_map(ai_players, human_ai, force_player_id):
 	load_game(ai_players, human_ai, m, force_player_id=force_player_id)
 	return True
 
-def _start_map(map_name, ai_players=0, human_ai=False, is_scenario=False, campaign=None, pirate_enabled=True, trader_enabled=True, force_player_id=None):
+def _start_map(map_name, ai_players=0, human_ai=False, is_scenario=False, campaign=None,
+               pirate_enabled=True, trader_enabled=True, force_player_id=None):
 	"""Start a map specified by user
 	@param map_name: name of map or path to map
 	@return: bool, whether loading succeded"""
-	maps = SavegameManager.get_available_scenarios(locales=True) if is_scenario else SavegameManager.get_maps()
-
-	map_file = None
-
-	# get system's language
-	game_language = fife.get_locale()
-
-	# now we have "_en.yaml" which is set to language_extension variable
-	language_extension = '_' + game_language + '.' + SavegameManager.scenario_extension
-
-	# check for exact/partial matches in map list first
-	for i in xrange(0, len(maps[1])):
-		# exact match
-		if maps[1][i] == map_name:
-			map_file = maps[0][i]
-			break
-		# we want to match when map_name is like "tutorial" not "tutorial_en"
-		if maps[1][i] == map_name + language_extension:
-			map_file = maps[0][i]
-			break
-		# check for partial match
-		if maps[1][i].startswith(map_name):
-			if map_file is not None:
-				# multiple matches, collect all for output
-				map_file += u'\n' + maps[0][i]
-			else:
-				map_file = maps[0][i]
-	if map_file is None:
-		# not a map name, check for path to file or fail
-		if os.path.exists(map_name):
-			map_file = map_name
-		else:
-			#xgettext:python-format
-			print u"Error: Cannot find map '{name}'.".format(name=map_name)
-			return False
-	if len(map_file.splitlines()) > 1:
-		print "Error: Found multiple matches:"
-		for match in map_file.splitlines():
-			print os.path.basename(match)
+	if is_scenario:
+		savegames = SavegameManager.get_available_scenarios(locales=True)
+	else:
+		savegames = SavegameManager.get_maps()
+	map_file = _find_matching_map(map_name, savegames)
+	if not map_file:
 		return False
 	load_game(ai_players, human_ai, map_file, is_scenario, campaign=campaign,
 	          trader_enabled=trader_enabled, pirate_enabled=pirate_enabled, force_player_id=force_player_id)
 	return True
 
-def _start_random_map(ai_players, human_ai, seed = None, force_player_id = None):
+def _start_random_map(ai_players, human_ai, seed=None, force_player_id=None):
 	from horizons.util import random_map
 	start_singleplayer(random_map.generate_map_from_seed(seed), ai_players=ai_players, human_ai=human_ai, force_player_id=force_player_id)
 	return True
@@ -464,13 +443,13 @@ def _start_campaign(campaign_name, force_player_id=None):
 		# This is not very clean, but it's safe.
 
 		if not campaign_name.endswith(".yaml"):
-			print "Error: campaign filenames have to end in \".yaml\"."
+			print 'Error: campaign filenames have to end in ".yaml".'
 			return False
 
 		# check if the user specified a file in the UH campaign dir
 		campaign_basename = os.path.basename( campaign_name )
 		path_in_campaign_dir = os.path.join(SavegameManager.campaigns_dir, campaign_basename)
-		if not (os.path.exists(path_in_campaign_dir) and \
+		if not (os.path.exists(path_in_campaign_dir) and
 		        os.path.samefile(campaign_name, path_in_campaign_dir)):
 			#xgettext:python-format
 			string = _("Due to technical reasons, the campaign file will be copied to the UH campaign directory ({path}).").format(path=SavegameManager.campaigns_dir)
@@ -483,51 +462,59 @@ def _start_campaign(campaign_name, force_player_id=None):
 			shutil.copy(campaign_name, SavegameManager.campaigns_dir)
 		# use campaign file name below
 		campaign_name = os.path.splitext( campaign_basename )[0]
-	campaign = SavegameManager.get_campaign_info(name = campaign_name)
+	campaign = SavegameManager.get_campaign_info(name=campaign_name)
 	if not campaign:
-		#xgettext:python-format
 		print u"Error: Cannot find campaign '{name}'.".format(campaign_name)
 		return False
 	scenarios = [sc.get('level') for sc in campaign.get('scenarios',[])]
 	if not scenarios:
 		return False
-	return _start_map(scenarios[0], 0, False, is_scenario = True, campaign = {'campaign_name': campaign_name, 'scenario_index': 0, 'scenario_name': scenarios[0]}, \
+	return _start_map(scenarios[0], 0, False, is_scenario=True,
+		campaign={'campaign_name': campaign_name, 'scenario_index': 0, 'scenario_name': scenarios[0]},
 		force_player_id=force_player_id)
 
 def _load_map(savegame, ai_players, human_ai, force_player_id=None):
 	"""Load a map specified by user.
-	@param savegame: eiter the displayname of a savegame or a path to a savegame
+	@param savegame: either the displayname of a savegame or a path to a savegame
 	@return: bool, whether loading succeded"""
 	# first check for partial or exact matches in the normal savegame list
-	saves = SavegameManager.get_saves()
-	map_file = None
-	for i in xrange(0, len(saves[1])):
-		# exact match
-		if saves[1][i] == savegame:
-			map_file = saves[0][i]
-			break
-		# check for partial match
-		if saves[1][i].startswith(savegame):
-			if map_file is not None:
-				# multiple matches, collect all for output
-				map_file += u'\n' + saves[0][i]
-			else:
-				map_file = saves[0][i]
-	if map_file is None:
-		# not a savegame, check for path to file or fail
-		if os.path.exists(savegame):
-			map_file = savegame
-		else:
-			#xgettext:python-format
-			print u"Error: Cannot find savegame '{name}'.".format(name=savegame)
-			return False
-	if len(map_file.splitlines()) > 1:
-		print "Error: Found multiple matches:"
-		for match in map_file.splitlines():
-			print os.path.basename(match)
+	savegames = SavegameManager.get_saves()
+	map_file = _find_matching_map(savegame, savegames)
+	if not map_file:
 		return False
 	load_game(savegame=map_file, force_player_id=force_player_id)
 	return True
+
+def _find_matching_map(name_or_path, savegames):
+	"""*name_or_path* is either a map/savegame name or path to a map/savegame file."""
+	game_language = fife.get_locale()
+	# now we have "_en.yaml" which is set to language_extension variable
+	language_extension = '_' + game_language + '.' + SavegameManager.scenario_extension
+	map_file = None
+	for filename, name in zip(*savegames):
+		if name in (name_or_path, name_or_path + language_extension):
+			# exact match or "tutorial" matching "tutorial_en.yaml"
+			return filename
+		if name.startswith(name_or_path): # check for partial match
+			if map_file is not None:
+				# multiple matches, collect all for output
+				map_file += u'\n' + filename
+			else:
+				map_file = filename
+	if map_file is not None:
+		if len(map_file.splitlines()) > 1:
+			print "Error: Found multiple matches:"
+			for name_or_path in map_file.splitlines():
+				print os.path.basename(name_or_path)
+			return
+		else:
+			return map_file
+	else: # not a savegame, check for path to file or fail
+		if os.path.exists(name_or_path):
+			return name_or_path
+		else:
+			print u"Error: Cannot find savegame or map '{name}'.".format(name=name_or_path)
+			return
 
 def _load_last_quicksave(session=None, force_player_id=None):
 	"""Load last quicksave
@@ -536,7 +523,8 @@ def _load_last_quicksave(session=None, force_player_id=None):
 	save_files = SavegameManager.get_quicksaves()[0]
 	if session is not None:
 		if not save_files:
-			session.gui.show_popup(_("No quicksaves found"), _("You need to quicksave before you can quickload."))
+			session.gui.show_popup(_("No quicksaves found"),
+			                       _("You need to quicksave before you can quickload."))
 			return False
 		else:
 			session.ingame_gui.on_escape() # close widgets that might be open
@@ -566,10 +554,10 @@ def preload_game_data(lock):
 		from horizons.entities import Entities
 		log = logging.getLogger("preload")
 		mydb = _create_main_db() # create own db reader instance, since it's not thread-safe
-		preload_functions = [ ActionSetLoader.load, \
+		preload_functions = [ ActionSetLoader.load,
 		                      TileSetLoader.load,
-		                      Callback(Entities.load_grounds, mydb, load_now=True), \
-		                      Callback(Entities.load_buildings, mydb, load_now=True), \
+		                      Callback(Entities.load_grounds, mydb, load_now=True),
+		                      Callback(Entities.load_buildings, mydb, load_now=True),
 		                      Callback(Entities.load_units, load_now=True) ]
 		for f in preload_functions:
 			if not lock.acquire(False):

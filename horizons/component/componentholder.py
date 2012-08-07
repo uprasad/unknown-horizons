@@ -22,6 +22,7 @@
 from horizons.component import Component
 
 from horizons.component.storagecomponent import StorageComponent
+from horizons.component.depositcomponent import DepositComponent
 from horizons.component.namedcomponent import NamedComponent, SettlementNameComponent, ShipNameComponent, PirateShipNameComponent
 from horizons.component.tradepostcomponent import TradePostComponent
 from horizons.component.ambientsoundcomponent import AmbientSoundComponent
@@ -29,6 +30,7 @@ from horizons.component.healthcomponent import HealthComponent
 from horizons.component.selectablecomponent import SelectableComponent
 from horizons.component.commandablecomponent import CommandableComponent
 from horizons.component.collectingcomponent import CollectingComponent
+from horizons.component.restrictedpickup import RestrictedPickup
 from horizons.world.production.producer import Producer, QueueProducer, UnitProducer
 
 class ComponentHolder(object):
@@ -67,10 +69,12 @@ class ComponentHolder(object):
 	    "HealthComponent": HealthComponent,
 	    'ProducerComponent': Producer,
 	    'QueueProducerComponent': QueueProducer,
+	    'DepositComponent': DepositComponent,
 	    'UnitProducerComponent': UnitProducer,
 	    'SelectableComponent': SelectableComponent,
 	    'CommandableComponent': CommandableComponent,
 	    'CollectingComponent': CollectingComponent,
+	    'RestrictedPickup': RestrictedPickup,
 	}
 
 

@@ -29,13 +29,13 @@ from horizons.world.building.path import Path
 from horizons.world.status import InventoryFullStatus
 from horizons.component.collectingcomponent import CollectingComponent
 
-class StorageBuilding(StorageResourceHandler, \
+class StorageBuilding(StorageResourceHandler,
                       BuildingResourceHandler, BasicBuilding):
 	"""Building that gets pickups and provides them for anyone.
 	Inherited eg. by warehouse, storage tent.
 	These objects don't have a storage themselves, but use the settlement storage.
 	"""
-	def __init__(self, x, y, owner, instance = None, **kwargs):
+	def __init__(self, x, y, owner, instance=None, **kwargs):
 		super(StorageBuilding, self).__init__(x = x, y = y, owner = owner, instance = instance, **kwargs)
 
 	def initialize(self):
@@ -77,7 +77,7 @@ class Warehouse(StorageBuilding, BuildableSingleFromShip):
 
 	def get_status_icons(self):
 		banned_classes = (InventoryFullStatus,)
-		return [ i for i in super(Warehouse, self).get_status_icons() if \
+		return [ i for i in super(Warehouse, self).get_status_icons() if
 		         not i.__class__ in banned_classes ]
 
 class MainSquare(Path, StorageBuilding, ProductionBuilding):

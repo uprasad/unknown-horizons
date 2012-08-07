@@ -5,18 +5,6 @@ CREATE TABLE "animals" (
 );
 INSERT INTO "animals" VALUES(18, 1000003, 3);
 
-CREATE TABLE "unit_production" (
-	"production_line" INT NOT NULL,
-	"unit" INT NOT NULL,
-	"amount" INT NOT NULL
-);
-INSERT INTO "unit_production" VALUES(15, 1000001, 1);
-INSERT INTO "unit_production" VALUES(58, 1000020, 1);
-INSERT INTO "unit_production" VALUES(62, 1000016, 1);
-INSERT INTO "unit_production" VALUES(63, 1000016, 1);
-INSERT INTO "unit_production" VALUES(64, 1000016, 1);
-INSERT INTO "unit_production" VALUES(68, 1000016, 1);
-
 CREATE TABLE "start_resources" (
 	"resource" INT,
 	"amount" INT
@@ -31,15 +19,6 @@ CREATE TABLE "player_start_res" (
 	"amount" INT NOT NULL
 );
 INSERT INTO "player_start_res" VALUES(1, 30000);
-
-CREATE TABLE "deposit_resources" (
-	"id" INT NOT NULL,
-	"resource" INT NOT NULL,
-	"min_amount" INT NOT NULL,
-	"max_amount" INT NOT NULL
-);
-INSERT INTO "deposit_resources" VALUES(23, 20, 750, 1250);
-INSERT INTO "deposit_resources" VALUES(34, 24, 375, 625);
 
 CREATE TABLE "storage_building_capacity" (
 	"type" INT,

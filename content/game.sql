@@ -32,36 +32,6 @@ INSERT INTO "ground_class" VALUES(6, 'constructible');
 INSERT INTO "ground_class" VALUES(5, 'coastline');
 INSERT INTO "ground_class" VALUES(7, 'constructible');
 
-CREATE TABLE "unit" (
-	"id" INT NOT NULL,
-	"name" TEXT NOT NULL,
-	"class_package" TEXT NOT NULL,
-	"class_type" TEXT NOT NULL,
-	"base_velocity" REAL DEFAULT '12.0',
-	"radius" INT DEFAULT '5'
-);
-INSERT INTO "unit" VALUES(1000001, 'Huker', 'ship', 'Ship', 5.0, 5);
-INSERT INTO "unit" VALUES(1000002, 'BuildingCollector', 'collectors', 'BuildingCollector', 12.0, 5);
-INSERT INTO "unit" VALUES(1000003, 'Sheep', 'animal', 'FarmAnimal', 12.0, 3);
-INSERT INTO "unit" VALUES(1000004, 'Fisher', 'ship', 'FisherShip', 12.0, 5);
-INSERT INTO "unit" VALUES(1000005, 'Pirate Ship', 'ship', 'PirateShip', 12.0, 5);
-INSERT INTO "unit" VALUES(1000006, 'Trader', 'ship', 'TradeShip', 12.0, 8);
-INSERT INTO "unit" VALUES(1000007, 'AnimalCarriage', 'collectors', 'AnimalCollector', 12.0, 5);
-INSERT INTO "unit" VALUES(1000008, 'StorageCollector', 'collectors', 'StorageCollector', 12.0, 5);
-INSERT INTO "unit" VALUES(1000009, 'FieldCollector', 'collectors', 'FieldCollector', 12.0, 5);
-INSERT INTO "unit" VALUES(1000010, 'LumberjackCollector', 'collectors', 'FieldCollector', 12.0, 5);
-INSERT INTO "unit" VALUES(1000011, 'SettlerCollector', 'collectors', 'StorageCollector', 12.0, 5);
-INSERT INTO "unit" VALUES(1000013, 'Deer', 'animal', 'WildAnimal', 12.0, 5);
-INSERT INTO "unit" VALUES(1000014, 'HunterCollector', 'collectors', 'HunterCollector', 12.0, 5);
-INSERT INTO "unit" VALUES(1000015, 'FarmAnimalCollector', 'collectors', 'FarmAnimalCollector', 12.0, 5);
-INSERT INTO "unit" VALUES(1000016, 'UsableFisher', 'ship', 'Ship', 12.0, 5);
-INSERT INTO "unit" VALUES(1000017, 'Cattle', 'animal', 'FarmAnimal', 12.0, 3);
-INSERT INTO "unit" VALUES(1000018, 'Boar', 'animal', 'FarmAnimal', 12.0, 5);
-INSERT INTO "unit" VALUES(1000019, 'Doctor', 'collectors', 'DisasterRecoveryCollector', 12.0, 5);
-INSERT INTO "unit" VALUES(1000020, 'Frigate', 'fightingship', 'FightingShip', 12.0, 5);
-INSERT INTO "unit" VALUES(1000021, 'BomberMan', 'groundunit', 'FightingGroundUnit', 10.0, 5);
-INSERT INTO "unit" VALUES(1000022, 'Firefighter', 'collectors', 'DisasterRecoveryCollector', 12.0, 5);
-
 CREATE TABLE "speech" (
 	"group_id" INT NOT NULL DEFAULT 0,
 	"file" TEXT NOT NULL
@@ -102,15 +72,6 @@ INSERT INTO "sounds_special" VALUES('flippage', 10);
 INSERT INTO "sounds_special" VALUES('success',  11);
 INSERT INTO "sounds_special" VALUES('refresh',  12);
 INSERT INTO "sounds_special" VALUES('click',    13);
-
-CREATE TABLE "collector_restrictions" (
-	"collector" INT,
-	"object" INT
-);
-INSERT INTO "collector_restrictions" VALUES(1000011,  4);
-INSERT INTO "collector_restrictions" VALUES(1000011,  5);
-INSERT INTO "collector_restrictions" VALUES(1000011, 21);
-INSERT INTO "collector_restrictions" VALUES(1000011, 32);
 
 CREATE TABLE "message" (
 	"id_string" TEXT NOT NULL,
@@ -169,7 +130,7 @@ INSERT INTO "message_text" VALUES('MOVE_INVALID_LOCATION', 'Cannot go here.');
 INSERT INTO "message_text" VALUES('MOVE_OUTSIDE_OF_WORLD', 'Your crew refuses to leave this map.');
 INSERT INTO "message_text" VALUES('NEED_MORE_RES',    'You need more {resource} to build this building.');
 INSERT INTO "message_text" VALUES('NEW_SETTLEMENT',   'A new settlement was founded by {player}.');
-INSERT INTO "message_text" VALUES('NEW_UNIT',         'A new ship has been created.');
+INSERT INTO "message_text" VALUES('NEW_UNIT',         'A new ship by the name of {name} has been created.');
 INSERT INTO "message_text" VALUES('NEW_WORLD',        'A new world has been created.');
 INSERT INTO "message_text" VALUES('NO_MAIN_SQUARE_IN_RANGE', 'Some of your inhabitants have no access to a main square.');
 INSERT INTO "message_text" VALUES('QUICKSAVE',        'Your game has been quicksaved.');
@@ -291,7 +252,7 @@ INSERT INTO "resource" VALUES(34, 'pigs', 0, 0, 1);
 INSERT INTO "resource" VALUES(35, 'cattle for slaughter', 2, 0, 1);
 INSERT INTO "resource" VALUES(36, 'pigs for slaughter', 2, 0, 1);
 INSERT INTO "resource" VALUES(37, 'herbs', 0, 0, 1);
-INSERT INTO "resource" VALUES(38, 'medical herbs', 2.5, 0, 0);
+INSERT INTO "resource" VALUES(38, 'medical herbs', 2.5, 1, 1);
 INSERT INTO "resource" VALUES(39, 'acorns', 0, 0, 1);
 INSERT INTO "resource" VALUES(40, 'cannon', 100, 1, 1);
 INSERT INTO "resource" VALUES(41, 'dagger', 10, 0, 0);
@@ -313,13 +274,6 @@ INSERT INTO "resource" VALUES(58, 'grapes', 2.5, 1, 1);
 INSERT INTO "resource" VALUES(59, 'alvearies', 2, 0, 1);
 INSERT INTO "resource" VALUES(60, 'honeycombs', 2.5, 1, 1);
 INSERT INTO "resource" VALUES(99, 'fire', NULL, 0, 0);
-
-CREATE TABLE "translucent_buildings" (
-	"type" INT
-);
-INSERT INTO "translucent_buildings" VALUES(17);
-INSERT INTO "translucent_buildings" VALUES(34);
-INSERT INTO "translucent_buildings" VALUES(28);
 
 CREATE TABLE "weapon" (
 	"id" INT,

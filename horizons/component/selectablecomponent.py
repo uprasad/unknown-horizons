@@ -22,6 +22,7 @@
 from fife import fife
 import copy
 import itertools
+import operator
 
 import horizons.main
 
@@ -192,7 +193,7 @@ class SelectableBuildingComponent(SelectableComponent):
 		"""
 		import cProfile as profile
 		import tempfile
-		outfilename = tempfile.mkstemp(text = True)[1]
+		outfilename = tempfile.mkstemp(text=True)[1]
 		print 'profile to ', outfilename
 		c = "cls._do_select(renderer, position, session.world, settlement)"
 		profile.runctx(c, globals(), locals(), outfilename)
@@ -228,17 +229,16 @@ class SelectableBuildingComponent(SelectableComponent):
 
 		# group buildings per settlement and treat them separately
 		# they cannot share tiles, and we can then just access the settlements ground map
-		get_settlement = lambda b : b.settlement
-		buildings_sorted = sorted(buildings, key=get_settlement)
-		for settlement, buildings in itertools.groupby( buildings_sorted, get_settlement ):
+		buildings_sorted = sorted(buildings, key=operator.attrgetter('settlement'))
+		for settlement, buildings in itertools.groupby( buildings_sorted, operator.attrgetter('settlement') ):
 			# resolve operator
 			buildings = list(buildings)
 
 			for building in buildings:
 				building.get_component(SelectableComponent).set_selection_outline()
 
-			coords = set( coord for \
-			              building in buildings for \
+			coords = set( coord for
+			              building in buildings for
 			              coord in building.position.get_radius_coordinates(building.radius, include_self=True) )
 
 			for coord in coords:

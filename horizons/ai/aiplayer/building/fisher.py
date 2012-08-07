@@ -63,7 +63,7 @@ class FisherEvaluator(BuildingEvaluator):
 		assert resource_id == RES.FOOD
 		if self.__production_level is None:
 			fishers_coords = [fisher.position.origin.to_tuple() for fisher in self.area_builder.owner.fishers]
-			self.__production_level = FisherSimulator.extra_productivity(self.area_builder.session, \
+			self.__production_level = FisherSimulator.extra_productivity(self.area_builder.session,
 				fishers_coords, self.builder.position.origin.to_tuple())
 		return self.__production_level
 
@@ -151,7 +151,7 @@ class FisherSimulator(object):
 				break
 
 			if not found_fish:
-				heapq.heappush(heap, (tick +  COLLECTORS.DEFAULT_WAIT_TICKS, fisher_coords))
+				heapq.heappush(heap, (tick + COLLECTORS.DEFAULT_WAIT_TICKS, fisher_coords))
 		return float(fish_caught) / cls.simulation_time
 
 AbstractFisher.register_buildings()

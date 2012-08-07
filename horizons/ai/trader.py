@@ -120,7 +120,7 @@ class Trader(GenericAI):
 				self.office[ship.worldid] = WorldObject.get_object_by_id(targeted_warehouse)
 			elif state == self.shipStates.reached_warehouse:
 				assert remaining_ticks is not None
-				Scheduler().add_new_object( \
+				Scheduler().add_new_object(
 					Callback(self.ship_idle, ship), self, remaining_ticks)
 
 	def get_ship_count(self):
@@ -131,7 +131,7 @@ class Trader(GenericAI):
 		"""Sends a ship to a random position on the map.
 		@param ship: Ship instance that is to be used"""
 		super(Trader, self).send_ship_random(ship)
-		ship.add_conditional_callback(Callback(self._check_for_signal_fire_in_ship_range, ship), \
+		ship.add_conditional_callback(Callback(self._check_for_signal_fire_in_ship_range, ship),
 		                              callback=Callback(self._ship_found_signal_fire, ship))
 
 	def _check_for_signal_fire_in_ship_range(self, ship):
@@ -157,7 +157,8 @@ class Trader(GenericAI):
 				self.log.debug("Trader %s moving to house %s", self.worldid, house)
 				self.allured_by_signal_fire[ship] = True
 				# HACK: remove allured flag in a few ticks
-				def rem_allured(self, ship): self.allured_by_signal_fire[ship] = False
+				def rem_allured(self, ship):
+					self.allured_by_signal_fire[ship] = False
 				Scheduler().add_new_object(Callback(rem_allured, self, ship), self, Scheduler().get_ticks(60))
 				self.send_ship_random_warehouse(ship, house)
 				return
@@ -167,7 +168,7 @@ class Trader(GenericAI):
 		"""Sends a ship to a random warehouse on the map
 		@param ship: Ship instance that is to be used
 		@param warehouse: warehouse instance to move to. Random one is selected on None."""
-		self.log.debug("Trader %s ship %s moving to warehouse (random=%s)", self.worldid, ship.worldid, \
+		self.log.debug("Trader %s ship %s moving to warehouse (random=%s)", self.worldid, ship.worldid,
 		               (warehouse is None))
 		#TODO maybe this kind of list should be saved somewhere, as this is pretty performance intense
 		warehouses = self.session.world.get_warehouses()
@@ -217,7 +218,7 @@ class Trader(GenericAI):
 
 		del self.office[ship.worldid]
 		# wait a few seconds before going on to simulate loading/unloading process
-		Scheduler().add_new_object(Callback(self.ship_idle, ship), self, \
+		Scheduler().add_new_object(Callback(self.ship_idle, ship), self,
 		                           Scheduler().get_ticks(TRADER.TRADING_DURATION))
 		self.ships[ship] = self.shipStates.reached_warehouse
 

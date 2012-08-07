@@ -51,7 +51,7 @@ class Inventory(pychan.widgets.Container):
 
 	def init(self, db, inventory, ordinal=None):
 		"""
-		@param ordinal: (min, max) Display ordinal scale with these boundaries instead of numbers. Currently implemented via ImageFillStatusButton.
+		@param ordinal: {res: (min, max)} Display ordinal scale with these boundaries instead of numbers for a particular resource. Currently implemented via ImageFillStatusButton.
 		"""
 		# check if we must init everything anew
 		if not self.__inited or self._inventory is not inventory:
@@ -70,11 +70,10 @@ class Inventory(pychan.widgets.Container):
 
 	def _draw(self):
 		"""Draws the inventory."""
-		if len(self.children) != 0:
-			self.removeChildren(*self.children)
-		vbox = pychan.widgets.VBox(padding = 0)
+		self.removeAllChildren()
+		vbox = pychan.widgets.VBox(padding=0)
 		vbox.width = self.width
-		current_hbox = pychan.widgets.HBox(padding = 0)
+		current_hbox = pychan.widgets.HBox(padding=0)
 		index = 0
 
 		# add res to res order in case there are new ones
@@ -103,16 +102,16 @@ class Inventory(pychan.widgets.Container):
 
 			amount = self._inventory[resid]
 
-			if self.ordinal is not None:
-				range_ = self.ordinal[1] - self.ordinal[0]
-				filled = (100 * (amount - self.ordinal[0])) // range_
-				amount = ""
+			if self.ordinal:
+				lower, upper = self.ordinal.get(resid, (0, 100))
+				filled = (100 * (amount - lower)) // (upper - lower)
+				amount = "" # do not display exact information for resource deposits
 			elif isinstance(self._inventory, TotalStorage):
 				filled = 0
 			else:
 				filled = (100 * amount) // self._inventory.get_limit(resid)
 
-			button = ImageFillStatusButton.init_for_res(self.db, resid, amount, \
+			button = ImageFillStatusButton.init_for_res(self.db, resid, amount,
 			                                            filled=filled, uncached=self.uncached)
 			button.button.name = "inventory_entry_%s" % index # required for gui tests
 			current_hbox.addChild(button)
@@ -121,9 +120,9 @@ class Inventory(pychan.widgets.Container):
 			#if index % ((vbox.width/(self.__class__.icon_width + 10))) < 0 and index != 0:
 			if index % self.ITEMS_PER_LINE == (self.ITEMS_PER_LINE - 1) and index != 0:
 				vbox.addChild(current_hbox)
-				current_hbox = pychan.widgets.HBox(padding = 0)
+				current_hbox = pychan.widgets.HBox(padding=0)
 			index += 1
-		if (index <= self.ITEMS_PER_LINE): # Hide/Remove second line
+		if index <= self.ITEMS_PER_LINE: # Hide/Remove second line
 			icons = self.parent.findChildren(name='slot')
 			if len(icons) > self.ITEMS_PER_LINE:
 				self.parent.removeChildren(icons[self.ITEMS_PER_LINE-1:])
@@ -161,7 +160,7 @@ class Inventory(pychan.widgets.Container):
 		self.adaptLayout()
 		self.stylize('menu_black')
 
-	def apply_to_buttons(self, action, filt = None):
+	def apply_to_buttons(self, action, filt=None):
 		"""Applies action to all buttons shown in inventory
 		@param action: function called that touches button
 		@param filt: function used to filter the buttons

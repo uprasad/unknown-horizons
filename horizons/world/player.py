@@ -42,7 +42,7 @@ class Player(ComponentHolder, WorldObject):
 	component_templates = ({'StorageComponent': {'PositiveStorage': {}}},)
 
 
-	def __init__(self, session, worldid, name, color, clientid = None, difficulty_level = None):
+	def __init__(self, session, worldid, name, color, clientid=None, difficulty_level=None):
 		"""
 		@param session: Session instance
 		@param worldid: player's worldid
@@ -63,7 +63,7 @@ class Player(ComponentHolder, WorldObject):
 			for res, value in inventory.iteritems():
 				self.get_component(StorageComponent).inventory.alter(res, value)
 
-	def __init(self, name, color, clientid, difficulty_level, settlerlevel = 0):
+	def __init(self, name, color, clientid, difficulty_level, settlerlevel=0):
 		assert isinstance(color, Color)
 		assert isinstance(name, basestring) and name
 		try:
@@ -97,7 +97,7 @@ class Player(ComponentHolder, WorldObject):
 	@property
 	def settlements(self):
 		"""Calculate settlements dynamically to save having a redundant list here"""
-		return [ settlement for settlement in self.session.world.settlements if \
+		return [ settlement for settlement in self.session.world.settlements if
 		         settlement.owner == self ]
 
 	def save(self, db):
@@ -105,7 +105,7 @@ class Player(ComponentHolder, WorldObject):
 		client_id = None if self is not self.session.world.player and \
 		                    self.clientid is None else self.clientid
 
-		db("INSERT INTO player(rowid, name, color, client_id, settler_level, difficulty_level) VALUES(?, ?, ?, ?, ?, ?)", \
+		db("INSERT INTO player(rowid, name, color, client_id, settler_level, difficulty_level) VALUES(?, ?, ?, ?, ?, ?)",
 			 self.worldid, self.name, self.color.id, client_id, self.settler_level, self.difficulty.level if self.difficulty is not None else None)
 
 	@classmethod
@@ -155,7 +155,7 @@ class Player(ComponentHolder, WorldObject):
 		"""The message bus calls this when a building is 'infected' with a disaster."""
 		if self.is_local_player:
 			pos = message.building.position.center()
-			self.session.ingame_gui.message_widget.add(x=pos.x, y=pos.y, string_id=message.disaster_class.NOTIFICATION_TYPE)
+			self.session.ingame_gui.message_widget.add(point=pos, string_id=message.disaster_class.NOTIFICATION_TYPE)
 
 	def end(self):
 		self.stats = None
@@ -191,11 +191,10 @@ class HumanPlayer(Player):
 		level_up = super(HumanPlayer, self).notify_settler_reached_level(message)
 		if level_up:
 			# add message and update ingame gui
-			coords = (message.sender.position.center().x, message.sender.position.center().y)
-			self.session.ingame_gui.message_widget.add(x=coords[0], y=coords[1], \
-			                                                    string_id='SETTLER_LEVEL_UP',
-			                                                    message_dict={'level': message.level+1})
+			self.session.ingame_gui.message_widget.add(point=message.sender.position.center(),
+			                                           string_id='SETTLER_LEVEL_UP',
+			                                           message_dict={'level': message.level+1})
 		return level_up
 
 	def notify_mine_empty(self, mine):
-		self.session.ingame_gui.message_widget.add(x=mine.position.center().x, y=mine.position.center().y, string_id='MINE_EMPTY')
+		self.session.ingame_gui.message_widget.add(point=mine.position.center(), string_id='MINE_EMPTY')

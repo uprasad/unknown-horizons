@@ -117,7 +117,7 @@ class LogBook(PickBeltWidget):
 		db("INSERT INTO logbook(widgets) VALUES(?)", json.dumps(self._parameters))
 		for message in self._message_log:
 			db("INSERT INTO logbook_messages(message) VALUES(?)", message)
-		db("INSERT INTO metadata(name, value) VALUES(?, ?)", \
+		db("INSERT INTO metadata(name, value) VALUES(?, ?)",
 		   "logbook_cur_entry", self._cur_entry)
 
 	def load(self, db):
@@ -218,8 +218,11 @@ class LogBook(PickBeltWidget):
 			for image in parameter[1]:
 				add.addChild(Icon(image=str(image)))
 		elif parameter_type == u'Headline':
-			add = Label(text=parameter[1])
-			add.stylize('headline')
+			add = Label(text=unicode(parameter[1]), wrap_text=True,
+			            min_size=(335, 0), max_size=(335, 508), font='headline')
+		elif parameter_type == u'BoldLabel':
+			add = Label(text=unicode(parameter[1]), wrap_text=True,
+			            min_size=(335, 0), max_size=(335, 508), font='14_bold')
 		elif parameter_type == u'Message':
 			add = None
 			# parameters are re-read on page reload.

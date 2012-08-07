@@ -67,7 +67,7 @@ class AmbientSoundComponent(Component):
 		self.__init()
 		# don't start playing all at once
 
-		interval = (0, self.__class__.AMBIENT_SOUND_INTERVAL + \
+		interval = (0, self.__class__.AMBIENT_SOUND_INTERVAL +
 		            self.__class__.AMBIENT_SOUND_INTERVAL_VARIANCE[1])
 		run_in = random.randint( *interval )
 		ExtScheduler().add_new_object(self._init_playing, self, run_in=run_in)
@@ -113,7 +113,7 @@ class AmbientSoundComponent(Component):
 		ExtScheduler().rem_all_classinst_calls(self)
 
 	@classmethod
-	def play_special(cls, sound, position = None):
+	def play_special(cls, sound, position=None):
 		"""Plays a special sound listed in the db table sounds_special
 		from anywhere in the code and without an instance of AmbientSound.
 		@param sound: string, key in table sounds_special

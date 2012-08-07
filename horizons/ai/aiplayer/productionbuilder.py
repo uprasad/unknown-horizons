@@ -77,14 +77,14 @@ class ProductionBuilder(AreaBuilder):
 		super(ProductionBuilder, self).save(db)
 		translated_last_collector_improvement_storage = self.last_collector_improvement_storage - Scheduler().cur_tick # pre-translate for the loading process
 		translated_last_collector_improvement_road = self.last_collector_improvement_road - Scheduler().cur_tick # pre-translate for the loading process
-		db("INSERT INTO ai_production_builder(rowid, settlement_manager, last_collector_improvement_storage, last_collector_improvement_road) VALUES(?, ?, ?, ?)", \
+		db("INSERT INTO ai_production_builder(rowid, settlement_manager, last_collector_improvement_storage, last_collector_improvement_road) VALUES(?, ?, ?, ?)",
 			self.worldid, self.settlement_manager.worldid, translated_last_collector_improvement_storage, translated_last_collector_improvement_road)
 		for (x, y), (purpose, _) in self.plan.iteritems():
 			db("INSERT INTO ai_production_builder_plan(production_builder, x, y, purpose) VALUES(?, ?, ?, ?)", self.worldid, x, y, purpose)
 
 	def _load(self, db, settlement_manager):
 		worldid, last_storage, last_road = \
-			db("SELECT rowid, last_collector_improvement_storage, last_collector_improvement_road FROM ai_production_builder WHERE settlement_manager = ?", \
+			db("SELECT rowid, last_collector_improvement_storage, last_collector_improvement_road FROM ai_production_builder WHERE settlement_manager = ?",
 			settlement_manager.worldid)[0]
 		super(ProductionBuilder, self)._load(db, settlement_manager, worldid)
 		self.__init(settlement_manager, last_storage, last_road)
@@ -157,7 +157,7 @@ class ProductionBuilder(AreaBuilder):
 		self.__collector_area_cache = (self.last_change_id, collector_area)
 		return collector_area
 
-	def count_available_squares(self, size, max_num = None):
+	def count_available_squares(self, size, max_num=None):
 		"""
 		Count the number of available and usable (covered by collectors) size x size squares.
 
@@ -321,7 +321,7 @@ class ProductionBuilder(AreaBuilder):
 			return None
 		return builder
 
-	def make_builder(self, building_id, x, y, needs_collector, orientation = 0):
+	def make_builder(self, building_id, x, y, needs_collector, orientation=0):
 		"""Return a Builder object if it is allowed to be built at the location, otherwise return None (cached)."""
 		coords = (x, y)
 		key = (building_id, coords, needs_collector, orientation)
@@ -514,7 +514,7 @@ class ProductionBuilder(AreaBuilder):
 		self.land_manager.refresh_resource_deposits()
 
 	def __str__(self):
-		return '%s.PB(%s/%s)' % (self.owner, self.settlement.get_component(NamedComponent).name if hasattr(self, 'settlement') else 'unknown', \
+		return '%s.PB(%s/%s)' % (self.owner, self.settlement.get_component(NamedComponent).name if hasattr(self, 'settlement') else 'unknown',
 			self.worldid if hasattr(self, 'worldid') else 'none')
 
 decorators.bind_all(ProductionBuilder)

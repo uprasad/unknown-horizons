@@ -28,7 +28,6 @@ from horizons.util import Callback
 from horizons.component.tradepostcomponent import TradePostComponent
 from horizons.component.storagecomponent import StorageComponent
 from horizons.component.namedcomponent import NamedComponent
-from horizons.component.ambientsoundcomponent import AmbientSoundComponent
 
 
 class TradeTab(TabInterface):
@@ -55,7 +54,7 @@ class TradeTab(TabInterface):
 		"""
 		@param instance: ship instance used for trading
 		"""
-		super(TradeTab,self).__init__(instance=instance, widget='tradetab.xml',
+		super(TradeTab,self).__init__(widget='tradetab.xml',
 		                              icon_path='content/gui/icons/tabwidget/warehouse/buysell_%s.png')
 		events = {}
 		for k, v in self.exchange_size_buttons.iteritems():
@@ -193,8 +192,10 @@ class TradeTab(TabInterface):
 				                 self.instance, signal_errors=True).execute(self.instance.session)
 
 			elif not selling and not is_own: # ship buys resources from settlement
-				self.log.debug('InternationalTrade: %s/%s is buying %d of res %d from %s/%s', \
-				               self.instance.get_component(NamedComponent).name, self.instance.owner.name, self.exchange, res_id, settlement.get_component(NamedComponent).name, settlement.owner.name)
+				self.log.debug('InternationalTrade: %s/%s is buying %d of res %d from %s/%s',
+				               self.instance.get_component(NamedComponent).name,
+				               self.instance.owner.name, self.exchange, res_id,
+				               settlement.get_component(NamedComponent).name, settlement.owner.name)
 				# international trading has own error handling, no signal_error
 				BuyResource(settlement.get_component(TradePostComponent), self.instance, res_id, self.exchange).execute(self.instance.session)
 			elif not selling and is_own: # transfer from ship to settlement

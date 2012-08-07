@@ -131,7 +131,7 @@ class Rect(object):
 	def distance_to_point(self, other):
 		"""Calculates distance to an instance of Point.
 		Don't use this, unless you are sure that distance() is too slow."""
-		return ((max(self.left - other.x, 0, other.x - self.right) ** 2) + \
+		return ((max(self.left - other.x, 0, other.x - self.right) ** 2) +
 						(max(self.top - other.y, 0, other.y - self.bottom) ** 2)) ** 0.5
 
 	def distance_to_tuple(self, other):
@@ -159,7 +159,7 @@ class Rect(object):
 		"""Returns list of all coordinates, that are in the Rect """
 		return [ (x, y) for x in xrange(self.left, self.right+1) for y in xrange(self.top, self.bottom+1) ]
 
-	def get_radius_coordinates(self, radius, include_self = False):
+	def get_radius_coordinates(self, radius, include_self=False):
 		"""Returns list of all coordinates (as tuples), that are in the radius
 		This is a generator.
 		@param include_self: whether to include coords in self"""
@@ -171,17 +171,17 @@ class Rect(object):
 		left, right, top, bottom = self.left, self.right, self.top, self.bottom
 		if not include_self:
 			self_coords = self.get_coordinates()
-			return  [ (x, y) \
-			          for x in xrange(left-radius, right+radius+1) \
-			          for y in xrange(top-radius, bottom+radius+1) if \
-			          (x, y) not in self_coords and \
+			return  [ (x, y)
+			          for x in xrange(left-radius, right+radius+1)
+			          for y in xrange(top-radius, bottom+radius+1) if
+			          (x, y) not in self_coords and
 			          (((max(left - x, 0, x - right) ** 2) + (max(top - y, 0, y - bottom) ** 2)) ** 0.5 ) <= radius ]
 
 
 		else:
-			return  [ (x, y) \
-			          for x in xrange(left-radius, right+radius+1) \
-			          for y in xrange(top-radius, bottom+radius+1) if \
+			return  [ (x, y)
+			          for x in xrange(left-radius, right+radius+1)
+			          for y in xrange(top-radius, bottom+radius+1) if
 			          (((max(left - x, 0, x - right) ** 2) + (max(top - y, 0, y - bottom) ** 2)) ** 0.5 ) <= radius ]
 		"""
 
@@ -189,7 +189,7 @@ class Rect(object):
 		ALGORITHM:
 		Idea:
 		calculate the borders of the shape for every line (y-axis) to the left and the right
-	  and fill it up later.
+		and fill it up later.
 		The borders are calculated this way:
 		Take a corner (here we use top right) and calculate a quarter of a circle (top right quarter).
 		This can be mirrored to every other corner.
@@ -292,7 +292,7 @@ class Rect(object):
 		# top and bottom
 		surrounding_top = self.top - 1
 		surrounding_bottom = self.bottom + 1
-		for x in xrange(self.left,  self.right + 1):
+		for x in xrange(self.left, self.right + 1):
 			yield (x, surrounding_bottom)
 			yield (x, surrounding_top)
 		# left and right

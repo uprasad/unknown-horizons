@@ -63,7 +63,7 @@ class ConcreteObject(WorldObject):
 
 	def save(self, db):
 		super(ConcreteObject, self).save(db)
-		db("INSERT INTO concrete_object(id, action_runtime, action_set_id) VALUES(?, ?, ?)", self.worldid, \
+		db("INSERT INTO concrete_object(id, action_runtime, action_set_id) VALUES(?, ?, ?)", self.worldid,
 			 self._instance.getActionRuntime(), self._action_set_id)
 
 	def load(self, db, worldid):
@@ -120,7 +120,7 @@ class ConcreteObject(WorldObject):
 		The highest level number is preferred.
 		@param level: level to prefer. a lower level might be chosen
 		@param exact_level: choose only action sets from this level. return val might be None here.
-		@return: action_set_id  or (if include_preview) tuple (action_set_id, preview_action_set_id) or None"""
+		@return: action_set_id or (if include_preview) tuple (action_set_id, preview_action_set_id) or None"""
 		action_sets = cls.action_sets
 		action_set, preview_set = None, None
 		if exact_level:

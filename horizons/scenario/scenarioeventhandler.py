@@ -57,7 +57,7 @@ class ScenarioEventHandler(LivingObject):
 
 	PICKLE_PROTOCOL = 2
 
-	def __init__(self, session, scenariofile = None):
+	def __init__(self, session, scenariofile=None):
 		"""
 		@param session: Session instance
 		@param scenariofile: yaml file that describes the scenario
@@ -82,7 +82,7 @@ class ScenarioEventHandler(LivingObject):
 
 	def start(self):
 		# Add the check_events method to the scheduler to be checked every few seconds
-		Scheduler().add_new_object(self._scheduled_check, self, \
+		Scheduler().add_new_object(self._scheduled_check, self,
 				                   run_in = Scheduler().get_ticks(self.CHECK_CONDITIONS_INTERVAL), loops = -1)
 
 	def sleep(self, ticks):
@@ -109,7 +109,7 @@ class ScenarioEventHandler(LivingObject):
 		if self.inited: # only save in case we have data applied
 			db("INSERT INTO metadata(name, value) VALUES(?, ?)", "scenario_events", self.to_yaml())
 		for key, value in self._scenario_variables.iteritems():
-			db("INSERT INTO scenario_variables(key, value) VALUES(?, ?)", key, \
+			db("INSERT INTO scenario_variables(key, value) VALUES(?, ?)", key,
 			   json.dumps(value))
 
 	def load(self, db):
@@ -149,30 +149,16 @@ class ScenarioEventHandler(LivingObject):
 		return self._data['mapfile']
 
 	@classmethod
-	def get_description_from_file(cls, filename):
-		"""Returns the description from a yaml file.
+	def get_metadata_from_file(cls, filename):
+		"""Returns (difficulty, author, description) from a yaml file.
+		Returns "unknown" for all of these fields not specified.
 		@throws InvalidScenarioFile"""
-		return cls._parse_yaml_file(filename)['description']
-
-	@classmethod
-	def get_difficulty_from_file(cls, filename):
-		"""Returns the difficulty of a yaml file.
-		Returns _("unknown") if difficulty isn't specified.
-		@throws InvalidScenarioFile"""
-		try:
-			return cls._parse_yaml_file(filename)['difficulty']
-		except KeyError:
-			return _("unknown")
-
-	@classmethod
-	def get_author_from_file(cls, filename):
-		"""Returns the author of a yaml file.
-		Returns _("unknown") if difficulty isn't specified.
-		@throws InvalidScenarioFile"""
-		try:
-			return cls._parse_yaml_file(filename)['author']
-		except KeyError:
-			return _("unknown")
+		fallback = _('unknown')
+		yamldata = cls._parse_yaml_file(filename)
+		difficulty = yamldata.get('difficulty', fallback)
+		author = yamldata.get('author', fallback)
+		desc = yamldata.get('description', fallback)
+		return difficulty, author, desc
 
 	def drop_events(self):
 		"""Removes all events. Useful when player lost."""
@@ -261,7 +247,7 @@ class _Event(object):
 	def to_yaml(self):
 		"""Returns yaml representation of self"""
 		return '{ actions: [ %s ] , conditions: [ %s ]  }' % \
-			   (', '.join(action.to_yaml() for action in self.actions), \
+			   (', '.join(action.to_yaml() for action in self.actions),
 				', '.join(cond.to_yaml() for cond in self.conditions))
 
 

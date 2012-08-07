@@ -61,7 +61,7 @@ class TearingTool(NavigationTool):
 		self._mark(self.coords, coords)
 		evt.consume()
 
-	def mouseMoved(self,  evt):
+	def mouseMoved(self, evt):
 		super(TearingTool, self).mouseMoved(evt)
 		coords = self.get_world_location(evt).to_tuple()
 		self._mark(coords)
@@ -70,7 +70,7 @@ class TearingTool(NavigationTool):
 	def on_escape(self):
 		self.session.set_cursor()
 
-	def mouseReleased(self,  evt):
+	def mouseReleased(self, evt):
 		"""Tear selected instances and set selection tool as cursor"""
 		self.log.debug("TearingTool: mouseReleased")
 		if fife.MouseEvent.LEFT == evt.getButton():
@@ -84,12 +84,12 @@ class TearingTool(NavigationTool):
 			else:
 				if self._hovering_over:
 					# we're hovering over a building, but none is selected, so this tear action isn't allowed
-					warehouses = [ b for b in self._hovering_over if \
+					warehouses = [ b for b in self._hovering_over if
 					               b.id == BUILDINGS.WAREHOUSE ]
 					if warehouses:
 						# tried to tear a warehouse, this is especially non-tearable
 						pos = warehouses[0].position.origin
-						self.session.ingame_gui.message_widget.add( x=pos.x, y=pos.y, string_id="WAREHOUSE_NOT_TEARABLE" )
+						self.session.ingame_gui.message_widget.add(point=pos, string_id="WAREHOUSE_NOT_TEARABLE" )
 
 			self.selected = WeakList()
 			self._hovering_over = WeakList()
@@ -99,7 +99,7 @@ class TearingTool(NavigationTool):
 				self.on_escape()
 			evt.consume()
 
-	def mousePressed(self,  evt):
+	def mousePressed(self, evt):
 		if fife.MouseEvent.RIGHT == evt.getButton():
 			self.on_escape()
 		elif fife.MouseEvent.LEFT == evt.getButton():
@@ -116,7 +116,7 @@ class TearingTool(NavigationTool):
 		if len(edges) == 1:
 			edges = (edges[0], edges[0])
 		elif len(edges) == 2:
-			edges = ((min(edges[0][0], edges[1][0]), min(edges[0][1], edges[1][1])), \
+			edges = ((min(edges[0][0], edges[1][0]), min(edges[0][1], edges[1][1])),
 					 (max(edges[0][0], edges[1][0]), max(edges[0][1], edges[1][1])))
 		else:
 			edges = None
@@ -137,7 +137,7 @@ class TearingTool(NavigationTool):
 							if b not in self.selected:
 								self.selected.append(b)
 			for i in self.selected:
-				self.session.view.renderer['InstanceRenderer'].addColored(i._instance, \
+				self.session.view.renderer['InstanceRenderer'].addColored(i._instance,
 				                                                          *self.tear_selection_color)
 		self.log.debug("TearingTool: mark done")
 

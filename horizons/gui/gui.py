@@ -142,7 +142,7 @@ class Gui(SingleplayerMenu, MultiplayerMenu):
 				if did_quit:
 					self.__pause_displayed = False
 			events = { # needed twice, save only once here
-			  'e_load' : do_load,
+				'e_load' : do_load,
 				'e_save' : self.save_game,
 				'e_sett' : self.show_settings,
 				'e_help' : self.on_help,
@@ -170,7 +170,7 @@ class Gui(SingleplayerMenu, MultiplayerMenu):
 			# gui elements by eating all events
 			height = horizons.main.fife.engine_settings.getScreenHeight()
 			width = horizons.main.fife.engine_settings.getScreenWidth()
-			image = horizons.main.fife.imagemanager.loadBlank(width,  height)
+			image = horizons.main.fife.imagemanager.loadBlank(width, height)
 			image = fife.GuiImage(image)
 			self.current.additional_widget = pychan.Icon(image=image)
 			self.current.additional_widget.position = (0, 0)
@@ -250,10 +250,10 @@ class Gui(SingleplayerMenu, MultiplayerMenu):
 		"""Shows the credits dialog. """
 		for box in self.widgets['credits'+str(number)].findChildren(name='box'):
 			box.margins = (30, 0) # to get some indentation
-			if number in [2, 0]: # #TODO fix this hardcoded translators page ref
-				box.padding = 1 # further decrease if more entries
-				box.parent.padding = 3 # see above
-		label = [self.widgets['credits'+str(number)].findChild(name=section+"_lbl") \
+			if number in [2, 0]: # #TODO fix these hardcoded page references
+				box.padding = 1
+				box.parent.padding = 3 # further decrease if more entries
+		label = [self.widgets['credits'+str(number)].findChild(name=section+"_lbl")
 		              for section in ('team','patchers','translators','packagers','special_thanks')]
 		for i in xrange(5):
 			if label[i]: # add callbacks to each pickbelt that is displayed
@@ -319,7 +319,7 @@ class Gui(SingleplayerMenu, MultiplayerMenu):
 
 		if not hasattr(self, 'filename_hbox'):
 			self.filename_hbox = self.current.findChild(name='enter_filename')
-			self.filename_hbox_parent = self.filename_hbox._getParent()
+			self.filename_hbox_parent = self.filename_hbox.parent
 
 		if mode == 'save': # only show enter_filename on save
 			self.filename_hbox_parent.showChild(self.filename_hbox)
@@ -332,16 +332,16 @@ class Gui(SingleplayerMenu, MultiplayerMenu):
 				if self.current.collectData('savegamelist') == -1: # set blank if nothing is selected
 					self.current.findChild(name="savegamefile").text = u""
 				else:
-					self.current.distributeData({'savegamefile' : \
-				                             map_file_display[self.current.collectData('savegamelist')]})
+					self.current.distributeData(
+						{'savegamefile' : map_file_display[self.current.collectData('savegamelist')]})
 
 		self.current.distributeInitialData({'savegamelist' : map_file_display})
 		self.current.distributeData({'savegamelist' : -1}) # Don't select anything by default
-		cb = Callback.ChainedCallbacks(Gui._create_show_savegame_details(self.current, map_files, 'savegamelist'), \
+		cb = Callback.ChainedCallbacks(Gui._create_show_savegame_details(self.current, map_files, 'savegamelist'),
 		                               tmp_selected_changed)
 		cb() # Refresh data on start
 		self.current.findChild(name="savegamelist").mapEvents({
-		    'savegamelist/action'              : cb
+			'savegamelist/action'              : cb
 		})
 		self.current.findChild(name="savegamelist").capture(cb, event_name="keyPressed")
 
@@ -573,7 +573,7 @@ class Gui(SingleplayerMenu, MultiplayerMenu):
 			bg.image = self._background_image
 
 		if center:
-			self.current.position_technique = "automatic" # "center:center"
+			self.current.position_technique = "automatic" # == "center:center"
 		if event_map:
 			self.current.mapEvents(event_map)
 		if show:
@@ -588,10 +588,6 @@ class Gui(SingleplayerMenu, MultiplayerMenu):
 		def tmp_show_details():
 			"""Fetches details of selected savegame and displays it"""
 			gui.findChild(name="screenshot").image = None
-			box = gui.findChild(name="savegamedetails_box")
-			old_label = box.findChild(name="savegamedetails_lbl")
-			if old_label is not None:
-				box.removeChild(old_label)
 			map_file = None
 			map_file_index = gui.collectData(savegamelist)
 			if map_file_index == -1:
@@ -605,7 +601,7 @@ class Gui(SingleplayerMenu, MultiplayerMenu):
 			savegame_info = SavegameManager.get_metadata(map_file)
 
 			if savegame_info.get('screenshot'):
-				# try to find a writeable location, that is accessible via relative paths
+				# try to find a writable location, that is accessible via relative paths
 				# (required by fife)
 				fd, filename = tempfile.mkstemp()
 				try:
@@ -628,8 +624,7 @@ class Gui(SingleplayerMenu, MultiplayerMenu):
 					os.unlink(filename)
 
 			# savegamedetails
-			details_label = pychan.widgets.Label(min_size=(290, 0), max_size=(290, 290), wrap_text=True)
-			details_label.name = "savegamedetails_lbl"
+			details_label = gui.findChild(name="savegamedetails_lbl")
 			details_label.text = u""
 			if savegame_info['timestamp'] == -1:
 				details_label.text += _("Unknown savedate")
@@ -660,10 +655,6 @@ class Gui(SingleplayerMenu, MultiplayerMenu):
 				# this should only happen for very old savegames, so having this unfriendly
 				# error is ok (savegame is quite certainly fully unusable).
 				details_label.text += _("Incompatible version")
-
-
-			box.addChild( details_label )
-
 
 			gui.adaptLayout()
 		return tmp_show_details

@@ -24,11 +24,11 @@ import operator
 
 from horizons.command.production import AddProduction, RemoveFromQueue, CancelCurrentProduction
 from horizons.gui.tabs import OverviewTab
-from horizons.gui.util import get_res_icon_path
+from horizons.gui.util import create_resource_icon
 from horizons.util import Callback
 from horizons.constants import PRODUCTIONLINES
 from horizons.world.production.producer import Producer
-from fife.extensions.pychan.widgets import Icon
+from fife.extensions.pychan.widgets import Icon, HBox, Label
 
 class _BoatbuilderOverviewTab(OverviewTab):
 	"""Private class all classes here inherit."""
@@ -108,8 +108,7 @@ class BoatbuilderTab(_BoatbuilderOverviewTab):
 
 			# Set built ship info
 			produced_unit_id = self.producer._get_production(production_lines[0]).get_produced_units().keys()[0]
-			produced_unit_id = self.producer._get_production(production_lines[0]).get_produced_units().keys()[0]
-			(name,) = self.instance.session.db.cached_query("SELECT name FROM unit WHERE id = ?", produced_unit_id)[0]
+			name = self.instance.session.db.get_unit_type_name(produced_unit_id)
 			container_active.findChild(name="headline_BB_builtship_label").text = _(name)
 			container_active.findChild(name="BB_cur_ship_icon").helptext = "Storage: 4 slots, 120t \nHealth: 100"
 			container_active.findChild(name="BB_cur_ship_icon").image = "content/gui/images/objects/ships/116/%s.png" % (produced_unit_id)
@@ -125,7 +124,7 @@ class BoatbuilderTab(_BoatbuilderOverviewTab):
 				# restore inactive button, if it isn't in the gui
 				if button_inactive is None:
 					# insert at the end
-					container_active.insertChild(container_active.button_inactive, \
+					container_active.insertChild(container_active.button_inactive,
 					                             len(container_active.children))
 				container_active.mapEvents({
 				  'toggle_active_inactive' : Callback(self.producer.set_active, active=True)
@@ -139,7 +138,7 @@ class BoatbuilderTab(_BoatbuilderOverviewTab):
 				# restore active button, if it isn't in the gui
 				if button_active is None:
 					# insert at the end
-					container_active.insertChild(container_active.button_active, \
+					container_active.insertChild(container_active.button_active,
 					                             len(container_active.children))
 
 				container_active.mapEvents({
@@ -155,32 +154,23 @@ class BoatbuilderTab(_BoatbuilderOverviewTab):
 
 			# Update needed resources
 			production = self.producer.get_productions()[0]
-			still_needed_res = production.get_consumed_resources()
-			# Now sort!
-			still_needed_res = sorted(still_needed_res.iteritems(), key=operator.itemgetter(1))
-			main_container.findChild(name="BB_needed_res_label").text = _('Resources still needed:')
-			i = 0
-			for res, amount in still_needed_res:
-				if amount == 0:
-					continue # Don't show res that are not really needed anymore
-				assert i <= 3, "Only 3 still needed res for ships are currently supported"
-
-				icon_path = get_res_icon_path(res, 16)
-				needed_res_container.findChild(name="BB_needed_res_icon_"+str(i+1)).image = icon_path
-				needed_res_container.findChild(name="BB_needed_res_lbl_"+str(i+1)).text = unicode(-1*amount)+u't' # -1 makes them positive
-				i += 1
-				if i >= 3:
-					break
-			for j in xrange(i, 3):
-				# these are not filled by a resource, so we need to make it invisible
-				needed_res_container.findChild(name="BB_needed_res_icon_"+str(j+1)).image = None
-				needed_res_container.findChild(name="BB_needed_res_lbl_"+str(j+1)).text = u""
+			needed_res = production.get_consumed_resources()
+			# Now sort! -amount is the positive value, drop unnecessary res (amount 0)
+			needed_res = dict((res, -amount) for res, amount in needed_res.iteritems() if amount < 0)
+			needed_res = sorted(needed_res.iteritems(), key=operator.itemgetter(1), reverse=True)
+			needed_res_container.removeAllChildren()
+			for i, (res, amount) in enumerate(needed_res):
+				icon = create_resource_icon(res, self.instance.session.db)
+				icon.max_size = icon.min_size = icon.size = (16, 16)
+				label = Label(name="needed_res_lbl_%s" % i)
+				label.text = u'{amount}t'.format(amount=amount)
+				new_hbox = HBox(name="needed_res_box_%s" % i)
+				new_hbox.addChildren(icon, label)
+				needed_res_container.addChild(new_hbox)
 
 			cancel_button = self.widget.findChild(name="BB_cancel_button")
-			cancel_button.capture(
-			  Callback(CancelCurrentProduction(self.producer).execute, self.instance.session),
-			  event_name="mouseClicked"
-			)
+			cancel_cb = Callback(CancelCurrentProduction(self.producer).execute, self.instance.session)
+			cancel_button.capture(cancel_cb, event_name="mouseClicked")
 
 		else: # display sth when nothing is produced
 			# remove other container, but save it

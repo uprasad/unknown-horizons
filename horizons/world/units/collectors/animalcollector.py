@@ -46,7 +46,7 @@ class AnimalCollector(BuildingCollector):
 	def load(self, db, worldid):
 		super(AnimalCollector, self).load(db, worldid)
 
-	def apply_state(self, state, remaining_ticks = None):
+	def apply_state(self, state, remaining_ticks=None):
 		super(AnimalCollector, self).apply_state(state, remaining_ticks)
 		if state == self.states.waiting_for_animal_to_stop:
 			# register at target
@@ -56,7 +56,7 @@ class AnimalCollector(BuildingCollector):
 			if not self.__class__.kill_animal:
 				self.setup_new_job() # register at target if it's still alive
 
-	def cancel(self, continue_action = None):
+	def cancel(self, continue_action=None):
 		if self.job is not None:
 			if self.state == self.states.waiting_for_animal_to_stop:
 				self.job.object.remove_stop_after_job()
@@ -134,14 +134,14 @@ class AnimalCollector(BuildingCollector):
 			self.job.object.die()
 			self.job.object = None # there is no target anymore now
 		else:
-			self.job.object.move(self.home_building.position, destination_in_building = True, \
+			self.job.object.move(self.home_building.position, destination_in_building = True,
 			                     action='move_full')
 
 	def release_animal(self):
 		"""Let animal free after shearing and schedules search for a new job for animal."""
 		if not self.__class__.kill_animal:
 			self.log.debug("%s releasing animal %s",self, self.job.object)
-			Scheduler().add_new_object(self.job.object.search_job, self.job.object, \
+			Scheduler().add_new_object(self.job.object.search_job, self.job.object,
 			                           GAME_SPEED.TICKS_PER_SECOND)
 
 
@@ -163,7 +163,7 @@ class HunterCollector(AnimalCollector):
 	def get_animals_in_range(self, res=None):
 		dist = self.home_building.position.distance_to_point
 		radius = self.home_building.radius
-		return [ animal for animal in self.home_building.island.wild_animals if \
+		return [ animal for animal in self.home_building.island.wild_animals if
 		         dist(animal.position) <= radius ]
 
 

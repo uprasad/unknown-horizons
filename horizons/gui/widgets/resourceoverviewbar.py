@@ -29,7 +29,7 @@ import functools
 
 import horizons.main
 
-from horizons.constants import RES
+from horizons.constants import TIER, RES
 from horizons.component.storagecomponent import StorageComponent
 from horizons.gui.util import load_uh_widget, get_res_icon_path, create_resource_selection_dialog
 from horizons.util import PychanChildFinder, Callback
@@ -79,11 +79,11 @@ class ResourceOverviewBar(object):
 	                      RES.SALT]
 
 	# order should match the above, else confuses players when in build mode
-	CONSTRUCTION_RESOURCES = { # per settler increment
-	  0: [ RES.TOOLS, RES.BOARDS ],
-	  1: [ RES.TOOLS, RES.BOARDS, RES.BRICKS ],
-	  2: [ RES.TOOLS, RES.BOARDS, RES.BRICKS ],
-	  3: [ RES.TOOLS, RES.BOARDS, RES.BRICKS ],
+	CONSTRUCTION_RESOURCES = { # per inhabitant tier
+	  TIER.SAILORS:  [ RES.TOOLS, RES.BOARDS ],
+	  TIER.PIONEERS: [ RES.TOOLS, RES.BOARDS, RES.BRICKS ],
+	  TIER.SETTLERS: [ RES.TOOLS, RES.BOARDS, RES.BRICKS ],
+	  TIER.CITIZENS: [ RES.TOOLS, RES.BOARDS, RES.BRICKS ],
 	}
 
 	def __init__(self, session):
@@ -95,7 +95,9 @@ class ResourceOverviewBar(object):
 		self.gold_gui = load_uh_widget(self.__class__.GOLD_ENTRY_GUI_FILE, style=self.__class__.STYLE)
 		self.gold_gui.balance_visible = False
 		self.gold_gui.child_finder = PychanChildFinder(self.gold_gui)
-		self.gold_gui.child_finder("res_icon").image = get_res_icon_path(RES.GOLD, 32)
+		gold_icon = self.gold_gui.child_finder("res_icon")
+		gold_icon.image = get_res_icon_path(RES.GOLD)
+		gold_icon.max_size = gold_icon.min_size = gold_icon.size = (32, 32)
 		self.gold_gui.mapEvents({
 		  "resbar_gold_container/mouseClicked/stats" : self._toggle_stats,
 		  })
@@ -219,8 +221,9 @@ class ResourceOverviewBar(object):
 				helptext = self.session.db.get_res_name(res)
 				icon = entry.findChild(name="res_icon")
 				icon.num = i
-				icon.image = get_res_icon_path(res, 24)
-				icon.capture(self._on_res_slot_click, event_name = 'mouseClicked')
+				icon.image = get_res_icon_path(res)
+				icon.max_size = icon.min_size = icon.size = (24, 24)
+				icon.capture(self._on_res_slot_click, event_name='mouseClicked')
 			else:
 				helptext = _("Click to add a new slot")
 				entry.show() # this will not be filled as the other res
@@ -374,7 +377,7 @@ class ResourceOverviewBar(object):
 			lvl = self.session.world.player.settler_level
 			res_list = self.__class__.CONSTRUCTION_RESOURCES[lvl]
 			# also add additional res that might be needed
-			res_list += [ res for res in self._last_build_costs if \
+			res_list += [ res for res in self._last_build_costs if
 			              res not in res_list and res != RES.GOLD ]
 			return res_list
 		# prefer user defaults over general defaults
@@ -647,7 +650,7 @@ class ResBarMouseTool(NavigationTool):
 		self.session.cursor.mousePressed(evt)
 
 	def reset(self):
-		"""Enable old tol again"""
+		"""Enable old tool again"""
 		if self.old_tool:
 			self.session.cursor = self.old_tool
 		self.remove()
