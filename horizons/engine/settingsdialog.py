@@ -21,7 +21,7 @@
 # ###################################################
 
 
-from fife.extensions.fife_settings import Setting
+from fife.extensions.pychan.fife_pychansettings import FifePychanSettings
 
 import horizons.main
 
@@ -29,7 +29,7 @@ from horizons.engine import UH_MODULE
 from horizons.constants import LANGUAGENAMES
 from horizons.gui.widgets.pickbeltwidget import OptionsPickbeltWidget
 
-class SettingsDialog(Setting):
+class SettingsDialog(FifePychanSettings):
 	"""
 	Localized settings dialog by using load_uh_widget() instead of
 	plain load_xml().

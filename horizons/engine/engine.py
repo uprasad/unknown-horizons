@@ -191,7 +191,7 @@ class Fife(ApplicationBase):
 		if not hasattr(self, "_settings_extra_inited"):
 			self._setting_handler.setup_setting_extras()
 			self._settings_extra_inited = True
-		self._setting.onOptionsPress()
+		self._setting.showSettingsDialog()
 
 	def set_cursor_image(self, which="default"):
 		"""Sets a certain cursor image.

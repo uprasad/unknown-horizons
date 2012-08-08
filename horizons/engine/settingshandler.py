@@ -123,7 +123,7 @@ class SettingsHandler(object):
 		#which will update slider as value
 		#read fife-extension-pychan-Widget-widget.py if u want know how it works
 		slider_event_map = {}
-		self.settings_dialog = self._setting.loadSettingsDialog()
+		self.settings_dialog = self._setting._loadSettingsDialog()
 		self.settings_dialog.position_technique = "automatic" # "center:center"
 		slider_dict = {'AutosaveInterval' : 'autosaveinterval',
 				       'AutosaveMaxCount' : 'autosavemaxcount',
