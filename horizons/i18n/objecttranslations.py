@@ -372,8 +372,12 @@ def set_translations():
 		},
 
 	"content/objects/buildings/trail.yaml" : {
-		# name of buildings:trail
-		"name"                        : _("Trail"),
+		# name_0 of buildings:trail
+		"name_0"                      : _("Trail"),
+		# name_1 of buildings:trail
+		"name_1"                      : _("Gravel Path"),
+		# name_3 of buildings:trail
+		"name_3"                      : _("Cobblestone Street"),
 		# tooltip_text of buildings:trail
 		"tooltip_text"                : _("Needed for collecting goods."),
 		},
@@ -477,6 +481,8 @@ def set_translations():
 		# headline of gui_buildmenu:build_menu_per_type
 		"headline"                    : _("Pioneers"),
 		# headline of gui_buildmenu:build_menu_per_type
+		"headline"                    : _("Precaution"),
+		# headline of gui_buildmenu:build_menu_per_type
 		"headline"                    : _("Residential"),
 		# headline of gui_buildmenu:build_menu_per_type
 		"headline"                    : _("Sea"),
@@ -484,10 +490,22 @@ def set_translations():
 		"headline"                    : _("Services"),
 		# headline of gui_buildmenu:build_menu_per_type
 		"headline"                    : _("Settlers"),
+		# headline of gui_buildmenu:build_menu_per_type
+		"headline"                    : _("Wood"),
+		# headline of gui_buildmenu:build_menu_per_type
+		"headline"                    : _("Workshops"),
+		# headline of gui_buildmenu:build_menu_per_type
+		"headline"                    : _("Workshops"),
+		# headline of gui_buildmenu:build_menu_per_type
+		"headline"                    : _("Workshops"),
+		# tab1_headline of gui_buildmenu:build_menu_per_type
+		"tab1_headline"               : _("Settlement"),
 		# tab1_helptext of gui_buildmenu:build_menu_per_type
 		"tab1_helptext"               : _("Residents and infrastructure"),
 		# tab2_headline of gui_buildmenu:build_menu_per_type
 		"tab2_headline"               : _("Fields"),
+		# tab3_headline of gui_buildmenu:build_menu_per_type
+		"tab3_headline"               : _("Agriculture"),
 		# tab4_headline of gui_buildmenu:build_menu_per_type
 		"tab4_headline"               : _("Companies"),
 		# tab5_headline of gui_buildmenu:build_menu_per_type

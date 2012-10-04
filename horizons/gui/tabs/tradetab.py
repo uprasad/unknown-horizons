@@ -24,7 +24,7 @@ import logging
 from horizons.gui.widgets.imagefillstatusbutton import ImageFillStatusButton
 from horizons.gui.tabs.tabinterface import TabInterface
 from horizons.command.uioptions import SellResource, BuyResource, TransferResource
-from horizons.util import Callback
+from horizons.util.python.callback import Callback
 from horizons.component.tradepostcomponent import TradePostComponent
 from horizons.component.storagecomponent import StorageComponent
 from horizons.component.namedcomponent import NamedComponent
@@ -153,6 +153,7 @@ class TradeTab(TabInterface):
 	def show(self):
 		self.widget.show()
 		self.__add_changelisteners()
+		self.refresh()
 
 	def set_exchange(self, size, initial=False):
 		"""

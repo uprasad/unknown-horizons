@@ -20,15 +20,16 @@
 # ###################################################
 
 import re
-import horizons.main
+import horizons.globals
 from fife import fife
 
 from horizons.entities import Entities
-from horizons.util import livingProperty, LivingObject, PychanChildFinder
-from horizons.util.python import Callback
+from horizons.util.living import livingProperty, LivingObject
+from horizons.util.pychanchildfinder import PychanChildFinder
+from horizons.util.python.callback import Callback
 from horizons.gui.mousetools import BuildingTool
 from horizons.gui.tabs import TabWidget, BuildTab, DiplomacyTab, SelectMultiTab
-from horizons.gui.widgets import OkButton, CancelButton
+from horizons.gui.widgets.imagebutton import OkButton, CancelButton
 from horizons.gui.widgets.messagewidget import MessageWidget
 from horizons.gui.widgets.minimap import Minimap
 from horizons.gui.widgets.logbook import LogBook
@@ -81,23 +82,8 @@ class IngameGui(LivingObject):
 
 		self.widgets = LazyWidgetsDict(self.styles, center_widgets=False)
 
-		cityinfo = self.widgets['city_info']
-		cityinfo.child_finder = PychanChildFinder(cityinfo)
-
-		# special settings for really small resolutions
-		#TODO explain what actually happens
-		width = horizons.main.fife.engine_settings.getScreenWidth()
-		x = 'center'
-		y = 'top'
-		x_offset = +15
-		y_offset = +4
-		if width < 800:
-			x = 'left'
-			x_offset = 10
-			y_offset = +66
-		elif width < 1020:
-			x_offset = (1050 - width) / 2
-		cityinfo.position_technique = "%s%+d:%s%+d" % (x, x_offset, y, y_offset) # usually "center-10:top+4"
+		self.cityinfo = self.widgets['city_info']
+		self.cityinfo.child_finder = PychanChildFinder(self.cityinfo)
 
 		self.logbook = LogBook(self.session)
 		self.message_widget = MessageWidget(self.session)
@@ -113,8 +99,8 @@ class IngameGui(LivingObject):
 
 		icon = minimap.findChild(name="minimap")
 		self.minimap = Minimap(icon,
-		                       targetrenderer=horizons.main.fife.targetrenderer,
-		                       imagemanager=horizons.main.fife.imagemanager,
+		                       targetrenderer=horizons.globals.fife.targetrenderer,
+		                       imagemanager=horizons.globals.fife.imagemanager,
 		                       session=self.session,
 		                       view=self.session.view)
 
@@ -151,10 +137,7 @@ class IngameGui(LivingObject):
 		HoverSettlementChanged.subscribe(self._cityinfo_set)
 
 	def _on_resourcebar_resize(self, message):
-		###
-		# TODO implement
-		###
-		pass
+		self._update_cityinfo_position()
 
 	def end(self):
 		self.widgets['minimap'].mapEvents({
@@ -196,45 +179,42 @@ class IngameGui(LivingObject):
 		old_was_player_settlement = False
 		if self.settlement is not None:
 			self.settlement.remove_change_listener(self.update_settlement)
-			old_was_player_settlement = (self.settlement.owner == self.session.world.player)
+			old_was_player_settlement = self.settlement.owner.is_local_player
 
 		# save reference to new "current" settlement in self.settlement
 		self.settlement = settlement
 
 		if settlement is None: # we want to hide the widget now (but perhaps delayed).
 			if old_was_player_settlement:
-				# Interface feature: Since players might need to scroll to an area not
-				# occupied by the current settlement, leave name on screen in case they
-				# want to e.g. rename the settlement which requires a click on cityinfo
-				ExtScheduler().add_new_object(self.widgets['city_info'].hide, self,
+				# After scrolling away from settlement, leave name on screen for some
+				# seconds. Players can still click on it to rename the settlement now.
+				ExtScheduler().add_new_object(self.cityinfo.hide, self,
 				      run_in=GUI.CITYINFO_UPDATE_DELAY)
 				#TODO 'click to rename' tooltip of cityinfo can stay visible in
 				# certain cases if cityinfo gets hidden in tooltip delay buffer.
 			else:
-				# this happens if you have not hovered an own settlement,
-				# but others like AI settlements. Simply hide the widget.
-				self.widgets['city_info'].hide()
+				# hovered settlement of other player, simply hide the widget
+				self.cityinfo.hide()
 
-		else:# we want to show the widget.
-			# do not hide cityinfo if we again hover the settlement
-			# before the delayed hide of the old info kicks in
-			ExtScheduler().rem_call(self, self.widgets['city_info'].hide)
+		else:# do not hide if settlement is hovered and a hide was previously scheduled
+			ExtScheduler().rem_call(self, self.cityinfo.hide)
 
-			self.widgets['city_info'].show()
-			self.update_settlement()
+			self.update_settlement() # calls show()
 			settlement.add_change_listener(self.update_settlement)
 
 	def _on_settler_inhabitant_change(self, message):
 		assert isinstance(message, SettlerInhabitantsChanged)
-		cityinfo = self.widgets['city_info']
-		foundlabel = cityinfo.child_finder('city_inhabitants')
-		foundlabel.text = u' %s' % ((int(foundlabel.text) if foundlabel.text else 0) + message.change)
+		foundlabel = self.cityinfo.child_finder('city_inhabitants')
+		old_amount = int(foundlabel.text) if foundlabel.text else 0
+		foundlabel.text = u' {amount:>4d}'.format(amount=old_amount+message.change)
 		foundlabel.resizeToContent()
 
 	def update_settlement(self):
-		cityinfo = self.widgets['city_info']
-		city_name_label = cityinfo.findChild(name="city_name")
+		city_name_label = self.cityinfo.child_finder('city_name')
 		if self.settlement.owner.is_local_player: # allow name changes
+			# Update settlement on the resource overview to make sure it
+			# is setup correctly for the coming calculations
+			self.resource_overview.set_inventory_instance(self.settlement)
 			cb = Callback(self.show_change_name_dialog, self.settlement)
 			helptext = _("Click to change the name of your settlement")
 			city_name_label.enable_cursor_change_on_hover()
@@ -242,24 +222,62 @@ class IngameGui(LivingObject):
 			cb = lambda : AmbientSoundComponent.play_special('error')
 			helptext = u""
 			city_name_label.disable_cursor_change_on_hover()
-		cityinfo.mapEvents({
+		self.cityinfo.mapEvents({
 			'city_name': cb
 		})
 		city_name_label.helptext = helptext
 
-		foundlabel = cityinfo.child_finder('owner_emblem')
+		foundlabel = self.cityinfo.child_finder('owner_emblem')
 		foundlabel.image = 'content/gui/images/tabwidget/emblems/emblem_%s.png' % (self.settlement.owner.color.name)
 		foundlabel.helptext = self.settlement.owner.name
 
-		foundlabel = cityinfo.child_finder('city_name')
+		foundlabel = self.cityinfo.child_finder('city_name')
 		foundlabel.text = self.settlement.get_component(SettlementNameComponent).name
 		foundlabel.resizeToContent()
 
-		foundlabel = cityinfo.child_finder('city_inhabitants')
-		foundlabel.text = u' %s' % (self.settlement.inhabitants)
+		foundlabel = self.cityinfo.child_finder('city_inhabitants')
+		foundlabel.text = u' {amount:>4d}'.format(amount=self.settlement.inhabitants)
 		foundlabel.resizeToContent()
 
-		cityinfo.adaptLayout()
+		self._update_cityinfo_position()
+
+	def _update_cityinfo_position(self):
+		""" Places cityinfo widget depending on resource bar dimensions.
+
+		For a normal-sized resource bar and reasonably large resolution:
+		* determine resource bar length (includes gold)
+		* determine empty horizontal space between resbar end and minimap start
+		* display cityinfo centered in that area if it is sufficiently large
+
+		If too close to the minimap (cityinfo larger than length of this empty space)
+		move cityinfo centered to very upper screen edge. Looks bad, works usually.
+		In this case, the resbar is redrawn to put the cityinfo "behind" it visually.
+		"""
+		width = horizons.globals.fife.engine_settings.getScreenWidth()
+		resbar = self.resource_overview.get_size()
+		is_foreign = (self.settlement.owner != self.session.world.player)
+		blocked = self.cityinfo.size[0] + int(1.6*self.minimap.get_size()[1])
+		# minimap[1] returns width! Use 1.6*width because of the GUI around it
+
+		if is_foreign: # other player, no resbar exists
+			self.cityinfo.pos = ('center', 'top')
+			xoff = +0
+			yoff = +4
+		elif blocked < width < resbar[0] + blocked: # large resbar / small resolution
+			self.cityinfo.pos = ('center', 'top')
+			xoff = +0
+			yoff = -21 # upper screen edge
+		else:
+			self.cityinfo.pos = ('left', 'top')
+			xoff = resbar[0] + (width - blocked - resbar[0]) // 2
+			yoff = +4
+
+		self.cityinfo.offset = (xoff, yoff)
+		self.cityinfo.position_technique = "{pos[0]}{off[0]:+d}:{pos[1]}{off[1]:+d}".format(
+				pos=self.cityinfo.pos,
+				off=self.cityinfo.offset )
+		self.cityinfo.hide()
+		self.cityinfo.show()
 
 	def minimap_to_front(self):
 		"""Make sure the full right top gui is visible and not covered by some dialog"""
@@ -268,22 +286,16 @@ class IngameGui(LivingObject):
 
 	def show_diplomacy_menu(self):
 		# check if the menu is already shown
-		if hasattr(self.get_cur_menu(), 'name') and self.get_cur_menu().name == "diplomacy_widget":
+		if getattr(self.get_cur_menu(), 'name', None) == "diplomacy_widget":
 			self.hide_menu()
 			return
-		players = set(self.session.world.players)
-		players.add(self.session.world.pirate)
-		players.discard(self.session.world.player)
-		players.discard(None) # e.g. when the pirate is disabled
-		if not players: # this dialog is pretty useless in this case
+
+		if not DiplomacyTab.is_useable(self.session.world):
 			self.main_gui.show_popup(_("No diplomacy possible"),
 			                         _("Cannot do diplomacy as there are no other players."))
 			return
 
-		dtabs = []
-		for player in players:
-			dtabs.append(DiplomacyTab(player))
-		tab = TabWidget(self, tabs=dtabs, name="diplomacy_widget")
+		tab = DiplomacyTab(self, self.session.world)
 		self.show_menu(tab)
 
 	def show_multi_select_tab(self):
@@ -428,7 +440,7 @@ class IngameGui(LivingObject):
 		"""
 		new_name = self.widgets['change_name'].collectData('new_name')
 		self.widgets['change_name'].findChild(name='new_name').text = u''
-		if not new_name or new_name.isspace():
+		if not new_name or not new_name.isspace():
 			# different namedcomponent classes share the name
 			RenameObject(instance.get_component_by_name(NamedComponent.NAME), new_name).execute(self.session)
 		self._hide_change_name_dialog()

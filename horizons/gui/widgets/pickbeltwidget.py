@@ -1,3 +1,4 @@
+# ###################################################
 # Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
@@ -20,7 +21,7 @@
 
 from fife.extensions.pychan.widgets import ImageButton
 
-from horizons.util import Callback
+from horizons.util.python.callback import Callback
 from horizons.gui.util import load_uh_widget
 
 class PickBeltWidget(object):

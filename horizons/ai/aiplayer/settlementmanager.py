@@ -21,6 +21,7 @@
 
 import logging
 
+from horizons.ai.aiplayer.goal.combatship import CombatShipGoal
 from horizons.ai.aiplayer.villagebuilder import VillageBuilder
 from horizons.ai.aiplayer.productionbuilder import ProductionBuilder
 from horizons.ai.aiplayer.productionchain import ProductionChain
@@ -44,7 +45,7 @@ from horizons.ai.aiplayer.goal.tent import TentGoal
 from horizons.ai.aiplayer.goal.tradingship import TradingShipGoal
 
 from horizons.scheduler import Scheduler
-from horizons.util import WorldObject
+from horizons.util.worldobject import WorldObject
 from horizons.util.python import decorators
 from horizons.command.building import Tear
 from horizons.command.uioptions import SetTaxSetting, SetSettlementUpgradePermissions
@@ -143,6 +144,7 @@ class SettlementManager(WorldObject):
 			self._goals.append(ToolsGoal(self))
 			self._goals.append(TentGoal(self))
 			self._goals.append(TradingShipGoal(self))
+			self._goals.append(CombatShipGoal(self))
 			self._goals.append(FireStationGoal(self))
 
 	def save(self, db):

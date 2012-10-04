@@ -27,8 +27,10 @@ from fife.extensions.fife_settings import FIFE_MODULE
 
 import horizons.main
 
+from horizons.gui.quotes import QUOTES_SETTINGS
 from horizons.i18n import change_language, find_available_languages
-from horizons.util import Callback, parse_port
+from horizons.util.python import parse_port
+from horizons.util.python.callback import Callback
 from horizons.extscheduler import ExtScheduler
 from horizons.constants import LANGUAGENAMES, PATHS
 from horizons.network.networkinterface import NetworkInterface
@@ -68,6 +70,11 @@ class SettingsHandler(object):
 		self._setting.createAndAddEntry(UH_MODULE, "AutoUnload", "auto_unload")
 		self._setting.createAndAddEntry(UH_MODULE, "MinimapRotation", "minimaprotation",
 				                        applyfunction=update_minimap)
+
+		self._setting.createAndAddEntry(UH_MODULE, "QuotesType", "quotestype",
+		                                initialdata=QUOTES_SETTINGS,
+		                                applyfunction=self.set_quotestype)
+		self._setting.createAndAddEntry(UH_MODULE, "ShowResourceIcons", "show_resource_icons")
 
 		self._setting.createAndAddEntry(FIFE_MODULE, "BitsPerPixel", "screen_bpp",
 				                        initialdata=[0, 16, 32], requiresrestart=True)
@@ -146,6 +153,12 @@ class SettingsHandler(object):
 			message = _("The SDL renderer is meant as a fallback solution only and has serious graphical glitches. \n\nUse at own risk!")
 			horizons.main._modules.gui.show_popup(headline, message)
 
+	def set_quotestype(self, *args):
+		type = 0
+		if args:
+			type = int(args[0])
+		self._setting.set(UH_MODULE, "QuotesType", type)
+
 	def update_slider_values(self, slider, factor=1, unit=''):
 		"""
 		slider - slider name
@@ -215,7 +228,7 @@ class SettingsHandler(object):
 		# port is saved as string due to pychan limitations
 		try:
 			# 0 is not a valid port, but a valid value here (used for default)
-			parse_port(port, allow_zero=True)
+			parse_port(port)
 		except ValueError:
 			headline = _("Invalid network port")
 			descr = _("The port you specified is not valid. It must be a number between 1 and 65535.")
@@ -234,7 +247,7 @@ class SettingsHandler(object):
 				headline = _(u"Failed to apply new network settings.")
 				descr = _("Network features could not be initialized with the current configuration.")
 				advice = _("Check the settings you specified in the network section.")
-				if 0 < parse_port(port, allow_zero=True) < 1024:
+				if 0 < parse_port(port) < 1024:
 					#i18n This is advice for players seeing a network error with the current config
 					advice += u" " + \
 						_("Low port numbers sometimes require special access privileges, try 0 or a number greater than 1024.")

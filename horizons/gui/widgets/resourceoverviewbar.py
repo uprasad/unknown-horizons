@@ -21,18 +21,20 @@
 
 
 from fife import fife
-from fife.extensions import pychan
+from fife.extensions.pychan.widgets import HBox, Icon, Label, Spacer
 import json
 import weakref
 import itertools
 import functools
 
-import horizons.main
+import horizons.globals
 
 from horizons.constants import TIER, RES
 from horizons.component.storagecomponent import StorageComponent
+from horizons.gui.mousetools.buildingtool import BuildingTool
 from horizons.gui.util import load_uh_widget, get_res_icon_path, create_resource_selection_dialog
-from horizons.util import PychanChildFinder, Callback
+from horizons.util.pychanchildfinder import PychanChildFinder
+from horizons.util.python.callback import Callback
 from horizons.util.python.decorators import cachedmethod
 from horizons.extscheduler import ExtScheduler
 from horizons.component.ambientsoundcomponent import AmbientSoundComponent
@@ -65,7 +67,13 @@ class ResourceOverviewBar(object):
 	"""
 
 	GOLD_ENTRY_GUI_FILE = "resource_overview_bar_gold.xml"
+	INITIAL_X_OFFSET = 100 # length of money icon (87px) + padding (10px left, 3px right)
+
 	ENTRY_GUI_FILE = "resource_overview_bar_entry.xml"
+	ENTRY_X_OFFSET = 52 # length of entry icons (49px) + padding (3px right)
+	ENTRY_Y_OFFSET = 17 # only padding (17px top)!
+	ENTRY_Y_HEIGHT = 66 # only height of entry icons (66px)!
+	CONSTRUCTION_LABEL_HEIGHT = 22 # height of extra label shown in build preview mode
 
 	STATS_GUI_FILE = "resource_overview_bar_stats.xml"
 
@@ -125,8 +133,14 @@ class ResourceOverviewBar(object):
 		self.current_instance = weakref.ref(self)
 		ExtScheduler().rem_all_classinst_calls(self)
 		self.resource_configurations.clear()
+		self.gold_gui.hide()
+		for slot in self.gui:
+			slot.hide()
+		if self.stats_gui:
+			self.stats_gui.hide()
 		self.gold_gui = None
 		self.gui = None
+		self.stats_gui = None
 		self._custom_default_resources = None
 		NewPlayerSettlementHovered.unsubscribe(self._on_different_settlement)
 		TabWidgetChanged.unsubscribe(self._on_tab_widget_changed)
@@ -134,7 +148,7 @@ class ResourceOverviewBar(object):
 	def _update_default_configuration(self):
 		# user defined variante of DEFAULT_RESOURCES (will be preferred)
 		self._custom_default_resources = None
-		setting = horizons.main.fife.get_uh_setting("ResourceOverviewBarConfiguration")
+		setting = horizons.globals.fife.get_uh_setting("ResourceOverviewBarConfiguration")
 		if setting: # parse it if there is something
 			config = json.loads(setting)
 			if config: # actually use it if it was parseable
@@ -147,7 +161,7 @@ class ResourceOverviewBar(object):
 				   obj.worldid, position, res)
 
 	def load(self, db):
-		from horizons.util import WorldObject
+		from horizons.util.worldobject import WorldObject
 		for obj in db("SELECT DISTINCT object FROM resource_overview_bar"):
 			obj = obj[0]
 			l = []
@@ -200,8 +214,6 @@ class ResourceOverviewBar(object):
 
 		# construct new slots (fill values later)
 		load_entry = lambda : load_uh_widget(self.ENTRY_GUI_FILE, style=self.__class__.STYLE)
-		initial_offset = 101
-		offset = 52
 		resources = self._get_current_resources()
 		addition = [-1] if self._do_show_dummy or not resources else [] # add dummy at end for adding stuff
 		for i, res in enumerate( resources + addition ):
@@ -213,7 +225,8 @@ class ResourceOverviewBar(object):
 				entry = load_entry()
 				self.gui.append(entry)
 
-			entry.findChild(name="entry").position = (initial_offset + offset * i, 17)
+			entry.findChild(name="entry").position = (self.INITIAL_X_OFFSET + i * self.ENTRY_X_OFFSET,
+			                                          self.ENTRY_Y_OFFSET)
 			background_icon = entry.findChild(name="entry")
 			background_icon.capture(Callback(self._show_resource_selection_dialog, i), 'mouseEntered', 'resbar')
 
@@ -267,7 +280,7 @@ class ResourceOverviewBar(object):
 		for res, amount in build_costs.iteritems():
 			assert res in res_list or res == RES.GOLD
 
-			cost_label = pychan.widgets.Label(text=u"-"+unicode(amount))
+			cost_label = Label(text=u"-"+unicode(amount))
 			cost_label.stylize( self.__class__.STYLE )
 			# add icon below end of background icon
 			if res in res_list:
@@ -275,8 +288,7 @@ class ResourceOverviewBar(object):
 				cur_gui = self.gui[ entry ]
 				reference_icon = cur_gui.findChild(name="background_icon")
 				below = reference_icon.size[1]
-				cost_icon = pychan.widgets.Icon(image=cost_icon_res,
-				                                position=(0, below))
+				cost_icon = Icon(image=cost_icon_res, position=(0, below))
 				cost_label.position = (15, below) # TODO: centering
 
 				cur_gui.addChild(cost_icon)
@@ -287,8 +299,7 @@ class ResourceOverviewBar(object):
 			else: # must be gold
 				# there is an icon with scales there, use its positioning
 				reference_icon = self.gold_gui.child_finder("balance_background")
-				cost_icon = pychan.widgets.Icon(image=cost_icon_gold,
-				                              position=(reference_icon.x, reference_icon.y))
+				cost_icon = Icon(image=cost_icon_gold, position=(reference_icon.x, reference_icon.y))
 				cost_label.position = (23, 74) # TODO: centering
 
 				self.gold_gui.addChild(cost_icon)
@@ -338,7 +349,7 @@ class ResourceOverviewBar(object):
 		gold_available_lbl.text = unicode(gold)
 		# reposition according to magic forumula passed down from the elders in order to support centering
 		gold_available_lbl.resizeToContent() # this sets new size values
-		gold_available_lbl.position = (42 - gold_available_lbl.size[0]/2,  51)
+		gold_available_lbl.position = (42 - (gold_available_lbl.size[0] // 2), 51)
 
 		self.gold_gui.resizeToContent() # update label size
 
@@ -346,7 +357,7 @@ class ResourceOverviewBar(object):
 		"""Updates balance info below gold icon"""
 		balance = self.session.world.player.get_balance_estimation()
 		balance_lbl = self.gold_gui.child_finder("balance")
-		balance_lbl.text = u"{sign}{balance}".format(balance=balance, sign=u'+' if balance >= 0 else u'')
+		balance_lbl.text = u"{balance:+}".format(balance=balance)
 		balance_lbl.resizeToContent()
 		# 38
 		balance_lbl.position = (70 - balance_lbl.size[0],  74) # see _update_gold
@@ -369,7 +380,7 @@ class ResourceOverviewBar(object):
 			# reposition according to magic forumula passed down from the elders in order to support centering
 			cur_gui.adaptLayout() # update size values (e.g. if amount of digits changed)
 			cur_gui.show()
-			label.position = (24 - label.size[0]/2, 44)
+			label.position = (24 - (label.size[0] // 2), 44)
 
 	def _get_current_resources(self):
 		"""Return list of resources to display now"""
@@ -391,12 +402,29 @@ class ResourceOverviewBar(object):
 		else:
 			return None
 
+	def get_size(self):
+		"""
+		Returns (x,y) size tuple.
+		Used by the cityinfo to determine how to change its position if the widgets
+		overlap using default positioning (resource bar can get arbitrarily long).
+		Note that the money icon has the same offset effect as all entry icons have
+		(height 73 + padding 10 == height 66 + padding 17), thus the calculation only
+		needs ENTRY_Y_OFFSET to determine the maximum widget height.
+		"""
+		item_amount = len(self._get_current_resources())
+		width = self.INITIAL_X_OFFSET + self.ENTRY_X_OFFSET * item_amount
+		height = self.ENTRY_Y_OFFSET + self.CONSTRUCTION_LABEL_HEIGHT * self.construction_mode
+		return (width, height)
+
 
 	###
 	# Resource slot selection
 
 	def _show_resource_selection_dialog(self, slot_num):
 		"""Shows gui for selecting a resource for slot slot_num"""
+		if isinstance(self.session.cursor, BuildingTool):
+			return
+
 		self._hide_resource_selection_dialog()
 		inv = self._get_current_inventory()
 		if inv is None:
@@ -432,17 +460,14 @@ class ResourceOverviewBar(object):
 		# the button should be disabled, but the first case below is shown because
 		# we can't disable it
 		if self._custom_default_resources is None:
-			reset_default_btn.text = _("Reset to default")
 			reset_default_btn.helptext = _("Reset this configuration to the factory default.")
 			reset_default_btn.capture(Callback(self._drop_settlement_resource_configuration))
 
 		elif self._custom_default_resources != self._get_current_resources():
-			reset_default_btn.text = _("Reset to default")
 			reset_default_btn.helptext = _("Reset this settlement's displayed resources to the default configuration you have saved.")
 			reset_default_btn.capture(Callback(self._drop_settlement_resource_configuration))
 
 		else:
-			reset_default_btn.text = _("Reset to factory")
 			reset_default_btn.helptext = _("Reset the default configuration (which you see here) to the factory default for all settlements.")
 			cb = Callback.ChainedCallbacks(
 			  self._drop_settlement_resource_configuration, # remove specific config
@@ -459,8 +484,8 @@ class ResourceOverviewBar(object):
 			config = [] # meaning invalid
 		else:
 			config = json.dumps(self._get_current_resources())
-		horizons.main.fife.set_uh_setting("ResourceOverviewBarConfiguration", config)
-		horizons.main.fife.save_settings()
+		horizons.globals.fife.set_uh_setting("ResourceOverviewBarConfiguration", config)
+		horizons.globals.fife.save_settings()
 		self._update_default_configuration()
 		AmbientSoundComponent.play_special("success")
 		if reset: # in the other case, it's already set
@@ -495,13 +520,12 @@ class ResourceOverviewBar(object):
 
 		self.resource_configurations[self.current_instance()] = res_copy
 
+		if number_of_slots_changed:
+			ResourceBarResize.broadcast(self)
 		self.redraw()
 
 		if isinstance(self.session.cursor, ResBarMouseTool):
 			self.session.cursor.reset()
-
-		if number_of_slots_changed:
-			ResourceBarResize.broadcast(self)
 
 	def _hide_resource_selection_dialog(self):
 		if hasattr(self, "_res_selection_dialog"):
@@ -530,6 +554,7 @@ class ResourceOverviewBar(object):
 
 	def _on_res_slot_click(self, widget, event):
 		"""Called when you click on a resource slot in the bar (not the selection dialog)"""
+		#TODO let KeyConfig handle this instead of hardcoding rmb
 		if event.getButton() == fife.MouseEvent.RIGHT:
 			self._set_resource_slot(widget.num, 0)
 
@@ -552,22 +577,22 @@ class ResourceOverviewBar(object):
 			  })
 
 			images = [ # these must correspond to the entries in _update_stats
-				"content/gui/images/resbar_stats/gold_icon.png",
-				"content/gui/images/resbar_stats/tools_icon.png",
-				"content/gui/images/resbar_stats/tools_icon.png",
-				"content/gui/images/resbar_stats/tools_icon.png",
+				"content/gui/images/resbar_stats/expense.png",
+				"content/gui/images/resbar_stats/income.png",
+				"content/gui/images/resbar_stats/buy.png",
+				"content/gui/images/resbar_stats/sell.png",
 				"content/gui/images/resbar_stats/scales_icon.png",
 			  ]
 
 			for num, image in enumerate(images):
 				# keep in sync with comment there until we can use that data:
 				# ./content/gui/xml/ingame/hud/resource_overview_bar_stats.xml
-				box = pychan.widgets.HBox(padding=0, min_size=(70,0), name="resbar_stats_line_%s"%num)
-				box.addChild( pychan.widgets.Icon(image=image) )
-				box.addSpacer( pychan.widgets.Spacer() )
-				box.addChild( pychan.widgets.Label(name="resbar_stats_entry_%s"%num) )
+				box = HBox(padding=0, min_size=(70,0), name="resbar_stats_line_%s"%num)
+				box.addChild(Icon(image=image))
+				box.addSpacer(Spacer())
+				box.addChild(Label(name="resbar_stats_entry_%s"%num))
 				# workaround for fife font bug, probably http://fife.trac.cvsdude.com/engine/ticket/666
-				box.addChild( pychan.widgets.Label(text=u" ") )
+				box.addChild(Label(text=u" "))
 
 				if num < len(images)-1: # regular one
 					self.stats_gui.child_finder("entries_box").addChild(box)
@@ -583,19 +608,16 @@ class ResourceOverviewBar(object):
 		# fill in valies of stats, must correspond to images in _show_stats
 		format_display = lambda x : (u"+" if x >= 0 else u"") + unicode(x)
 		data = self.session.world.player.get_statistics()
-		# TODO: mark as expense
+
 		self.stats_gui.child_finder("resbar_stats_line_0").helptext = _("Running costs")
 		self.stats_gui.child_finder("resbar_stats_entry_0").text = format_display(-data.running_costs)
 
-		# TODO: mark as income
 		self.stats_gui.child_finder("resbar_stats_line_1").helptext = _("Taxes")
 		self.stats_gui.child_finder("resbar_stats_entry_1").text = format_display(data.taxes)
 
-		# TODO: mark as expense
 		self.stats_gui.child_finder("resbar_stats_line_2").helptext = _("Buy expenses")
 		self.stats_gui.child_finder("resbar_stats_entry_2").text = format_display(-data.buy_expenses)
 
-		# TODO: mark as income
 		self.stats_gui.child_finder("resbar_stats_line_3").helptext = _("Sell income")
 		self.stats_gui.child_finder("resbar_stats_entry_3").text = format_display(data.sell_income)
 

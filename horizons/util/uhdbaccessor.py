@@ -22,7 +22,7 @@
 import random
 
 from horizons.constants import PATHS
-from horizons.util import decorators
+from horizons.util.python import decorators
 from horizons.util.dbreader import DbReader
 from horizons.gui.util import get_res_icon_path
 from horizons.entities import Entities
@@ -153,7 +153,7 @@ class UhDbAccessor(DbReader):
 		sql = "SELECT DISTINCT building FROM related_buildings"
 		return map(lambda x: x[0], self.cached_query(sql))
 
-	# Message table
+	# Messages
 
 	def get_msg_visibility(self, msg_id_string):
 		"""
@@ -188,33 +188,31 @@ class UhDbAccessor(DbReader):
 
 	#
 	#
-	# Settler DATABASE
+	# Inhabitants
 	#
 	#
-
-	# production_line table
 
 	def get_settler_name(self, level):
 		"""Returns the name for a specific settler level
 		@param level: int settler's level
 		@return: string settler's level name"""
-		return self.cached_query("SELECT name FROM settler_level WHERE level = ?",
-		                         level)[0][0]
+		sql = "SELECT name FROM settler_level WHERE level = ?"
+		return self.cached_query(sql, level)[0][0]
 
 	def get_settler_house_name(self, level):
 		"""Returns name of the residential building for a specific increment
 		@param level: int settler's level
 		@return: string settler's housing name"""
-		return self.cached_query("SELECT residential_name FROM settler_level \
-		                          WHERE level = ?", level)[0][0]
+		sql = "SELECT residential_name FROM settler_level WHERE level = ?"
+		return self.cached_query(sql, level)[0][0]
 
 	def get_settler_tax_income(self, level):
-		return self.cached_query("SELECT tax_income FROM settler_level \
-		                          WHERE level=?", level)[0][0]
+		sql = "SELECT tax_income FROM settler_level WHERE level=?"
+		return self.cached_query(sql, level)[0][0]
 
 	def get_settler_inhabitants_max(self, level):
-		return self.cached_query("SELECT inhabitants_max FROM settler_level \
-		                          WHERE level=?", level)[0][0]
+		sql = "SELECT inhabitants_max FROM settler_level WHERE level=?"
+		return self.cached_query(sql , level)[0][0]
 	
 	def get_settler_inhabitants_min(self, level):
 		"""The minimum inhabitants before a setter levels down
@@ -222,8 +220,16 @@ class UhDbAccessor(DbReader):
 		if level == 0:
 			return 0
 		else: 
-			return self.cached_query("SELECT inhabitants_max FROM settler_level \
-			                          WHERE level=?", level-1)[0][0]
+			sql = "SELECT inhabitants_max FROM settler_level WHERE level=?"
+			return self.cached_query(sql, level-1)[0][0]
+
+	def get_settler_happiness_increase_requirement(self):
+		sql = "SELECT value FROM balance_values WHERE name='happiness_inhabitants_increase_requirement'"
+		return self.cached_query(sql)[0][0]
+
+	def get_settler_happiness_decrease_limit(self):
+		sql = "SELECT value FROM balance_values WHERE name='happiness_inhabitants_decrease_limit'"
+		return self.cached_query(sql)[0][0]
 
 	# Misc
 
@@ -234,17 +240,18 @@ class UhDbAccessor(DbReader):
 
 	@decorators.cachedmethod
 	def get_storage_building_capacity(self, storage_type):
-		"""Returns the amount that a storage building can store of every resource."""
-		return self("SELECT size FROM storage_building_capacity WHERE type = ?", storage_type)[0][0]
+		"""Returns the amount that a storage building can store of every resource.
+		@param storage_type: building class id"""
+		sql = "SELECT size FROM storage_building_capacity WHERE type = ?"
+		return self.cached_query(sql, storage_type)[0][0]
 
 	# Tile sets
 
 	def get_random_tile_set(self, ground_id):
-		"""Returns an tile set for a tile of type id"""
-		sql = "SELECT set_id FROM tile_set \
-		       WHERE ground_id = ?"
+		"""Returns a tile set for a tile of type ground_id"""
+		sql = "SELECT set_id FROM tile_set WHERE ground_id = ?"
 		db_data = self.cached_query(sql, ground_id)
-		return random.choice(db_data) if db_data else None
+		return random.choice(db_data)[0] if db_data else None
 
 	@decorators.cachedmethod
 	def get_translucent_buildings(self):
@@ -269,6 +276,29 @@ class UhDbAccessor(DbReader):
 		"""Returns the name of a unit type identified by its type"""
 		return Entities.units[type_id].name
 
+	def get_ship_tooltip(self, ship_id):
+		"""Tries to identify ship properties to display as tooltip.
+		#TODO Should be extended later to also include movement speed, etc."""
+		helptexts = [] # collects all information we will find
+		ship = Entities.units[ship_id]
+		try:
+			comp = ship.get_component_template('StorageComponent')
+			storage = comp['PositiveTotalNumSlotsStorage']
+			#i18n Ship storage properties
+			helptext = _('{slotnum} slots, {limit}t') #xgettext:python-format
+			helptext = helptext.format(slotnum=storage['slotnum'],
+			                           limit=storage['limit'])
+			helptexts.append(helptext)
+		except KeyError: # Component not found, ignore this part
+			pass
+		try:
+			comp = ship.get_component_template('HealthComponent')
+			helptext = _('Health: {health}') #xgettext:python-format
+			helptext = helptext.format(health=comp['maxhealth'])
+			helptexts.append(helptext)
+		except KeyError: # Component not found, ignore this part
+			pass
+		return u'\\n'.join(helptexts)
 
 def read_savegame_template(db):
 	savegame_template = open(PATHS.SAVEGAME_TEMPLATE, "r")

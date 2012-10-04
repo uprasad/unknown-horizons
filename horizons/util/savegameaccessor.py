@@ -23,9 +23,9 @@ import hashlib
 import os.path
 from collections import defaultdict, deque
 
-from horizons.util.savegameupgrader import SavegameUpgrader
+from horizons.util.dbreader import DbReader
 from horizons.util.python import decorators
-from horizons.util import DbReader
+from horizons.util.savegameupgrader import SavegameUpgrader
 
 class SavegameAccessor(DbReader):
 	"""
@@ -239,7 +239,7 @@ class SavegameAccessor(DbReader):
 		h = hashlib.sha1()
 		h.update(fd.read())
 		filehash = h.hexdigest()
-		fd.close();
+		fd.close()
 		return filehash
 
 decorators.bind_all(SavegameAccessor)

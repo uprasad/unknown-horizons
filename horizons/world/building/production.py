@@ -24,8 +24,7 @@ from horizons.world.building.buildingresourcehandler import BuildingResourceHand
 from horizons.world.building.building import BasicBuilding
 from horizons.world.building.buildable import BuildableSingle, BuildableSingleOnCoast, BuildableSingleOnDeposit, BuildableSingleOnOcean
 from horizons.world.building.nature import Field
-from horizons.util import Rect
-from horizons.util.shapes.radiusshape import RadiusRect
+from horizons.util.shapes import Rect, RadiusRect
 from horizons.command.building import Build
 from horizons.scheduler import Scheduler
 from horizons.constants import BUILDINGS, PRODUCTION
@@ -113,7 +112,7 @@ class Mine(BuildingResourceHandler, BuildableSingleOnDeposit, BasicBuilding):
 	@classmethod
 	def get_prebuild_data(cls, session, position):
 		"""Returns dict containing inventory of deposit, which is needed for the mine build"""
-		deposit = session.world.get_building(position.center())
+		deposit = session.world.get_building(position.center)
 		data = {}
 		data["inventory"] = deposit.get_component(StorageComponent).inventory.get_dump()
 		data["deposit_class"] = deposit.id
@@ -123,7 +122,7 @@ class Mine(BuildingResourceHandler, BuildableSingleOnDeposit, BasicBuilding):
 		# build the deposit back here after remove() is finished
 		deposit_build_data = { 'inventory' : self.get_component(StorageComponent).inventory.get_dump() }
 		build_cmd = Build(self.__deposit_class, self.position.origin.x, self.position.origin.y,
-		                  self.island, ownerless=True, data = deposit_build_data)
+		                  self.island, ownerless=True, data=deposit_build_data)
 		Scheduler().add_new_object(build_cmd, build_cmd, run_in=0)
 
 		super(Mine, self).remove()

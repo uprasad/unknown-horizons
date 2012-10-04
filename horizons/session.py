@@ -28,6 +28,7 @@ import traceback
 import time
 from random import Random
 
+import horizons.globals
 import horizons.main
 
 from horizons.ai.aiplayer import AIPlayer
@@ -42,7 +43,9 @@ from horizons.extscheduler import ExtScheduler
 from horizons.view import View
 from horizons.world import World
 from horizons.entities import Entities
-from horizons.util import WorldObject, LivingObject, livingProperty, SavegameAccessor
+from horizons.util.living import LivingObject, livingProperty
+from horizons.util.savegameaccessor import SavegameAccessor
+from horizons.util.worldobject import WorldObject
 from horizons.util.uhdbaccessor import read_savegame_template
 from horizons.util.lastactiveplayersettlementmanager import LastActivePlayerSettlementManager
 from horizons.component.namedcomponent import NamedComponent
@@ -51,6 +54,7 @@ from horizons.savegamemanager import SavegameManager
 from horizons.scenario import ScenarioEventHandler
 from horizons.component.ambientsoundcomponent import AmbientSoundComponent
 from horizons.constants import GAME_SPEED, PATHS, LAYERS
+from horizons.world.managers.productionfinishediconmanager import ProductionFinishedIconManager
 from horizons.world.managers.statusiconmanager import StatusIconManager
 from horizons.messaging import MessageBus
 
@@ -128,11 +132,28 @@ class Session(LivingObject):
 		  renderer=self.view.renderer['GenericRenderer'],
 		  layer=self.view.layers[LAYERS.OBJECTS]
 		  )
+		self.production_finished_icon_manager = None
+		self.create_production_finished_icon_manager()
+
 
 		self.selected_instances = set()
 		self.selection_groups = [set() for _ in range(10)]  # List of sets that holds the player assigned unit groups.
 
 		self._old_autosave_interval = None
+
+	def create_production_finished_icon_manager(self):
+		""" Checks the settings if we should display resrouce icons.
+		If True: Create the ProductionFinishedIconManager
+		If False and a manager is currently running: End it
+		"""
+		show_resource_icons = bool(horizons.globals.fife.get_uh_setting("ShowResourceIcons"))
+		if show_resource_icons:
+			self.production_finished_icon_manager = ProductionFinishedIconManager(
+				renderer=self.view.renderer['GenericRenderer'],
+				layer=self.view.layers[LAYERS.OBJECTS]
+			)
+		else:
+			self.end_production_finished_icon_manager()
 
 	def start(self):
 		"""Actually starts the game."""
@@ -142,7 +163,7 @@ class Session(LivingObject):
 	def reset_autosave(self):
 		"""(Re-)Set up autosave. Called if autosave interval has been changed."""
 		# get_uh_setting returns floats like 4.0 and 42.0 since slider stepping is 1.0.
-		interval = int(horizons.main.fife.get_uh_setting("AutosaveInterval"))
+		interval = int(horizons.globals.fife.get_uh_setting("AutosaveInterval"))
 		if interval != self._old_autosave_interval:
 			self._old_autosave_interval = interval
 			ExtScheduler().rem_call(self, self.autosave)
@@ -162,12 +183,18 @@ class Session(LivingObject):
 		"""Returns a Timer instance."""
 		raise NotImplementedError
 
-	def _clear_caches(self):
+	@classmethod
+	def _clear_caches(cls):
 		"""Clear all data caches in global namespace related to a session"""
 		WorldObject.reset()
 		NamedComponent.reset()
 		AIPlayer.clear_caches()
 		SelectableBuildingComponent.reset()
+
+	def end_production_finished_icon_manager(self):
+		if self.production_finished_icon_manager is not None:
+			self.production_finished_icon_manager.end()
+			self.production_finished_icon_manager = None
 
 	def end(self):
 		self.log.debug("Ending session")
@@ -175,15 +202,17 @@ class Session(LivingObject):
 
 		self.gui.session = None
 
+		# Has to be done here, cause the manager uses Scheduler!
+		self.end_production_finished_icon_manager()
 		Scheduler().rem_all_classinst_calls(self)
 		ExtScheduler().rem_all_classinst_calls(self)
 
-		if horizons.main.fife.get_fife_setting("PlaySounds"):
-			for emitter in horizons.main.fife.sound.emitter['ambient'][:]:
+		if horizons.globals.fife.get_fife_setting("PlaySounds"):
+			for emitter in horizons.globals.fife.sound.emitter['ambient'][:]:
 				emitter.stop()
-				horizons.main.fife.sound.emitter['ambient'].remove(emitter)
-			horizons.main.fife.sound.emitter['effects'].stop()
-			horizons.main.fife.sound.emitter['speech'].stop()
+				horizons.globals.fife.sound.emitter['ambient'].remove(emitter)
+			horizons.globals.fife.sound.emitter['effects'].stop()
+			horizons.globals.fife.sound.emitter['speech'].stop()
 		if hasattr(self, "cursor"): # the line below would crash uglily on ^C
 			self.cursor.remove()
 
@@ -361,7 +390,7 @@ class Session(LivingObject):
 			if self.timer.tick_next_time is not None:
 				self.paused_time_missing = (self.timer.tick_next_time - time.time()) * old
 			else:
-				self.paused_time_missing =  None
+				self.paused_time_missing = None
 			self.timer.tick_next_time = None
 		else:
 			"""
@@ -440,6 +469,9 @@ class Session(LivingObject):
 			self._pause_stack -= 1
 			if self._pause_stack == 0:
 				self.speed_set(self.paused_ticks_per_second)
+
+				# check if resource icons should be displayed (possible changes in settings)
+				self.create_production_finished_icon_manager()
 
 	def speed_toggle_pause(self, suggestion=False):
 		if self.speed_is_paused():

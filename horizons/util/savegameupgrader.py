@@ -24,10 +24,11 @@ import os.path
 import json
 import shutil
 import tempfile
+from sqlite3 import OperationalError
 
+from horizons.constants import VERSION, UNITS
+from horizons.util.dbreader import DbReader
 from horizons.util.python import decorators
-from horizons.constants import VERSION
-from horizons.util import DbReader
 
 class SavegameUpgrader(object):
 	"""The class that prepares saved games to be loaded by the current version."""
@@ -144,7 +145,77 @@ class SavegameUpgrader(object):
 
 	def _upgrade_to_rev62(self, db):
 		# added a message parameter to the logbook which needs to be saved
-		db("CREATE TABLE logbook_messages ( message STRING )")
+		db("CREATE TABLE IF NOT EXISTS logbook_messages ( message STRING )")
+
+	def _upgrade_to_rev63(self, db):
+		""" Due to miscommunication, the savegame revision 62 was not changed in
+		savegames after updates to 63. To keep savegames functional that have a
+		revision of 62 stored but where the upgrade to 63 was executed, we assume
+		that this has to happen for savegames of revision <62 unless CREATEing tables
+		raises an OperationalError, which indicates that they already exist and thus
+		this upgrade routine should also work for savegames with odd upgrade paths:
+		There may have been branches storing revision 63 in savegames after all.
+		"""
+		# adds a table for pirate's 'tick' callback
+		try:
+			db("CREATE TABLE ai_pirate (remaining_ticks INTEGER NOT NULL DEFAULT 1)")
+		except OperationalError:
+			return
+		db("INSERT INTO ai_pirate (rowid, remaining_ticks) SELECT p.rowid, 1 FROM player p WHERE p.is_pirate")
+		# added flag to aiplayer for fighting ships request
+		db("ALTER TABLE ai_player ADD COLUMN need_more_combat_ships INTEGER NOT NULL DEFAULT 1")
+
+		# update stance for every pirate player ship
+		db('INSERT INTO stance (worldid, stance, state) SELECT u.rowid, "none_stance", "idle" FROM unit u, player p WHERE u.owner=p.rowid AND p.is_pirate=1')
+
+		# update ai_player with long callback function column
+		db("ALTER TABLE ai_player ADD COLUMN remaining_ticks_long INTEGER NOT NULL DEFAULT 1")
+
+		# update ai_pirate with long callback function column
+		db("ALTER TABLE ai_pirate ADD COLUMN remaining_ticks_long INTEGER NOT NULL DEFAULT 1")
+
+		# Combat missions below:
+		# Abstract FleetMission data
+		db('CREATE TABLE "ai_fleet_mission" ( "owner_id" INTEGER NOT NULL , "fleet_id" INTEGER NOT NULL , "state_id" INTEGER NOT NULL, "combat_phase" BOOL NOT NULL )')
+		# ScoutingMission
+		db('CREATE TABLE "ai_scouting_mission" ("owner" INTEGER NOT NULL , "ship" INTEGER NOT NULL , "starting_point_x" INTEGER NOT NULL, '
+		   '"starting_point_y" INTEGER NOT NULL, "target_point_x" INTEGER NOT NULL, "target_point_y" INTEGER NOT NULL, "state" INTEGER NOT NULL )')
+		# SurpriseAttack
+		db('CREATE TABLE "ai_mission_surprise_attack" ("enemy_player_id" INTEGER NOT NULL, "target_point_x" INTEGER NOT NULL, "target_point_y" INTEGER NOT NULL,'
+			'"target_point_radius" INTEGER NOT NULL, "return_point_x" INTEGER NOT NULL, "return_point_y" INTEGER NOT NULL )')
+		# ChaseShipsAndAttack
+		db('CREATE TABLE "ai_mission_chase_ships_and_attack" ("target_ship_id" INTEGER NOT NULL )')
+
+		# BehaviorManager
+		db('CREATE TABLE "ai_behavior_manager" ("owner_id" INTEGER NOT NULL, "profile_token" INTEGER NOT NULL)')
+
+		# No previous token was present, choose anything really
+		db('INSERT INTO ai_behavior_manager (owner_id, profile_token) SELECT p.rowid, 42 FROM player p')
+
+		# Locks for Conditions being resolved by StrategyManager
+		db('CREATE TABLE "ai_condition_lock" ("owner_id" INTEGER NOT NULL, "condition" TEXT NOT NULL, "mission_id" INTEGER NOT NULL)')
+
+		# Fleets
+		db('CREATE TABLE "fleet" ("fleet_id" INTEGER NOT NULL, "owner_id" INTEGER NOT NULL, "state_id" INTEGER NOT NULL, "dest_x" '
+		   'INTEGER, "dest_y" INTEGER, "radius" INTEGER, "ratio" DOUBLE)')
+
+		# ships per given fleet
+		db('CREATE TABLE "fleet_ship" ("fleet_id" INTEGER NOT NULL, "ship_id" INTEGER NOT NULL, "state_id" INTEGER NOT NULL)')
+
+		# CombatManager's ship states
+		db('CREATE TABLE "ai_combat_ship" ( "owner_id" INTEGER NOT NULL, "ship_id" INTEGER NOT NULL, "state_id" INTEGER NOT NULL )')
+
+		# Set CombatManager's state of ship to idle
+		db('INSERT INTO ai_combat_ship (owner_id, ship_id, state_id) SELECT p.rowid, u.rowid, 0 FROM player p, unit u WHERE u.owner = p.rowid AND u.type=? and p.client_id="AIPlayer"', UNITS.FRIGATE)
+
+		# Same for pirate ships
+		db('INSERT INTO ai_combat_ship (owner_id, ship_id, state_id) SELECT p.rowid, u.rowid, 0 FROM ai_pirate p, unit u WHERE u.owner = p.rowid')
+
+		# save pirate routine mission
+		db('CREATE TABLE "ai_mission_pirate_routine" ("target_point_x" INTEGER NOT NULL, "target_point_y" INTEGER NOT NULL )')
+
+	def _upgrade_to_rev64(self, db):
+		db("INSERT INTO metadata VALUES (?, ?)", "max_tier_notification", False)
 
 	def _upgrade(self):
 		# fix import loop
@@ -191,6 +262,10 @@ class SavegameUpgrader(object):
 				self._upgrade_to_rev61(db)
 			if rev < 62:
 				self._upgrade_to_rev62(db)
+			if rev < 63:
+				self._upgrade_to_rev63(db)
+			if rev < 64:
+				self._upgrade_to_rev64(db)
 
 			db('COMMIT')
 			db.close()

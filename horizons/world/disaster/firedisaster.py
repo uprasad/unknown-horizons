@@ -24,10 +24,9 @@ from horizons.world.disaster import Disaster
 from horizons.messaging import AddStatusIcon, RemoveStatusIcon, NewDisaster
 from horizons.world.status import FireStatusIcon
 from horizons.constants import GAME_SPEED, BUILDINGS, RES, TIER
-from horizons.command.building import Tear
 from horizons.scheduler import Scheduler
 from horizons.util.python.callback import Callback
-from horizons.util import WorldObject
+from horizons.util.worldobject import WorldObject
 
 class FireDisaster(Disaster):
 	"""Simulates a fire.
@@ -50,7 +49,7 @@ class FireDisaster(Disaster):
 	MIN_SETTLERS_FOR_BREAKOUT = 5
 
 	TIME_BEFORE_HAVOC = GAME_SPEED.TICKS_PER_SECOND * 30
-	EXPANSION_TIME = (TIME_BEFORE_HAVOC / 2) - 1 # try twice before dying
+	EXPANSION_TIME = (TIME_BEFORE_HAVOC // 2) - 1 # try twice before dying
 
 	DISASTER_RES = RES.FIRE
 
@@ -130,4 +129,4 @@ class FireDisaster(Disaster):
 	def wreak_havoc(self, building):
 		super(FireDisaster, self).wreak_havoc(building)
 		self._affected_buildings.remove(building)
-		Tear(building).execute(self._settlement.session)
+		building.make_ruin()

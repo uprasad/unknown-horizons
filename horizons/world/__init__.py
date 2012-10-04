@@ -28,17 +28,19 @@ import copy
 
 from collections import deque
 
-import horizons.main
+import horizons.globals
 from horizons.world.island import Island
 from horizons.world.player import HumanPlayer
-from horizons.util import Point, Rect, Circle, WorldObject
+from horizons.util.buildingindexer import BuildingIndexer
 from horizons.util.color import Color
+from horizons.util.python import decorators
+from horizons.util.shapes import Circle, Point, Rect
+from horizons.util.worldobject import WorldObject
 from horizons.constants import UNITS, BUILDINGS, RES, GROUND, GAME
 from horizons.ai.trader import Trader
 from horizons.ai.pirate import Pirate
 from horizons.ai.aiplayer import AIPlayer
 from horizons.entities import Entities
-from horizons.util import decorators, BuildingIndexer
 from horizons.world.buildingowner import BuildingOwner
 from horizons.world.diplomacy import Diplomacy
 from horizons.world.units.bullet import Bullet
@@ -192,7 +194,7 @@ class World(BuildingOwner, WorldObject):
 			if self.trader:
 				self.trader.load_ship_states(savegame_db)
 			if self.pirate:
-				self.pirate.load_ship_states(savegame_db)
+				self.pirate.finish_loading(savegame_db)
 
 			# load the AI stuff only when we have AI players
 			if any(isinstance(player, AIPlayer) for player in self.players):
@@ -321,7 +323,7 @@ class World(BuildingOwner, WorldObject):
 				player = HumanPlayer.load(self.session, savegame_db, player_worldid)
 			self.players.append(player)
 
-			if client_id == horizons.main.fife.get_uh_setting("ClientID"):
+			if client_id == horizons.globals.fife.get_uh_setting("ClientID"):
 				self.player = player
 			elif client_id is not None and not ai_data:
 				# possible human player candidate with different client id
@@ -355,7 +357,7 @@ class World(BuildingOwner, WorldObject):
 		moves = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
 
 		n = 0
-		self.water_body = dict(self.water)
+		self.water_body = dict.fromkeys(self.water)
 		for coords, num in self.water_body.iteritems():
 			if num is not None:
 				continue
@@ -593,7 +595,7 @@ class World(BuildingOwner, WorldObject):
 			circle = Circle(position, radius)
 			for island in self.islands:
 				for building in island.buildings:
-					if circle.contains(building.position.center()):
+					if circle.contains(building.position.center):
 						buildings.append(building)
 			return buildings
 		else:

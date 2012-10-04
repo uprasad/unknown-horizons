@@ -1,4 +1,4 @@
-baseclass: ship.PirateShip
+baseclass: pirateship.PirateShip
 id: 1000005
 name: Pirate
 radius: 5
@@ -10,7 +10,7 @@ components:
     enemy_tabs: [EnemyShipOverviewTab,]
 - AmbientSoundComponent
 - StorageComponent:
-      PositiveTotalNumSlotStorage:
+      PositiveTotalNumSlotsStorage:
          limit: 120
          slotnum: 4
 - PirateShipNameComponent

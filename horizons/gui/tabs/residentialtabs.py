@@ -20,11 +20,12 @@
 # 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 # ###################################################
 
-from horizons.util import Callback, ActionSetLoader
+from horizons.util.python.callback import Callback
+from horizons.util.loaders.actionsetloader import ActionSetLoader
 from horizons.constants import SETTLER
 from horizons.command.uioptions import SetTaxSetting
 from horizons.gui.tabs import OverviewTab
-from horizons.gui.util import create_resource_icon
+from horizons.gui.util import create_resource_icon, get_happiness_icon_and_helptext
 from horizons.component.namedcomponent import NamedComponent
 from horizons.messaging import SettlerUpdate
 
@@ -36,11 +37,15 @@ class SettlerOverviewTab(OverviewTab):
 			instance = instance
 		)
 		self.helptext = _("Settler overview")
-		self.widget.findChild(name="headline").text = self.instance.settlement.get_component(NamedComponent).name
-		setup_tax_slider(self.widget.child_finder('tax_slider'), self.widget.child_finder('tax_val_label'),
-		                  self.instance.settlement, self.instance.level)
+		name = self.instance.settlement.get_component(NamedComponent).name
+		self.widget.findChild(name="headline").text = name
+		setup_tax_slider(self.widget.child_finder('tax_slider'),
+		                 self.widget.child_finder('tax_val_label'),
+		                 self.instance.settlement,
+		                 self.instance.level)
 
-		self.widget.child_finder('tax_val_label').text = unicode(self.instance.settlement.tax_settings[self.instance.level])
+		taxes = self.instance.settlement.tax_settings[self.instance.level]
+		self.widget.child_finder('tax_val_label').text = unicode(taxes)
 		action_set = ActionSetLoader.get_sets()[self.instance._action_set_id]
 		action_gfx = action_set.items()[0][1]
 		image = action_gfx[45].keys()[0]
@@ -48,9 +53,12 @@ class SettlerOverviewTab(OverviewTab):
 
 	def on_settler_level_change(self, message):
 		assert isinstance(message, SettlerUpdate)
-		setup_tax_slider(self.widget.child_finder('tax_slider'), self.widget.child_finder('tax_val_label'),
-		                  self.instance.settlement, message.level)
-		self.widget.child_finder('tax_val_label').text = unicode(self.instance.settlement.tax_settings[self.instance.level])
+		setup_tax_slider(self.widget.child_finder('tax_slider'),
+		                 self.widget.child_finder('tax_val_label'),
+		                 self.instance.settlement,
+		                 message.level)
+		taxes = self.instance.settlement.tax_settings[self.instance.level]
+		self.widget.child_finder('tax_val_label').text = unicode(taxes)
 		imgs = ActionSetLoader.get_sets()[self.instance._action_set_id].items()[0][1]
 		self.widget.findChild(name="building_image").image = imgs[45].keys()[0]
 
@@ -63,15 +71,20 @@ class SettlerOverviewTab(OverviewTab):
 		super(SettlerOverviewTab, self).hide()
 
 	def refresh(self):
+		image, helptext = get_happiness_icon_and_helptext(self.instance.happiness, self.instance.session)
+		self.widget.child_finder('happiness_label').image = image
+		self.widget.child_finder('happiness_label').helptext = helptext
 		self.widget.child_finder('happiness').progress = self.instance.happiness
 		self.widget.child_finder('inhabitants').text = u"%s/%s" % (
 		                                               self.instance.inhabitants,
 		                                               self.instance.inhabitants_max)
 		self.widget.child_finder('taxes').text = unicode(self.instance.last_tax_payed)
 		self.update_consumed_res()
-		self.widget.findChild(name="headline").text = self.instance.settlement.get_component(NamedComponent).name
+		name = self.instance.settlement.get_component(NamedComponent).name
+		self.widget.findChild(name="headline").text = name
 		events = {
-				'headline': Callback(self.instance.session.ingame_gui.show_change_name_dialog, self.instance.settlement)
+				'headline': Callback(self.instance.session.ingame_gui.show_change_name_dialog,
+				                     self.instance.settlement)
 		         }
 		self.widget.mapEvents(events)
 		super(SettlerOverviewTab, self).refresh()
