@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -19,23 +19,17 @@
 # 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 # ###################################################
 
+import json
 import yaml
 import copy
-import pickle
 
-try:
-	from yaml import CLoader as Loader
-except ImportError:
-	from yaml import Loader
-
-import horizons.main
-
-from horizons.ext.enum import Enum
-from horizons.constants import RES
 from horizons.scheduler import Scheduler
-from horizons.util import Callback, LivingObject, decorators
+from horizons.util.living import LivingObject
+from horizons.util.python.callback import Callback
+from horizons.util.yamlcache import YamlCache
 
-from horizons.scenario.conditions import CONDITIONS, _scheduled_checked_conditions
+from horizons.scenario import ACTIONS, CONDITIONS
+
 
 class InvalidScenarioFileFormat(Exception):
 	def __init__(self, msg=None):
@@ -45,13 +39,27 @@ class InvalidScenarioFileFormat(Exception):
 
 class ScenarioEventHandler(LivingObject):
 	"""Handles event, that make up a scenario. See wiki.
-	An instance of this class is bound to a set of events. On a new scenario, you need a new instance."""
+	An instance of this class is bound to a set of events. On a new scenario, you need a new instance.
+
+	Scenarios consist of condition-action events.
+	When all conditions of an event become true, the action is executed and the event is
+	removed from the scenario. All events only happen once.
+
+	Whenever the game state changes in a way, that can change the truth value of a condition,
+	the event handler must be notified. It will then check all relevant events.
+	It is imperative for this notification to always be triggered, else the scenario gets stuck.
+	For conditions, where this approach doesn't make sense (e.g. too frequent changes),
+	a periodic check can be used.
+
+	Save/load works by dumping all info into a yaml string in the savegame,
+	which is loaded just like normal scenarios are loaded.
+	"""
 
 	CHECK_CONDITIONS_INTERVAL = 3 # seconds
 
 	PICKLE_PROTOCOL = 2
 
-	def __init__(self, session, scenariofile = None):
+	def __init__(self, session, scenariofile=None):
 		"""
 		@param session: Session instance
 		@param scenariofile: yaml file that describes the scenario
@@ -64,7 +72,7 @@ class ScenarioEventHandler(LivingObject):
 		# map: condition types -> events
 		self._event_conditions = {}
 		self._scenario_variables = {} # variables for set_var, var_eq ...
-		for cond in CONDITIONS:
+		for cond in CONDITIONS.registry.keys():
 			self._event_conditions[cond] = set()
 		if scenariofile:
 			self._apply_data( self._parse_yaml_file( scenariofile ) )
@@ -76,8 +84,9 @@ class ScenarioEventHandler(LivingObject):
 
 	def start(self):
 		# Add the check_events method to the scheduler to be checked every few seconds
-		Scheduler().add_new_object(self._scheduled_check, self, \
-				                   run_in = Scheduler().get_ticks(self.CHECK_CONDITIONS_INTERVAL), loops = -1)
+		Scheduler().add_new_object(self._scheduled_check, self,
+		                           run_in=Scheduler().get_ticks(self.CHECK_CONDITIONS_INTERVAL),
+		                           loops=-1)
 
 	def sleep(self, ticks):
 		"""Sleep the ScenarioEventHandler for number of ticks. This delays all
@@ -88,7 +97,7 @@ class ScenarioEventHandler(LivingObject):
 			callback.run_in = callback.run_in + ticks
 			Scheduler().add_object(callback)
 		self.sleep_ticks_remaining = ticks
-		Scheduler().add_new_object(self._reduce_sleep, self, loops = ticks)
+		Scheduler().add_new_object(self._reduce_sleep, self, loops=ticks)
 
 	def _reduce_sleep(self):
 		self.sleep_ticks_remaining -= 1
@@ -103,14 +112,14 @@ class ScenarioEventHandler(LivingObject):
 		if self.inited: # only save in case we have data applied
 			db("INSERT INTO metadata(name, value) VALUES(?, ?)", "scenario_events", self.to_yaml())
 		for key, value in self._scenario_variables.iteritems():
-			db("INSERT INTO scenario_variables(key, value) VALUES(?, ?)", key, \
-			   pickle.dumps(value, self.PICKLE_PROTOCOL))
+			db("INSERT INTO scenario_variables(key, value) VALUES(?, ?)", key,
+			   json.dumps(value))
 
 	def load(self, db):
 		for key, value in db("SELECT key, value FROM scenario_variables"):
-			self._scenario_variables[key] = pickle.loads(value)
+			self._scenario_variables[key] = json.loads(value)
 		data = db("SELECT value FROM metadata WHERE name = ?", "scenario_events")
-		if len(data) == 0:
+		if not data:
 			return # nothing to load
 		self._apply_data( self._parse_yaml( data[0][0] ) )
 
@@ -122,7 +131,7 @@ class ScenarioEventHandler(LivingObject):
 
 	def schedule_action(self, action):
 		if self.sleep_ticks_remaining > 0:
-			Scheduler().add_new_object(Callback(action, self.session), self, run_in = self.sleep_ticks_remaining)
+			Scheduler().add_new_object(Callback(action, self.session), self, run_in=self.sleep_ticks_remaining)
 		else:
 			action(self.session)
 
@@ -143,30 +152,16 @@ class ScenarioEventHandler(LivingObject):
 		return self._data['mapfile']
 
 	@classmethod
-	def get_description_from_file(cls, filename):
-		"""Returns the description from a yaml file.
+	def get_metadata_from_file(cls, filename):
+		"""Returns (difficulty, author, description) from a yaml file.
+		Returns "unknown" for all of these fields not specified.
 		@throws InvalidScenarioFile"""
-		return cls._parse_yaml_file(filename)['description']
-
-	@classmethod
-	def get_difficulty_from_file(cls, filename):
-		"""Returns the difficulty of a yaml file.
-		Returns _("unknown") if difficulty isn't specified.
-		@throws InvalidScenarioFile"""
-		try:
-			return cls._parse_yaml_file(filename)['difficulty']
-		except KeyError:
-			return _("unknown")
-
-	@classmethod
-	def get_author_from_file(cls, filename):
-		"""Returns the author of a yaml file.
-		Returns _("unknown") if difficulty isn't specified.
-		@throws InvalidScenarioFile"""
-		try:
-			return cls._parse_yaml_file(filename)['author']
-		except KeyError:
-			return _("unknown")
+		fallback = _('unknown')
+		yamldata = cls._parse_yaml_file(filename)
+		difficulty = yamldata.get('difficulty', fallback)
+		author = yamldata.get('author', fallback)
+		desc = yamldata.get('description', fallback)
+		return difficulty, author, desc
 
 	def drop_events(self):
 		"""Removes all events. Useful when player lost."""
@@ -176,32 +171,16 @@ class ScenarioEventHandler(LivingObject):
 	@staticmethod
 	def _parse_yaml(string_or_stream):
 		try:
-			return yaml.load(string_or_stream, Loader=Loader)
-		except Exception, e: # catch anything yaml or functions that yaml calls might throw
+			return YamlCache.load_yaml_data(string_or_stream)
+		except Exception as e: # catch anything yaml or functions that yaml calls might throw
 			raise InvalidScenarioFileFormat(str(e))
 
-	_yaml_file_cache = {} # only used in the method below
-	"""
-	This caches the parsed output of a yaml file.
-	It also checks if the cache is invalidated, therefore we can't use the
-	decorator.
-	"""
 	@classmethod
 	def _parse_yaml_file(cls, filename):
-		# calc the hash
-		f = open(filename, 'r')
-		h = hash(f.read())
-		f.seek(0)
-		# check for updates or new files
-		if (filename in cls._yaml_file_cache and \
-			cls._yaml_file_cache[filename][0] != h) or \
-		   (not filename in cls._yaml_file_cache):
-			cls._yaml_file_cache[filename] = (h, cls._parse_yaml( f ) )
-
-		return cls._yaml_file_cache[filename][1]
+		return YamlCache.get_file(filename, game_data=True)
 
 	def _apply_data(self, data):
-		"""Apply data to self loaded via yaml.load
+		"""Apply data to self loaded via from yaml
 		@param data: return value of yaml.load or _parse_yaml resp.
 		"""
 		self._data = data
@@ -214,7 +193,7 @@ class ScenarioEventHandler(LivingObject):
 
 	def _scheduled_check(self):
 		"""Check conditions that can only be checked periodically"""
-		for cond_type in _scheduled_checked_conditions:
+		for cond_type in CONDITIONS.check_periodically:
 			self.check_events(cond_type)
 
 	def _remove_event(self, event):
@@ -232,23 +211,20 @@ class ScenarioEventHandler(LivingObject):
 		# every data except events are static, so reuse old data
 		data = copy.deepcopy(self._data)
 		del data['events']
-		yaml_code = yaml.dump(data, line_break=u'\n')
-		yaml_code = yaml_code.rstrip(u'}\n')
-		#yaml_code = yaml_code.strip('{}')
+		yaml_code = dump_dict_to_yaml(data)
+		yaml_code = yaml_code.rstrip(u'}\n') # remove last } so we can add stuff
 		yaml_code += ', events: [ %s ] }' % ', '.join(event.to_yaml() for event in self._events)
 		return yaml_code
 
 
 ###
-# Scenario Conditions
-from horizons.scenario.conditions import *
-
-###
-# Scenario Actions
-from horizons.scenario.actions import *
-
-###
 # Simple utility classes
+
+def assert_type(var, expected_type, name):
+	if not isinstance(var, expected_type):
+		raise InvalidScenarioFileFormat('%s should be a %s, but is: %s' % (
+			name, expected_type.__name__, str(var)))
+
 
 class _Event(object):
 	"""Internal data structure representing an event."""
@@ -256,8 +232,10 @@ class _Event(object):
 		self.session = session
 		self.actions = []
 		self.conditions = []
+		assert_type(event_dict['actions'], list, "actions")
 		for action_dict in event_dict['actions']:
 			self.actions.append( _Action(action_dict) )
+		assert_type(event_dict['conditions'], list, "conditions")
 		for cond_dict in event_dict['conditions']:
 			self.conditions.append( _Condition(session, cond_dict) )
 
@@ -272,34 +250,25 @@ class _Event(object):
 	def to_yaml(self):
 		"""Returns yaml representation of self"""
 		return '{ actions: [ %s ] , conditions: [ %s ]  }' % \
-			   (', '.join(action.to_yaml() for action in self.actions), \
+			   (', '.join(action.to_yaml() for action in self.actions),
 				', '.join(cond.to_yaml() for cond in self.conditions))
 
 
 class _Action(object):
 	"""Internal data structure representing an ingame scenario action"""
-	action_types = {
-		'message': show_message,
-		'db_message': show_db_message,
-		'win' : do_win,
-		'lose' : do_lose,
-		'set_var' : set_var,
-		'logbook': show_logbook_entry_delayed, # set delay=0 for instant appearing
-		'logbook_w': write_logbook_entry, # not showing the logbook
-		'wait': wait,
-		'goal_reached' : goal_reached,
-	}
-
 	def __init__(self, action_dict):
+		assert_type(action_dict, dict, "action specification")
+
 		try:
-			self._action_type_str = action_dict['type']
+			self.action_type = action_dict['type']
 		except KeyError:
-			raise InvalidScenarioFileFormat('Encountered action without type')
+			raise InvalidScenarioFileFormat('Encountered action without type\n'+str(action_dict))
 		try:
-			self.callback = self.action_types[ action_dict['type'] ]
+			self.callback = ACTIONS.get(self.action_type)
 		except KeyError:
-			raise InvalidScenarioFileFormat('Found invalid action type: %s' % action_dict['type'])
-		self.arguments = action_dict['arguments'] if 'arguments' in action_dict else []
+			raise InvalidScenarioFileFormat('Found invalid action type: %s' % self.action_type)
+
+		self.arguments = action_dict.get('arguments', [])
 
 	def __call__(self, session):
 		"""Executes action."""
@@ -307,31 +276,27 @@ class _Action(object):
 
 	def to_yaml(self):
 		"""Returns yaml representation of self"""
-		arguments_yaml = yaml.safe_dump(self.arguments, line_break='\n')
-		# NOTE: the line above used to end with this: .replace('\n', '')
-		# which broke formatting of logbook messages, of course. Revert in case of problems.
-		return "{arguments: %s, type: %s}" % (arguments_yaml, self._action_type_str)
+		arguments_yaml = dump_dict_to_yaml(self.arguments)
+		return "{arguments: %s, type: %s}" % (arguments_yaml, self.action_type)
 
 
 class _Condition(object):
 	"""Internal data structure representing a condition"""
-	# map condition types to functions here if renaming is necessary
-	condition_types = { }
+
 	def __init__(self, session, cond_dict):
 		self.session = session
-		if not 'type' in cond_dict:
-			raise InvalidScenarioFileFormat("Encountered condition without type")
+		assert_type(cond_dict, dict, "condition specification")
+
 		try:
-			self.cond_type = CONDITIONS.get_item_for_string(cond_dict['type'])
+			self.cond_type = cond_dict['type']
 		except KeyError:
-			raise InvalidScenarioFileFormat('Found invalid condition type: %s' % cond_dict['type'])
-		# first check the global namespace for a function called same as the condition.
-		# if a function has to be named differently, map the CONDITION type in self.condition_types
-		if cond_dict['type'] in globals():
-			self.callback = globals()[cond_dict['type']]
-		else:
-			self.callback = self.condition_types[ self.cond_type  ]
-		self.arguments = cond_dict['arguments'] if 'arguments' in cond_dict else []
+			raise InvalidScenarioFileFormat("Encountered condition without type\n"+str(cond_dict))
+		try:
+			self.callback = CONDITIONS.get(self.cond_type)
+		except KeyError:
+			raise InvalidScenarioFileFormat('Found invalid condition type: %s' % self.cond_type)
+
+		self.arguments = cond_dict.get('arguments', [])
 
 	def __call__(self):
 		"""Check for condition.
@@ -340,7 +305,15 @@ class _Condition(object):
 
 	def to_yaml(self):
 		"""Returns yaml representation of self"""
-		arguments_yaml = yaml.safe_dump(self.arguments, line_break='\n')
-		# NOTE: the line above used to end with this: .replace('\n', '')
-		# which broke formatting of logbook messages, of course. Revert in case of problems.
-		return '{arguments: %s, type: "%s"}' % ( arguments_yaml, self.cond_type.key)
+		arguments_yaml = dump_dict_to_yaml(self.arguments)
+		return '{arguments: %s, type: "%s"}' % ( arguments_yaml, self.cond_type)
+
+
+def dump_dict_to_yaml(data):
+	"""Wrapper for dumping yaml data using common parameters"""
+	# NOTE: the line below used to end with this: .replace('\n', '')
+	# which broke formatting of logbook messages, of course. Revert in case of problems.
+
+	# default_flow_style: makes use of short list notation without newlines (required here)
+	return yaml.safe_dump(data, line_break='\n', default_flow_style=True)
+

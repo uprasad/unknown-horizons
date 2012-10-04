@@ -2,127 +2,106 @@
 # DON'T EDIT THIS FILE.
 
 # It was automatically generated with development/create_scenario_pot.sh using
-# translation files from pootle.
+# translation files from pootle. Documentation on this process is found here:
+#   development/copy_pofiles.sh
 
-author: "UH-ryhm\xE4"
-description: "Tutoriaali:\nRakenna ensimm\xE4inen asutuskeskuksesi ja opi kuinka pelata!\n"
-difficulty: !!python/unicode 'Tutoriaali'
+author: "Unknown Horizonsin kehitt\xE4j\xE4t"
+description: "Harjoituspeli:\nRakenna ensimm\xE4inen siirtokuntasi ja opi, miten t\xE4\
+  t\xE4 peli\xE4 pelataan!\n"
+difficulty: !!python/unicode 'Harjoituspeli'
 events:
 - actions:
-  - arguments: [!!python/unicode 'Rakenna sivutoimisto rannikolle.']
+  - arguments: ["Rakenna rannikolle sivutoimistosi, jossa se on hyvien kulkuyhteyksien\
+        \ p\xE4\xE4ss\xE4."]
     type: message
-  - arguments: [!!python/unicode 'Tervetuloa peliin Unknown Horizons!', "T\xE4m\xE4\
-        \ on kapteenin lokikirja, johon kaikki t\xE4rke\xE4 tieto kirjataan. Lyhyt\
-        \ huomautus jokaisesta teht\xE4v\xE4st\xE4 tarjotaan kuvaruudun vasempaan\
-        \ reunaan.\n\nJos olet kiinnostunut tarkemmista kuvauksista, niin lokikirjastasi\
-        \ toivottavasti l\xF6ytyy kaikki tarvitsemasi.\n\nKun olet sulkenut t\xE4\
-        m\xE4n lokikirjan, voit avata sen uudelleen \"Kapteenin lokikirja\"-kuvakkeesta\
-        \ oikeasta yl\xE4kulmasta. (minimap:n alapuolella, sinet\xF6idyn dokumentin\
-        \ ja sulan kera).\n\nJos keksit ehdotuksia paremmille sanamuodoille, aiheita,\
-        \ joista haluaisit kuulla tai t\xF6rm\xE4\xE4t vikatilanteeseen: Pyyd\xE4\
-        mme kertomaan meille, niin me yrit\xE4mme parantaa tutoriaalia!\n\nVieraile\
-        \ sivustolla www.unknown-horizons.org l\xF6yt\xE4\xE4ksesi ohjeet, kuinka\
-        \ ottaa yhteytt\xE4 kehitysryhm\xE4\xE4n!\n\nJa nyt, aloitetaanpas varsinainen\
-        \ peli."]
-    type: logbook_w
-  - arguments: [!!python/unicode 'ASETU JONKINLAISELLE SAARELLE', "Liikuttaaksesi\
-        \ laivaasi, valitse se hiiren vasemmalla painonapilla ja oikealla sijainti,\
-        \ johon haluat sen menev\xE4n.\n\nKun olet rannikon l\xE4hell\xE4, ankkurimainen\
-        \ n\xE4pp\xE4in yleiskatsaus-v\xE4lilehdell\xE4 tulee aktiiviseksi.\n\nT\xE4\
-        m\xE4 kertoo, ett\xE4 voit rakentaa sivutoimiston siihen painamalla n\xE4\
-        pp\xE4int\xE4 (nimelt\xE4\xE4n 'Rakenna asutuskeskus').\n\nNyt kuva tulevasta\
-        \ rakennuksestasi seuraa hiiresi osoitinta.\n\nVoit rakentaa mihin tahansa,\
-        \ miss\xE4 kuvalla ei ole punertavaa v\xE4ris\xE4vy\xE4.\nPaina hiirell\xE4\
-        \ mihin haluat rakentaa ensimm\xE4isen rakennuksesi.\n\nTEHT\xC4V\xC4: Rakenna\
-        \ sivutoimisto rannikolle.", 2]
+  - arguments:
+    - ''
+    - - Gallery
+      - [content/gfx/uh.png]
+    - [Pagebreak]
+    - [Headline, !!python/unicode 'Tervetuloa Unknown Horizonsiin!']
+    - [Image, content/gui/images/background/hr.png]
+    - ''
+    - "T\xE4m\xE4 on Kapteenin p\xE4iv\xE4kirja, johon kirjataan kaikki pelin kannalta\
+      \ olennaiset tiedot. Jokaisesta teht\xE4v\xE4st\xE4 ilmoitetaan pelin vasemmassa\
+      \ reunassa."
+    - "Jos haluat tiet\xE4\xE4 teht\xE4vist\xE4 lis\xE4\xE4, niin t\xE4st\xE4 p\xE4\
+      iv\xE4kirjasta pit\xE4isi l\xF6yty\xE4 tarvitsemasi tiedot."
+    - "Kun olet sulkenut t\xE4m\xE4n p\xE4iv\xE4kirjan, voit avata sen uudelleen \"\
+      Kapteenin p\xE4iv\xE4kirja\" -kuvakkeesta oikeasta yl\xE4kulmasta (pikkukartan\
+      \ alapuolelta, kuvakkeessa on sinet\xF6ity kirje ja sulka)."
+    - - Gallery
+      - [content/gui/icons/widgets/minimap/captainslog.png]
+    - "\nVoit tutustua ensimm\xE4iseen teht\xE4v\xE4\xE4si napsauttamalla \"Seuraava\
+      \ merkint\xE4\" -kuvaketta p\xE4iv\xE4kirjan alareunassa. Kuvake n\xE4ytt\xE4\
+      \xE4 t\xE4lt\xE4:"
+    - - Gallery
+      - [content/gui/images/buttons/parrow_right.png]
+    - [Pagebreak]
+    - "\nJos keksit ehdotuksia paremmalle kieliopille, haluaisit kuulla jostain lis\xE4\
+      \xE4 tai t\xF6rm\xE4\xE4t vikatilanteeseen, kerrothan siit\xE4 meille, jotta\
+      \ voimme parantaa t\xE4t\xE4 harjoituspeli\xE4!"
+    - "\nKehitysryhm\xE4mme yhteystiedot on saatavilla verkkosivuiltamme osoitteesta\
+      \ www.unknown-horizons.org ."
+    - !!python/unicode 'Ja nyt viimeinkin, aloitetaanpas itse peli!'
+    - [Pagebreak]
+    - [Headline, !!python/unicode 'ASETU SAARELLE']
+    - [Image, content/gui/images/background/hr.png]
+    - "Liikuta laivaasi valitsemalla se hiiren vasemmalla painikkeella ja oikealla\
+      \ sijainti, johon haluat sen menev\xE4n."
+    - "Kun olet rannikon l\xE4hell\xE4, ankkurin kuvake laivan yleiskatsauksessa muuttuu\
+      \ aktiiviseksi."
+    - - Gallery
+      - [content/gui/icons/ship/anchor.png]
+    - "T\xE4m\xE4 kertoo, ett\xE4 voit rakentaa sivutoimiston t\xE4h\xE4n napsauttamalla\
+      \ t\xE4t\xE4 painiketta (nimelt\xE4\xE4n \"Rakenna siirtokunta\")."
+    - "Hiirt\xE4 liikutellessa pit\xE4isi nyt sen yhteydess\xE4 olla sivutoimiston\
+      \ esikatselukuva."
+    - "Sivutoimiston voi rakentaa mihin tahansa, kunhan rakennuksen kuvalla ei ole\
+      \ punertavaa v\xE4ris\xE4vy\xE4. Sivutoimisto sijoitetaan rannikolle. Valitse\
+      \ sopiva paikka ja rakenna sivutoimisto napsauttamalla hiiren vasenta painiketta."
+    - "\nTEHT\xC4V\xC4: Rakenna sivutoimisto rannikolle."
     type: logbook
-  - arguments: [tutStepDone, 6]
+  - arguments: [tutStepDone, 16]
     type: set_var
   conditions:
   - arguments: [0]
     type: time_passed
 - actions:
-  - arguments: ["TYHJENN\xC4 LASTISI", !!python/unicode 'Now that you have built the
-        Branch Office, you need to move some of your resources to its stock.
-
-
-        To do so, select your ship and go into the tab with the wooden box icon called
-        ''Ship Inventory''.
-
-
-        Here you get an overview of what this ship''s cargo looks like and have the
-        button ''Load/Unload''.
-
-
-        This button becomes active if your ship is in range of a possible trade partner
-        like a branch office.
-
-
-        Click on the button. If it is not active, move your ship towards the branch
-        office and then try again.
-
-
-        TASK: Open the trade dialogue.']
-    type: logbook_w
-  - arguments: ['', "V\xE4lilehti, jonka n\xE4et, jakautuu kaupank\xE4yjiin 'Alus'\
-        \ ja 'Asutuskeskus'.\n\nSiirt\xE4\xE4ksesi tavaroita varastosta toiseen paina\
-        \ kyseist\xE4 tavaraa.\n\nKoita ensin painaa laivassasi olevia lautoja ja\
-        \ sitten yrit\xE4 siirt\xE4\xE4 ne takaisin.\n\nVoit vaihtaa liikutettavien\
-        \ m\xE4\xE4r\xE4n k\xE4ytt\xE4m\xE4ll\xE4 itsens\xE4selitt\xE4vi\xE4 valintanappeja\
-        \ keskell\xE4.\n\nTotuitko kaupank\xE4yntiv\xE4lilehteen?\nTarvitset nyt rakennustarvikkeita\
-        \ asutuskeskukseesi!\n\nTEHT\xC4V\xC4: Pura laivasi lastista v\xE4hint\xE4\
-        \xE4n 10 tonnia kutakin laivasi mukana purjehtinutta tarviketta."]
+  - arguments:
+    - [Headline, !!python/unicode 'RAKENNA PUUNHAKKAAJA']
+    - [Image, content/gui/images/background/hr.png]
+    - !!python/unicode 'Laivasi lastina olleet tavarat puretaan siirtokuntaasi automaattisesti.
+      Voit nyt rakentaa joitain perusrakennuksia.'
+    - !!python/unicode 'Aloittakaamme puunhakkaajalla.'
+    - "Puunhakkaaja on t\xE4rke\xE4, koska sen tuottamia lautoja tarvitaan useimpiin\
+      \ rakennuksiin, kuten asukkaidesi telttoihin."
+    - "My\xF6s kalastaja tarvitsee lautoja alustensa rakentamiseen."
+    - "Rakenna puunhakkaajan n\xE4in: avaa aluksi rakennusvalikko joko napsauttamalla\
+      \ pikkukartan alapuolella olevista napeista keskimm\xE4ist\xE4 tai painamalla\
+      \ pikan\xE4pp\xE4int\xE4 B."
+    - - Gallery
+      - [content/gui/icons/widgets/minimap/build.png]
+    - "Rakennusvalikko on jaettu siirtokunnan tason mukaan v\xE4lilehtiin (vasen reuna)."
+    - "T\xE4ss\xE4 vaiheessa voit rakentaa vain ensimm\xE4isen eli Merenkulkijat-tason\
+      \ rakennuksia."
+    - [Pagebreak]
+    - "\nSiirtokuntasi kehittyess\xE4 saat k\xE4ytt\xF6\xF6si uusia rakennuksia."
+    - "Nyt kuitenkin riitt\xE4\xE4, ett\xE4 valitset puunhakkaajan kohdasta \"Yritykset\"\
+      \ ja rakennat sen alueelle, jossa on riitt\xE4v\xE4sti puita."
+    - "Voit tarvittaessa istuttaa my\xF6hemmin my\xF6s puita - mutta se maksaa rahaa.\
+      \ K\xE4yt\xE4 ensisijaisesti sit\xE4, mit\xE4 luonto on sinulle tarjonnut."
+    - "Yritys tarvitsee polkuyhteyden varastoon tai sivutoimistoon, muuten tavarat\
+      \ j\xE4\xE4v\xE4t yritykselle eik\xE4 niit\xE4 saada ker\xE4tty\xE4."
+    - !!python/unicode 'Rakenna siis polku puunhakkaajalta sivutoimistolle tai varastolle.'
+    - "\nTEHT\xC4V\xC4: Rakenna puunhakkaaja mets\xE4\xE4n ja yhdist\xE4 se polkuun."
+    - "Katsele, kun ker\xE4\xE4j\xE4 hakee ensimm\xE4iset itsevalmistetut lautasi.\xC4\
+      l\xE4 huolehdi lis\xE4ty\xF6voiman palkkauksesta, sill\xE4 se tapahtuu automaattisesti."
+    - - Gallery
+      - [content/gui/icons/buildmenu/008.png, content/gui/icons/buildmenu/015.png,
+        content/gui/icons/resources/50/004.png]
     type: logbook
-  - arguments: ["Pura v\xE4hint\xE4\xE4n 10 tonnia kutakin tavaraa laivastasi."]
-    type: message
-  - arguments: [tutStepDone, 16]
-    type: set_var
-  conditions:
-  - arguments: [1, 0]
-    type: building_num_of_type_greater
-  - arguments: [tutStepDone, 5]
-    type: var_gt
-  - arguments: [tutStepDone, 16]
-    type: var_lt
-- actions:
-  - arguments: [!!python/unicode 'RAKENNA PUUNHAKKAAJA', "Uudet rakennustarvikkeesi\
-        \ sivustoimistossa, voit aloittaa rakentamaan muutamia perusrakennuksia.\n\
-        \nAloittakaamme puunhakkaajalla.\n\nT\xE4m\xE4 on olennaista, koska t\xE4\
-        ss\xE4 vaiheessa laudat ovat ainoat palkit, joille merenk\xE4vij\xF6ill\xE4\
-        si on varaa ripustaa telttansa.\n\nKalastaja tarvitsee lautoja my\xF6s rakentaakseen\
-        \ veneens\xE4.\n\nRakentaaksesi puunhakkaajan; avaa rakennusvalikko joko painamalla\
-        \ isoa kuvaketta minimapin alapuolella tai B-n\xE4pp\xE4int\xE4.\n\nRakennusvalikko\
-        \ on j\xE4rjestetty korotusten perusteella.\nSin\xE4 olet t\xE4ss\xE4 vaiheessa\
-        \ peli\xE4 ensimm\xE4isess\xE4 korotuksessa (Merenk\xE4vij\xE4-taso), joten\
-        \ sinulle tarjotaan vain perusrakennuksia."]
-    type: logbook_w
-  - arguments: ['', !!python/unicode 'As your civilization advances, you also gain
-        more and more complex buildings.
-
-
-        For now, select the lumberjack under ''Companies'' and build it in an area
-        with some trees around.
-
-
-        You can also plant trees later - but that costs money. Use what nature provided
-        you with!
-
-
-        A company always needs a trail connection to a storage or branch office, otherwise
-        goods will remain at the company and not be collected.
-
-
-        This means that you have to build a trail connecting your branch office (or
-        storage) and lumberjack.
-
-
-        TASK: Build a lumberjack in a wooded area and connect it to a road.
-
-
-        Watch how a collector will fetch your first self-produced boards.']
-    type: logbook
-  - arguments: ["Rakenna puunhakkaaja ja yhdist\xE4 se sivutoimistoon k\xE4ytt\xE4\
-        m\xE4ll\xE4 polkua."]
+  - arguments: ["Rakenna puunhakkaaja ja yhdist\xE4 se sivutoimistoon polulla."]
     type: message
   - arguments: [tutStepDone, 19]
     type: set_var
@@ -138,77 +117,79 @@ events:
   - arguments: [tutStepDone, 19]
     type: var_lt
 - actions:
-  - arguments: [!!python/unicode 'RUOKAVARANTO', !!python/unicode 'You will need to
-        have some food-producing companies, too, because people in general (and especially
-        sailors) are very hungry.
-
-
-        Available companies in the first increment are the Hunter and Fisher.
-
-
-        The Hunter, surprisingly, hunts animals in the forest, so he needs trees around.
-
-
-        Note that you can place your Hunter close to the lumberjack''s forest.
-
-
-        It can happen that the animals don''t reproduce fast enough or simply hide
-        well.
-
-
-        Conclusion: the hunter is not too reliable if you need continuous supply.']
-    type: logbook_w
-  - arguments: ['', !!python/unicode 'The Fisher needs a coastal building site like
-        the branch office and a fish school in range.
-
-
-        He will build a small rowing vessel and catch some fish.
-
-
-        This is a very constant supply at the cost of a slightly longer production
-        time per unit of food.
-
-
-        A small settlement like yours can use both companies, and you can better balance
-        pros and cons if you see the direct comparison.
-
-
-        TASK: Build a hunter and a fisher.
-
-
-        Don''t forget to connect them to your branch office with trails!']
+  - arguments:
+    - [Headline, !!python/unicode 'RUOKAVARANTO']
+    - [Image, content/gui/images/background/hr.png]
+    - "Tulet tarvitsemaan my\xF6s ruokaa tuottavia yrityksi\xE4, sill\xE4 asukkaasi\
+      \ tarvitsevat ruokaa."
+    - "Ensimm\xE4isell\xE4 tasolla voit rakentaa mets\xE4st\xE4j\xE4n ja kalastajan."
+    - "Mets\xE4st\xE4j\xE4 (yll\xE4tys yll\xE4tys) mets\xE4st\xE4\xE4 el\xE4imi\xE4\
+      \ mets\xE4st\xE4. Se tuleekin sijoittaa mets\xE4\xE4n."
+    - "Huomaa, ett\xE4 paras paikka mets\xE4st\xE4j\xE4lle on puunhakkaajan vieress\xE4\
+      ."
+    - "Mets\xE4st\xE4j\xE4n huonona puolena el\xE4imet eiv\xE4t v\xE4ltt\xE4m\xE4\
+      tt\xE4 lis\xE4\xE4nny riitt\xE4v\xE4n nopeasti tai osaavat piiloutua liian hyvin."
+    - "Johtop\xE4\xE4t\xF6s: mets\xE4st\xE4j\xE4 ei ole sataprosenttisen luotettava\
+      \ pitk\xE4nt\xE4ht\xE4imen ruokatuotantoon."
+    - [Pagebreak]
+    - "\nKalastaja pit\xE4\xE4 rakentaa rannikolle kuten sivutoimistokin ja tarvitsee\
+      \ kalastuskoulun kantamaansa."
+    - "Kalastaja rakentaa pienen soutuveneen ja alkaa pyydyst\xE4m\xE4\xE4n kaloja."
+    - "Kalastus on todella pitk\xE4ik\xE4inen ruoanl\xE4hde, mutta hitaampaa kuin\
+      \ mets\xE4st\xE4minen."
+    - "Pieni asutuskeskus - kuten omasi - voi k\xE4ytt\xE4\xE4 molempia, jolloin pystyt\
+      \ paremmin tasapainottamaan hyv\xE4t ja huonot puolet."
+    - "\nTEHT\xC4V\xC4: Rakenna mets\xE4st\xE4j\xE4 ja kalastaja."
+    - "\xC4l\xE4 unohda yhdist\xE4\xE4 niit\xE4 polulla sivutoimistoosi!"
+    - - Gallery
+      - [content/gui/icons/buildmenu/011_h.png, content/gui/icons/buildmenu/009_h.png,
+        content/gui/icons/resources/50/005.png]
     type: logbook
-  - arguments: ["Rakenna mets\xE4st\xE4j\xE4 ja kalastaja. Yhdist\xE4 ne sivutoimistoon."]
+  - arguments: ["Rakenna mets\xE4st\xE4j\xE4 ja kalastaja ja yhdist\xE4 ne sivutoimistoosi."]
     type: message
   - arguments: [tutStepDone, 22]
     type: set_var
   conditions:
   - arguments: [8, 0]
-    type: buildings_connected_to_branch_gt
+    type: buildings_connected_to_warehouse_gt
   - arguments: [tutStepDone, 18]
     type: var_gt
   - arguments: [tutStepDone, 22]
     type: var_lt
 - actions:
-  - arguments: [!!python/unicode 'KESKUSTORI', "Asukkaasi tarvitsevat keskustorin,\
-        \ jolta he voivat hankkia elintarvikkeensa.\n\nT\xE4m\xE4 tarkoittaa, ett\xE4\
-        \ he tarvitsevat kulkuyhteyden kodeistaan keskustorille.\n\nKaikki elintarvikkeet\
-        \ sivutoimistollasi ovat saatavilla t\xE4lt\xE4 'kauppapaikalta', joten asukkaidesi\
-        \ ei tarvitse k\xE4vell\xE4 kalastajalle tai jopa sivutoimistolle.\n\nSinun\
-        \ tulisi harkita perustavasi varsinaisen taloasutuskeskuksesi alueelle, jolta\
-        \ voit helposti laajentaa sit\xE4 ja my\xF6s rakentaa polkuja\n\nSinun tulee\
-        \ v\xE4ltt\xE4\xE4 sijoittamasta telttojasi esimerkiksi liian l\xE4helle puunhakkaajiasi,\
-        \ koska telttojen rakentaminen raivaa puut, joita puunhakkaajasi tarvitsee\
-        \ rakentaakseen lautoja.\n\nTEHT\xC4V\xC4: Rakenna keskustori."]
-    type: logbook_w
-  - arguments: ['', "Katsotaanpa tarkemmin keskustoria.\n\nYleiskatsaus-v\xE4lilehdell\xE4\
-        \ voit nopeasti s\xE4\xE4t\xE4\xE4 veroja.\n\nSeuraavalla eli 'Tili'-v\xE4\
-        lilehdell\xE4 saat saaren tasapainolaskelman, jossa n\xE4kyy kaikki maksamasi\
-        \ kustannukset ja tienaamasi verot.\n\nKohdat 'Myynti' ja 'Osto' viittaavat\
-        \ kaupank\xE4yntitasapainoosi ja ne tullaan selitt\xE4m\xE4\xE4n my\xF6hemmin.\n\
-        \nJos tasapainosi on positiivisella, bisneksesi kokonaisuutena tekee voittoa.\n\
-        \n'Uudisasukas'-v\xE4lilehdess\xE4 n\xE4et, kuinka onnellisia asukkaasi ovat\
-        \ ja mit\xE4 tarviketta suurin osa heist\xE4 haluaisi."]
+  - arguments:
+    - [Headline, !!python/unicode 'KESKUSTORI']
+    - [Image, content/gui/images/background/hr.png]
+    - !!python/unicode 'Asukkaasi tarvitsevat keskustorin, jolta he voivat hankkia
+      elintarvikkeensa.'
+    - "Keskustorille pit\xE4\xE4 siis olla kulkuyhteys asukkaiden asunnoilta."
+    - "Kaikki elintarvikkeet sivutoimistollasi ovat saatavilla t\xE4lt\xE4 \"kauppapaikalta\"\
+      , joten asukkaidesi ei tarvitse k\xE4vell\xE4 erikseen kalastajalle, mets\xE4\
+      st\xE4j\xE4lle tai edes sivutoimistolle."
+    - - Gallery
+      - [content/gui/icons/buildmenu/004_h.png]
+    - "V\xE4lt\xE4 telttojen sijoittamista puunhakkaajan l\xE4heisyyteen, sill\xE4\
+      \ teltan pystytt\xE4minen raivaa paikalla olevat puut (ja et p\xE4\xE4se sahaamaan\
+      \ niit\xE4 laudoiksi hy\xF6tyk\xE4ytt\xF6\xF6n)."
+    - "Yritysten toiminta jatkuu, vaikka niill\xE4 ei olisikaan kulkuyhteytt\xE4 keskustorille."
+    - "\nTEHT\xC4V\xC4: Rakenna keskustori."
+    - [Pagebreak]
+    - !!python/unicode '
+
+      Tutustutaan kuitenkin nyt tarkemmin keskustoriin.'
+    - - Gallery
+      - [content/gui/icons/tabwidget/warehouse/account_a.png]
+    - "Yleiskatsauksessa n\xE4et siirtokuntasi taloudellisen tilan, kuten ansaitsemasi\
+      \ verot ja rakennuksien yll\xE4pitoon kuluvat juoksevat kulut."
+    - "Tulot- ja Menot-kohtien perusteella m\xE4\xE4ritell\xE4\xE4n siirtokuntasi\
+      \ taloudellinen tasapaino, josta puhumme my\xF6hemmin lis\xE4\xE4."
+    - !!python/unicode 'Jos taloutesi on plussan puolella, siirtokuntasi tekee voittoa.'
+    - - Gallery
+      - [content/gui/icons/tabwidget/mainsquare/inhabitants0_a.png]
+    - "Siirtokunnantason mukaan jaettavilla v\xE4lilehdill\xE4 voit tutustua erilaisiin\
+      \ tilastotietoihin. Voit m\xE4\xE4ritell\xE4 siirtokuntatasokohtaisen veroprosentin\
+      \ ja sallia tai kielt\xE4\xE4 asukkailtasi oikeudet asumustensa p\xE4ivitt\xE4\
+      miseen."
     type: logbook
   - arguments: [!!python/unicode 'Rakenna keskustori. Valitse alue, jolla ei ole liian
         montaa tuotantorakennusta.']
@@ -221,23 +202,29 @@ events:
   - arguments: [11, 0]
     type: building_num_of_type_greater
   - arguments: [9, 0]
-    type: buildings_connected_to_branch_gt
+    type: buildings_connected_to_warehouse_gt
   - arguments: [11, 0]
-    type: buildings_connected_to_branch_gt
+    type: buildings_connected_to_warehouse_gt
   - arguments: [tutStepDone, 21]
     type: var_gt
   - arguments: [tutStepDone, 25]
     type: var_lt
 - actions:
-  - arguments: [!!python/unicode 'ASUINRAKENNUKSIA', "Uudisasukkaat haluavat katon\
-        \ p\xE4\xE4ns\xE4 p\xE4\xE4lle, muuten he eiv\xE4t tulisi ajatelleeksikaan\
-        \ asuvansa kaupungissasi! Sinun tarvitsee tarjota telttoja.\n\nTeltat ovat\
-        \ perusasuinrakennuksia. Asukkaasi haluavat kehitt\xE4\xE4 asumustaan, kun\
-        \ he saavuttavat korkeampia korotuksia.\n\nUudisasukkaat eiv\xE4t v\xE4ltt\xE4\
-        m\xE4tt\xE4 n\xE4yt\xE4 hy\xF6dyllisilt\xE4, sill\xE4 he yritt\xE4v\xE4t kuluttaa\
-        \ tuottamiasi elintarvikkeita, mutta he sent\xE4\xE4n maksavat veroja, ja\
-        \ se on t\xE4ll\xE4 hetkell\xE4 ainoa tapa, jolla saat rahaa!\n\nTEHT\xC4\
-        V\xC4: Rakenna teltta ja yhdist\xE4 se polulla keskustoriin."]
+  - arguments:
+    - [Headline, !!python/unicode 'ASUINRAKENNUKSET']
+    - [Image, content/gui/images/background/hr.png]
+    - "Uudisasukkaat haluavat katon p\xE4\xE4ns\xE4 p\xE4\xE4lle, muuten he eiv\xE4\
+      t tule l\xE4hellek\xE4\xE4n siirtokuntaasi! Sinun pit\xE4\xE4 siis pystytt\xE4\
+      \xE4 telttoja."
+    - - Gallery
+      - [content/gui/icons/buildmenu/003_h.png]
+    - "Teltat ovat perusasuinrakennuksia. Asukkaasi haluavat kehitt\xE4\xE4 asumustaan,\
+      \ kun heill\xE4 on varaa ja taitoja siihen."
+    - "Uudisasukkaat eiv\xE4t v\xE4ltt\xE4m\xE4tt\xE4 vaikuta hy\xF6dyllisilt\xE4\
+      , sill\xE4 he kuluttavat tuottamiasi elintarvikkeita. He kuitenkin maksavat\
+      \ veroja, ja se on t\xE4ll\xE4 hetkell\xE4 ainoa tapa, jolla saat rahaa!"
+    - "\nTEHT\xC4V\xC4: Rakenna teltta ja yhdist\xE4 se polulla keskustoriin. Telttoja\
+      \ ei tarvitse yhdist\xE4\xE4 yrityksiin."
     type: logbook
   - arguments: ["Rakenna teltta ja yhdist\xE4 se polulla keskustoriin."]
     type: message
@@ -251,16 +238,16 @@ events:
   - arguments: [tutStepDone, 28]
     type: var_lt
 - actions:
-  - arguments: ['', "Katsotaanpa telttayleiskatsauksen v\xE4lilehte\xE4.\nN\xE4et\n\
-        * n\xE4iden asukkaiden onnellisuuden,\n* heid\xE4n maksamansa verot ja\n*\
-        \ heid\xE4n vaatimansa tarvikkeet.\n\nJos heid\xE4n vaatimuksensa t\xE4ytet\xE4\
-        \xE4n, onnellisuus lis\xE4\xE4ntyy ja sit\xE4 kautta verotulosi.\n\nJos ei\
-        \ t\xE4ytet\xE4, onnellisuus ja tulot laskevat. Asukkaat saattavat tulla hyvin\
-        \ happamiksi ja yksinkertaisesti k\xE4\xE4nt\xE4\xE4 selk\xE4ns\xE4 kyl\xE4\
-        llesi j\xE4tt\xE4en taakseen murenevat rauniot.\n\nHuomaa, ett\xE4 voit muuttaa\
-        \ veroasetuksia my\xF6s t\xE4\xE4ll\xE4.\n\nTEHT\xC4V\xC4: Rakenna v\xE4hint\xE4\
-        \xE4n kolme telttaa lis\xE4\xE4.\n\nVIHJE: VAIHTO-n\xE4pp\xE4imen pit\xE4\
-        minen pohjassa helpottaa usean saman lajin rakennuksen rakentamista."]
+  - arguments: ["\nKatsotaanpa telttayleiskatsauksen v\xE4lilehte\xE4.", "N\xE4et\
+        \ teltan asukkaiden\n* onnellisuuden,\n* maksamat verot ja\n* vaatimat resurssit.",
+      "Jos t\xE4yt\xE4t heid\xE4n vaatimuksensa, onnellisuus lis\xE4\xE4ntyy ja siten\
+        \ my\xF6s verotulosi.", "Jos et t\xE4yt\xE4, onnellisuus ja tulot laskevat.\
+        \ Asukkaat saattavat tulla hyvin happamiksi ja yksinkertaisesti k\xE4\xE4\
+        nt\xE4\xE4 selk\xE4ns\xE4 kyl\xE4llesi j\xE4tt\xE4en taakseen murenevat rauniot.",
+      "Huomaa, ett\xE4 veroprosenttia voi muuttaa my\xF6s telttakohtaisesti.", "\n\
+        TEHT\xC4V\xC4: Rakenna v\xE4hint\xE4\xE4n kolme telttaa lis\xE4\xE4.", "\n\
+        VIHJE: Shift-n\xE4pp\xE4imen pit\xE4minen pohjassa helpottaa usean saman rakennuksen\
+        \ rakentamista."]
     type: logbook
   - arguments: ["Rakenna v\xE4hint\xE4\xE4n kolme telttaa lis\xE4\xE4 ja yhdist\xE4\
         \ ne keskustoriin."]
@@ -275,50 +262,36 @@ events:
   - arguments: [tutStepDone, 31]
     type: var_lt
 - actions:
-  - arguments: [!!python/unicode 'RAKENNA MERKKITULI', !!python/unicode 'Can you see
-        the ship passing your island from time to time?
-
-
-        This is the ship of the Free Trader, one of the first settlers in this archipelago.
-
-
-        This trader will supply your settlement with necessary goods which you can''t
-        produce yet.
-
-
-        You can also sell surpluses of your production, but in general consuming them
-        (by building more tents) instead of selling to the Free Trader yields more
-        profit.
-
-
-        Normally the ships just sail around and look for deals, but small settlements
-        like yours first need some promotion, otherwise you won''t be found.
-
-
-        For this purpose, you can build a signal fire at the coast near your branch
-        office to show ships the way to your settlement.']
-    type: logbook_w
-  - arguments: ['', !!python/unicode 'After this little advertisment, the trader will
-        stop by from time to time and look into your branch office.
-
-
-        You can propose deals via the tab ''Buy/Sell''. (This feature is currently
-        quite fiddly to use, but a re-design is in the pipeline. If you have found
-        a nice way of doing it, please share your thoughts! We need your help here!)
-
-
-        At the ''sailors'' increment, you are equipped with three trading slots.
-
-
-        Click on the small icon to change the slot mode from ''Buy'' to ''Sell'' and
-        vice versa.
-
-
-        If you click in the slot, you can choose the good you want to trade with.
-        We will further explain this once you are ready to trade.
-
-
-        TASK: Build a signal fire at the coast close to your branch office.']
+  - arguments:
+    - [Headline, !!python/unicode 'RAKENNA MERKKITULI']
+    - [Image, content/gui/images/background/hr.png]
+    - "Oletko huomannut laivan ohittavan s\xE4\xE4nn\xF6llisesti siirtokuntasi? Alus\
+      \ on vapaakauppiaan, joka oli yksi saariston ensimm\xE4isist\xE4 uudisasukkaista."
+    - "Kauppiaalta voi ostaa hy\xF6dyllisi\xE4 tarvikkeita, joita et voi tuottaa viel\xE4\
+      \ itse."
+    - "Tarvittaessa voit myyd\xE4 my\xF6s ylij\xE4\xE4m\xE4tuotantoasi, mutta t\xE4\
+      m\xE4 kannattaa ennemminkin korvata rakentamalla lis\xE4\xE4 telttoja (jolloin\
+      \ asukkaita tulee lis\xE4\xE4 ja resursseja kuluu enemm\xE4n)."
+    - "Normaalisti kauppa-alukset vain kiertelev\xE4t ymp\xE4riins\xE4 etsien hyvi\xE4\
+      \ kauppapaikkoja, mutta voit nopeuttaa t\xE4t\xE4 prosessia."
+    - - Gallery
+      - [content/gui/icons/buildmenu/006_h.png]
+    - "T\xE4t\xE4 varten rannikolle pit\xE4\xE4 rakentaa merkkituli sivutoimistosi\
+      \ l\xE4helle. Se osoittaa kauppalaivoille tien siirtokuntaasi."
+    - "Siirtotulikaan ei n\xE4y loputtoman kauaksi, vaan sill\xE4 on tietty kantama-alue,\
+      \ jonka sis\xE4ll\xE4 kulkevat laivat huomaavat sen."
+    - [Pagebreak]
+    - "\nT\xE4m\xE4n pikku mainostuksen j\xE4lkeen kauppias alkaa etsi\xE4 sivutoimistoasi."
+    - "Voit ehdottaa kauppoja sivutoimiston Kaupank\xE4ynti-v\xE4lilehdelt\xE4."
+    - - Gallery
+      - [content/gui/icons/tabwidget/warehouse/buysell_a.png]
+    - !!python/unicode 'Merimiehet-tasolla sinulla on kolme kauppapaikkaa, eli voit
+      asettaa korkeintaan kolme tarjousta vapaakauppiaalle kerrallaan.'
+    - "Voit muuttaa myyntitarjouksen ostotarjoukseksi napsauttamalla kauppapaikan\
+      \ vasemman yl\xE4kulman pienest\xE4 kuvakkeesta."
+    - "Valitse kaupattava tuote napsauttamalla kauppapaikkaa. Kerromme t\xE4st\xE4\
+      \ ominaisuudesta my\xF6hemmin, kun olet valmis kaupank\xE4yntiin."
+    - "\nTEHT\xC4V\xC4: Rakenna merkkituli rannikolle sivutoimistosi l\xE4hettyville."
     type: logbook
   - arguments: ["Rakenna merkkituli rannikolle sivutoimistosi l\xE4hettyville."]
     type: message
@@ -332,29 +305,42 @@ events:
   - arguments: [tutStepDone, 34]
     type: var_lt
 - actions:
-  - arguments: ["OPI K\xC4YM\xC4\xC4N KAUPPAA", !!python/unicode "Excellent! The Free\
-        \ Trader will now stop by at your branch office from time to time.\n\nLet's\
-        \ continue our tutorial on how to trade.\n\nAfter selecting a particular type\
-        \ of good, the green bar across the bottom of the slot (if visible) shows\
-        \ you how much you have in stock of this good.\n\nDragging the slider on the\
-        \ right of each slot determines your 'target value' which has a different\
-        \ meaning on 'Buy' and 'Sell'. \nWhen buying, you will buy sufficient to hold\
-        \ your 'target value' in stock. \nWhen selling the 'target value' is the number\
-        \ which you hold in reserve to not sell"]
-    type: logbook_w
-  - arguments: ['', !!python/unicode "For example: \nHaving a 'Buy' slot and 5 tons\
-        \ in stock, a slider positioned at 9 tons will cause you to buy 4 additional\
-        \ tons at most.\nSelling works similarly. A 'Sell' slot with 18 tons in stock\
-        \ and the slider positioned at 13 will sell up to 5 tons.\n\nIf the free trader\
-        \ however only wants to buy or sell less than your settings would allow him,\
-        \ you need to live with that and wait for him to return.\n\nUnknown Horizons\
-        \ features smart pricing, so the value of one unit can vary.\nIt is NOT possible\
-        \ to change prices manually!\n\nYou can see your trade balance in the 'Account'\
-        \ tab comparing the 'Sale' and 'Buy' values there.\n\nTASK: Buy as many tools\
-        \ as you need to have 30 tools in stock!\nIf you still have some in your ship's\
-        \ inventory, this seems like a good point to unload them."]
+  - arguments:
+    - [Headline, "OPI K\xC4YM\xC4\xC4N KAUPPAA"]
+    - [Image, content/gui/images/background/hr.png]
+    - "Loistavaa! Vapaakauppias pys\xE4htyy nyt s\xE4\xE4nn\xF6llisesti sivutoimistollasi.\n\
+      \nJatketaan kaupank\xE4yntiin tutustumisella."
+    - "Kun olet valinnut kauppapaikkaan resurssin, oikeassa reunassa oleva vihre\xE4\
+      \ palkki n\xE4ytt\xE4\xE4, kuinka paljon t\xE4t\xE4 resurssia on varastossa.\
+      \ Jos resurssia ei ole yht\xE4\xE4n, palkkia ei n\xE4y."
+    - "Liikuttamalla liukus\xE4\xE4dint\xE4 tavararuudun (kauppapaikan) oikealla puolella\
+      \ valitaan kuinka paljon tavaraa korkeintaan myyd\xE4\xE4n tai ostetaan."
+    - "Ostaessa liukus\xE4\xE4timen luku on se m\xE4\xE4r\xE4, jonka tavoittelet olevan\
+      \ varastoissasi."
+    - "Myydess\xE4 taas luku ilmaisee m\xE4\xE4r\xE4\xE4, jonka haluat pit\xE4\xE4\
+      \ itsell\xE4si (jota ei aseteta myyntiin)."
+    - [Pagebreak]
+    - "\nEsimerkki:\nTavararuutu on asetettu Osta-asentoon. Sinulla on 5 tonnia lautoja\
+      \ varastossa, ja olet asettanut liukus\xE4\xE4timen yhdeks\xE4\xE4n tonniin.\
+      \ T\xE4ll\xF6in hankit korkeintaan 4 tonnia lautoja lis\xE4\xE4."
+    - "Myyminen toimii samalla tavalla. Kun Myy-asennossa oleva tavararuudun liukus\xE4\
+      \xE4din on 13 tonnissa ja varastossa on tavaraa 18 tonnia, tavaraa myyd\xE4\xE4\
+      n korkeintaan 5 tonnia."
+    - "Jos vapaakauppias ei kuitenkaan ole valmis myym\xE4\xE4n/ostamaan toivomaasi\
+      \ m\xE4\xE4r\xE4\xE4, et voi sille mit\xE4\xE4n, vaan joudut odottamaan kauppiaan\
+      \ seuraavaa k\xE4ynti\xE4."
+    - "Unknown Horisonzsissa on \xE4lyk\xE4s hinnoitteluj\xE4rjestelm\xE4, joten hinnat\
+      \ voivat olla muuttuneet kauppiaan seuraavalla k\xE4yntikerralla.\nHintoihin\
+      \ EI VOI vaikuttaa itse."
+    - "Budjetti-v\xE4lilehdell\xE4 n\xE4et kaupank\xE4ynnin tasapainon kohdista \"\
+      Ostot\" ja \"Myynti\"."
+    - "\nTEHT\xC4V\xC4: Osta niin monta ty\xF6kalua, ett\xE4 varastossasi on v\xE4\
+      hint\xE4\xE4n 30 ty\xF6kalua!"
+    - - Gallery
+      - [content/gui/icons/resources/50/006.png]
     type: logbook
-  - arguments: [!!python/unicode 'Reach an island stock of at least 30 tools.']
+  - arguments: ["Varastoi saarellesi v\xE4hint\xE4\xE4n 30 ty\xF6kalua.", "Huomioi,\
+        \ ett\xE4 t\xE4m\xE4 voi vied\xE4 jonkin aikaa."]
     type: message
   - arguments: [tutStepDone, 37]
     type: set_var
@@ -366,51 +352,32 @@ events:
   - arguments: [tutStepDone, 37]
     type: var_lt
 - actions:
-  - arguments: [!!python/unicode 'NEW TASK: BUILD A PAVILION', !!python/unicode 'Those
-        tools will be enough for the moment. Well done!
-
-
-        You now provide housing, a main square and food to your inhabitants.
-
-
-        Still there is one demand which we have not satisfied so far, you may check
-        that in the marketplace or tent tab - your sailors want a basic building where
-        they can pray.
-
-
-        The solution is a pavilion which the village parson quickly puts up as shelter
-        from the sun.
-
-
-        Service buildings like this also need to be connected to the tents with a
-        trail, else your inhabitants feel unable to reach them.
-
-
-        In later increments, upgraded versions of buildings may become available.']
-    type: logbook_w
-  - arguments: ['', !!python/unicode 'In that case the ''small'' version is not needed
-        anymore since the ''big'' one will also provide what your inhabitants are
-        looking for in early increments.
-
-
-        Take care when planning your city because most of those advanced buildings
-        are bigger than the basic ones.
-
-
-        Note that faith is treated like a physical resource, so units need to refresh
-        there after some time.
-
-
-        Important:
-
-        It is NOT enough that the building is merely within a certain range of the
-        tents.
-
-
-        TASK: Build a pavilion with a trail to the tents in order to fulfill your
-        sailors'' demand for faith.']
+  - arguments:
+    - [Headline, !!python/unicode 'RAKENNA KIRKKO']
+    - [Image, content/gui/images/background/hr.png]
+    - "Nuo ty\xF6kalut riitt\xE4v\xE4t hetkeksi. Hyvin tehty!"
+    - !!python/unicode 'Tarjoat nyt asuintilat, keskustorin ja ruokaa asukkaillesi.'
+    - "Yh\xE4 on yksi vaatimus, jota ei olla viel\xE4 t\xE4ytetty, voit tarkistaa\
+      \ sen halutessasi toripaikasta tai teltan v\xE4lilehdest\xE4 - merimiehesi haluavat\
+      \ yksinkertaisen rakennuksen, jossa voivat rukoilla."
+    - "Siksip\xE4 sinun pit\xE4\xE4 rakentaa kyl\xE4\xE4si kirkko, jonka kyl\xE4pappi\
+      \ nopeasti rakentaa auringonsuojaksi."
+    - "Kirkon kaltaiset palvelurakennukset pit\xE4\xE4 yhdist\xE4\xE4 polulla telttoihin\
+      \ tai muuten asukkaasi kokevat mahdottomaksi p\xE4\xE4st\xE4 niihin."
+    - [Pagebreak]
+    - "\nHuomioi, ett\xE4 uskoa on kohdeltava samoin kuin muitakin resursseja!"
+    - "T\xE4m\xE4n takia sinun on tarjottava kaikille asukkaille polkuyhteys uskontuottajan\
+      \ (kirkon) luokse."
+    - "He ker\xE4\xE4v\xE4t uskovarantonsa t\xE4yteen, mutta varannotkin kuitenkin\
+      \ tyhjentyv\xE4t joskus. Jonkin ajan kuluttua heid\xE4n on p\xE4\xE4st\xE4v\xE4\
+      \ kirkolle uudelleen t\xE4ytt\xE4m\xE4\xE4n uskonnolliset tarpeensa."
+    - "T\xE4rke\xE4\xE4:\nEi riit\xE4, ett\xE4 kirkko on asuntojen l\xE4hell\xE4,\
+      \ vaan sinne on oltava my\xF6s polkuyhteys."
+    - "\nRakenna kirkko polkuyhteydell\xE4 asukkaidesi luokse."
+    - - Gallery
+      - [content/gui/icons/buildmenu/005.png]
     type: logbook
-  - arguments: [!!python/unicode 'Build a pavilion with connection to the tents.']
+  - arguments: ["Rakenna kirkko yhteydell\xE4 telttoihin."]
     type: message
   - arguments: [tutStepDone, 40]
     type: set_var
@@ -422,51 +389,41 @@ events:
   - arguments: [tutStepDone, 40]
     type: var_lt
 - actions:
-  - arguments: [!!python/unicode 'NEW TASK: NEXT INCREMENT', !!python/unicode 'All
-        demands are fulfilled now if your inhabitants can regularly visit the main
-        square & pavilion and your food supply is adequate.
-
-
-        If the sailors are happy enough, they want to advance to the next increment
-        called Pioneers.
-
-
-        To make them happy, there is nothing else for you to do but setting taxes
-        to a lower level since you have fulfilled all the demands of your inhabitants.
-
-
-        You should try to not always run on low taxes since this will probably lead
-        to bankruptcy sooner or later. For a period of time and if you know what you
-        are doing, it is fine though.
-
-
-        After some time, the first unit should walk to the main square and have a
-        look for new construction material there to build a log house. This house
-        will replace the old tent.']
-    type: logbook_w
-  - arguments: ['', !!python/unicode 'Such residential upgrades are the only ones
-        which cost resources and can not be restricted by you.
-
-
-        There are manual upgrades to some buildings where you use resources to construct
-        a better version on the same spot, and there are upgrades without costs for
-        example as you will see with the lumberjack (In this case, only the graphics
-        change).
-
-
-        Upgraded housing accomodates more inhabitants, and pioneers pay more taxes
-        than sailors, too.
-
-
-        As you may have figured out already, the downside is that pioneers demand
-        additional goods which sailors do not need - so you will need to spend this
-        extra money to make them happy as well.
-
-
-        TASK: Set the tax level to Low (left end) and wait for sailors to upgrade.']
+  - arguments:
+    - [Headline, !!python/unicode 'SEURAAVA TASO']
+    - [Image, content/gui/images/background/hr.png]
+    - "Kaikki vaatimukset on nyt t\xE4ytetty, kunhan asukkaasi voivat s\xE4\xE4nn\xF6\
+      llisesti vierailla keskustorilla ja kirkossa ja ruokavarantosi on riitt\xE4\
+      v\xE4t."
+    - "Jos merimiehesi ovat riitt\xE4v\xE4n onnellisia, he haluavat kehitty\xE4 seuraavalle\
+      \ tasolle, kansoittajiksi."
+    - "Voit tehd\xE4 asukkaistasi onnellisempia laskemalla veroprosenttia. Muuta sinun\
+      \ ei tarvitse tehd\xE4, sill\xE4 olet jo t\xE4ytt\xE4nyt asukkaidesi kaikki\
+      \ vaatimukset."
+    - "Veroprosenttia ei kannata kuitenkaan koko aikaa pit\xE4\xE4 alhaalla, sill\xE4\
+      \ t\xE4st\xE4 todenn\xE4k\xF6isesti aiheutuu konkurssi ennemmin tai my\xF6hemmin.\
+      \ Voit kuitenkin laskea prosenttia huoletta pieniksi ajoiksi."
+    - "Jonkin ajan j\xE4lkeen ensimm\xE4isen yksik\xF6n pit\xE4isi k\xE4vell\xE4 keskustorille\
+      \ ja etsi\xE4 sielt\xE4 uusia rakennustarvikkeita rakentaakseen hirsitalon.\
+      \ T\xE4m\xE4 talo korvaa vanhan teltan."
+    - [Pagebreak]
+    - "\nAsuinrakennusten p\xE4ivitykset ovat ainoat, jotka maksavat resursseja ja\
+      \ joita voidaan rajoittaa."
+    - "Jotkut p\xE4ivitykset ovat kuitenkin maksuttomia, kuten esimerkiksi puunhakkaaja\
+      \ (jolloin vain ulkoasu muuttuu)."
+    - "P\xE4ivitettyyn asumukseen mahtuu enemm\xE4n asukkaita ja lis\xE4ksi kansoittajat\
+      \ maksavat my\xF6s enemm\xE4n veroja kuin merimiehet."
+    - "Kuten olet jo saattanut huomata, huonona puolena kansoittajat vaativat my\xF6\
+      s tavaroita, joita merimiehet eiv\xE4t tarvinneet - sinun pit\xE4\xE4 siis k\xE4\
+      ytt\xE4\xE4 n\xE4m\xE4 ylim\xE4\xE4r\xE4iset tuotot my\xF6s heid\xE4n onnellisena\
+      \ pit\xE4miseen."
+    - "\nTEHT\xC4V\xC4: Aseta veroprosentti matalaksi (vasempaan p\xE4\xE4h\xE4n)\
+      \ ja odota merimiesten p\xE4ivittymist\xE4."
+    - - Gallery
+      - [content/gfx/buildings/pioneers/residential/as_hut0/idle/45/0.png]
     type: logbook
-  - arguments: ["Laske verotasosi alas (vasempaan p\xE4\xE4h\xE4n) ja odota merenk\xE4\
-        vij\xF6idesi p\xE4ivittyv\xE4n."]
+  - arguments: ["Laske verotasosi alas (palkin vasempaan p\xE4\xE4h\xE4n) ja odota\
+        \ merimiestesi p\xE4ivittyv\xE4n seuraavalle tasolle."]
     type: message
   - arguments: [tutStepDone, 43]
     type: set_var
@@ -478,50 +435,39 @@ events:
   - arguments: [tutStepDone, 43]
     type: var_lt
 - actions:
-  - arguments: [!!python/unicode 'RAKENNA MAATILA', !!python/unicode 'Congratulations!
-        Some of your inhabitants have reached increment II!
-
-
-        Now you have access to new buildings, take a look at the Build menu again.
-
-
-        A shiny new tab appeared there.
-
-
-        Pioneers will demand cloth, so you need to set up a production line for cloth
-        starting with lambs wool (which is one of the goods produced at the farm).
-
-
-        The farm is a very special production building since it can produce not only
-        one, but very many (and different) goods if you choose.
-
-
-        The output of farms depends on what kind of fields you build around it.']
-    type: logbook_w
-  - arguments: ['', !!python/unicode 'We will have a closer look at this later.
-
-
-        Farms, like all companies producing raw materials, do not necessarily need
-        to be connected to storage or a Branch Office.
-
-
-        As long as units of the final production company can reach the farm, and collectors
-        from the branch office or storage tent can reach the final company everything''s
-        fine.
-
-
-        If you, however, plan to do some processing on different parts of the island
-        (which can make sense) or even on different islands, you will need a connection
-        to collectors.
-
-
-        Try to build the farm not too close to the coast or your existing buildings
-        since it will need some space around it to work well.
-
-
-        TASK: Build a farm.']
+  - arguments:
+    - [Headline, !!python/unicode 'RAKENNA MAATILA']
+    - [Image, content/gui/images/background/hr.png]
+    - !!python/unicode 'Onneksi olkoon! Jotkut asukkaasi ovat saavuttaneet tason II!'
+    - "Nyt kun sinulla on p\xE4\xE4sy uusiin rakennuksiin, katsopas rakennusvalikkoa\
+      \ uudestaan."
+    - - Gallery
+      - [content/gui/icons/tabwidget/buildmenu/level2_u.png]
+    - "Sinne on ilmestynyt uutukainen v\xE4lilehti."
+    - "Kansoittajat tulevat vaatimaan vaatteita, joten sinun pit\xE4\xE4 rakentaa\
+      \ tuotantolinja vaatteille lampaanvillasta l\xE4htien (joka on yksi maatilan\
+      \ tuottamista tarvikkeista)."
+    - "Maatila on t\xE4rke\xE4 tuotantorakennus, sill\xE4 se voi tuottaa todella monia\
+      \ (ja erilaisia) resursseja."
+    - "Maatilojen tuotanto riippuu siit\xE4, mit\xE4 peltoja olet rakentanut sen l\xE4\
+      hettyville."
+    - [Pagebreak]
+    - "\nTarkastelemme t\xE4t\xE4 my\xF6hemmin."
+    - "Resursseja valmistavat yritykset eiv\xE4t v\xE4ltt\xE4m\xE4tt\xE4 tarvitse\
+      \ polkuyhteytt\xE4 varastoon tai sivutoimistoon. Maatila lukeutuu n\xE4ihin\
+      \ yrityksiin."
+    - "Riitt\xE4\xE4, ett\xE4 lopputuotannon yritykset tavoittavat maatilan ja ker\xE4\
+      \xE4j\xE4t sivutoimistolta tai varastolta p\xE4\xE4sev\xE4t lopputuottajalle."
+    - "Jos kuitenkin aiot valmistaa tuotteita eri saaren osissa (miss\xE4 saattaa\
+      \ olla j\xE4rke\xE4) tai jopa eri saarilla, tulet tarvitsemaan jonkinlaisen\
+      \ kulkuyhteyden sivutoimistoon tai johonkin varastoon."
+    - "Maatila kannattaa rakentaa kauaksi rannikosta ja asutuksesta, sill\xE4 se tulee\
+      \ tarvitsemaan tilaa toiminnalleen."
+    - "\nTEHT\xC4V\xC4: Rakenna maatila."
+    - - Gallery
+      - [content/gui/icons/buildmenu/020.png]
     type: logbook
-  - arguments: ["Rakenna maatila ja j\xE4t\xE4 hieman vapaata tilaa sen ymp\xE4rille."]
+  - arguments: ["Rakenna maatila ja j\xE4t\xE4 vapaata tilaa sen ymp\xE4rille."]
     type: message
   - arguments: [tutStepDone, 46]
     type: set_var
@@ -533,44 +479,37 @@ events:
   - arguments: [tutStepDone, 46]
     type: var_lt
 - actions:
-  - arguments: [!!python/unicode 'RAKENNA PELTOJA', !!python/unicode 'The farm itself
-        is not going to produce anything without some fields.
-
-
-        You currently have the choice between pastures, potato and sugar fields.
-
-
-        Let''s have a short overview:
-
-        * Pasture: Sheep live here, producing lamb wool.
-
-        * Potato field: Grows potatoes which are currently treated as food.
-
-        * Sugar field: Grows sugar which is used to distill liquor and (later) produce
-        confectionery.
-
-
-        We now only need pastures, but in case your food supply chain is too small
-        (maybe many residential buildings) you can also produce some potatoes.
-
-
-        Note that for potatoes you will need a road connection to the farm (not to
-        the field!) as it will be the only company to work on the goods.']
-    type: logbook_w
-  - arguments: ['', "Varmista, ett\xE4 kaikki rakentamasi pellot ovat maatilan alueella.\n\
-        \nVoit harrastaa sekatuotantoa - yksi laidun ei johda sadan prosentin tehokkuuteen,\
-        \ mutta sinun t\xE4ytyy tarkistaa, montako peltoa yksi maatila voi hoitaa.\n\
-        \nEri tyyppiset pellot tarvitsevat maatilayksik\xF6ilt\xE4 enemm\xE4n tai\
-        \ v\xE4hemm\xE4n aikaa (kylv\xE4miseen, korjuuseen, paimennukseen, jne.) ja\
-        \ sen vuoksi maatila ei v\xE4ltt\xE4m\xE4tt\xE4 pysty huolehtimaan kaikista\
-        \ rakentamistasi pelloista ajoissa.\n\nMutta nyt sinun ei tarvitse huolehtia\
-        \ paljoa, sill\xE4 et ole viel\xE4 rakentanut yht\xE4k\xE4\xE4n peltoa. Tehd\xE4\
-        \xE4n siis asialle jotakin!\n\nTEHT\xC4V\xC4: Rakenna v\xE4hint\xE4\xE4n yksi\
-        \ laidun maatilan ulottuville ja lis\xE4\xE4 perunamaita, jos tykk\xE4\xE4\
-        t."]
+  - arguments:
+    - [Headline, !!python/unicode 'RAKENNA PELTOJA']
+    - [Image, content/gui/images/background/hr.png]
+    - "Maatila ei itse itsess\xE4\xE4n tuota mit\xE4\xE4n ilman peltoja."
+    - "T\xE4ll\xE4 hetkell\xE4 valittavissasi on laitumet sek\xE4 peruna- ja sokeripellot."
+    - "N\xE4iden ominaisuuksia:\n* Laidun: Lampaat elelev\xE4t siell\xE4 tuottaen\
+      \ villaa.\n* Perunapelto: Kasvattaa perunoita, jotka ovat mainiota ruokaa kansallesi.\n\
+      * Sokeripelto: Kasvattaa sokeria, jota k\xE4ytet\xE4\xE4n alkoholijuomien tislaamisessa\
+      \ ja (my\xF6hemmin) tuottamaan makeisia."
+    - "Tarvitsemme nyt vain laitumia, mutta jos tarvitset lis\xE4\xE4 ruokaa (esimerkiksi\
+      \ jos sinulla on paljon asukkaita), voit rakentaa my\xF6s perunapellon."
+    - !!python/unicode 'Note that for potatoes you will need a road connection to
+      the farm (not to the field!) as it will be the only company to work on the goods.'
+    - [Pagebreak]
+    - "\nVarmista, ett\xE4 kaikki rakentamasi pellot ovat maatilan alueella."
+    - !!python/unicode 'Voit harrastaa sekatuotantoa - yksi laidun ei johda 100 prosentin
+      tehokkuuteen - mutta muista kuitenkin tarkistaa, montako peltoa yksi maatila
+      kykenee hoitamaan.'
+    - "Eri tyyppiset pellot tarvitsevat maatilayksik\xF6ilt\xE4 enemm\xE4n tai v\xE4\
+      hemm\xE4n aikaa (kylv\xE4miseen, korjuuseen, paimennukseen, jne.) ja sen vuoksi\
+      \ maatila ei v\xE4ltt\xE4m\xE4tt\xE4 pysty huolehtimaan kaikista rakentamistasi\
+      \ pelloista."
+    - "Viel\xE4 sinun ei kutenkaan tarvitse huolehtia, sill\xE4 et ole viel\xE4 rakentanut\
+      \ yht\xE4k\xE4\xE4n peltoa. Tehd\xE4\xE4n asialle jotakin!"
+    - "\nTEHT\xC4V\xC4: Rakenna v\xE4hint\xE4\xE4n yksi laidun maatilan ulottuville\
+      \ ja lis\xE4\xE4 halutessasi perunapeltoja."
+    - - Gallery
+      - [content/gui/icons/buildmenu/018.png, content/gui/icons/buildmenu/019.png]
     type: logbook
-  - arguments: ["Rakenna v\xE4hint\xE4\xE4n yksi laidun maatilan ulottuville ja lis\xE4\
-        \xE4 perunamaita, jos tykk\xE4\xE4t."]
+  - arguments: ["Rakenna v\xE4hint\xE4\xE4n yksi laidun maatilan ulottuville ja halutessasi\
+        \ my\xF6s perunapeltoja."]
     type: message
   - arguments: [tutStepDone, 49]
     type: set_var
@@ -582,43 +521,45 @@ events:
   - arguments: [tutStepDone, 49]
     type: var_lt
 - actions:
-  - arguments: [!!python/unicode 'RAKENNA VARASTO', !!python/unicode 'Did you watch
-        your lumberjack recently?
-
-
-        Since your branch office does not have unlimited space to store goods, collectors
-        will stop fetching goods from companies when stock is full.
-
-        So if no sailor recently wanted to upgrade his tent, you probably have a lot
-        of boards and in that case, the lumberjack may idle.
-
-        We can improve this situation with two different approaches, and below we
-        will have a look at both of them.
-
-
-        All companies offer the possibility of doing no work at all.
-
-        This may sound strange, but try to click on the gear wheel you see in, for
-        example, a lumberjack''s overview.
-
-
-        If this ''break'' mode is enabled (we call it ''Decommissioning''), the running
-        costs you pay for the building will decrease. They won''t be zero, but still
-        lower than if you keep the company producing.']
-    type: logbook_w
-  - arguments: ['', !!python/unicode "This means that you can save money when you\
-        \ temporarily do not need a company and do not want to tear it down, either.\n\
-        \nAnother solution is to build the last increment-I building which has not\
-        \ been mentioned so far: the storage tent.\n\nThis building has two purposes.\
-        \ It:\n* Offers more storage for your goods, and \n* sends its own collectors\
-        \ to fetch goods, just like the branch office does.\n\nNote that companies\
-        \ can also be connected to a storage in order to get their products collected,\
-        \ and if the branch office is overwhelmed with collector tasks, you can place\
-        \ a storage tent to help out there.\n\nTASK: Build a storage tent, preferably\
-        \ where you need collectors."]
+  - arguments:
+    - [Headline, !!python/unicode 'RAKENNA VARASTO']
+    - [Image, content/gui/images/background/hr.png]
+    - !!python/unicode 'Milloin olet viimeksi vilkaissut puunhakkaajaasi?'
+    - "Sivutoimistollasi ei ole loputtomasti tilaa tavaroiden varastoimiseen. Ker\xE4\
+      \xE4j\xE4t lakkaavat ker\xE4\xE4m\xE4st\xE4 tavaroita yrityksilt\xE4, kun varasto\
+      \ on t\xE4ynn\xE4."
+    - "Joten jos asukkaasi eiv\xE4t viime aikoina ole olleet kiinnostuneita p\xE4\
+      ivittelem\xE4\xE4n asuntojaan ja sinulla on paljon lautoja, puunhakkaajasi saattaa\
+      \ olla toimettomana."
+    - !!python/unicode 'Voimme parantaa tilannetta kahdella eri tavalla, ja alla tutustumme
+      molempiin.'
+    - "Kaikkien yritysten toiminta voidaan v\xE4liaikaisesti keskeytt\xE4\xE4.\nT\xE4\
+      m\xE4 saattaa kuulostaa oudolta, mutta kokeilepa napsauttaa puunhakkaajan yleiskatsauksessa\
+      \ olevaa hammaspy\xF6r\xE4\xE4."
+    - "Kun t\xE4m\xE4 \"taukotila\" on k\xE4yt\xF6ss\xE4, rakennuksesta maksamasi\
+      \ juoksevat kustannukset v\xE4henev\xE4t. Ne eiv\xE4t laske nollaan, mutta kuitenkin\
+      \ alemmaksi kuin yrityksen ollessa k\xE4yt\xF6ss\xE4."
+    - - Gallery
+      - [content/gui/icons/templates/production/toggle_inactive_h.png]
+    - [Pagebreak]
+    - "\nT\xE4m\xE4 tarkoittaa siis sit\xE4, ett\xE4 voit s\xE4\xE4st\xE4\xE4 rahaa\
+      \ kun et v\xE4liaikaisesti tarvitse yrityst\xE4, mutta et my\xF6sk\xE4\xE4n\
+      \ halua tuhota sit\xE4 maan tasalle."
+    - "Toinen ratkaisu on rakentaa viimeinen tason I rakennus, jota ei ole viel\xE4\
+      \ mainittu: varastoteltta."
+    - "T\xE4ll\xE4 rakennuksella on kaksi tarkoitusta. Se...\n* tarjoaa lis\xE4\xE4\
+      \ varastotilaa tavaroillesi ja\n* l\xE4hett\xE4\xE4 omat ker\xE4\xE4j\xE4ns\xE4\
+      \ hakemaan tavaroita kuten sivutoimistokin."
+    - "Yritykset voidaan siis yhdist\xE4\xE4 sivutoimiston sijasta varastoon, jolloin\
+      \ niiden tuotteet tulevat my\xF6s ker\xE4tyiksi. Varasto on hy\xF6dyllinen my\xF6\
+      s silloin, kun sivutoimistolla on paljon hommia ker\xE4yst\xF6iss\xE4."
+    - "\nTEHT\xC4V\xC4: Rakenna varastoteltta mieluiten sellaiseen paikkaan, jossa\
+      \ tarvitset ker\xE4\xE4ji\xE4."
+    - - Gallery
+      - [content/gui/icons/buildmenu/002.png]
     type: logbook
-  - arguments: [!!python/unicode 'Build a storage tent (increment I tab) where it
-        makes sense.']
+  - arguments: ["Rakenna varastoteltta (tason I v\xE4lilehdell\xE4) j\xE4rkev\xE4\xE4\
+        n paikkaan."]
     type: message
   - arguments: [tutStepDone, 52]
     type: set_var
@@ -630,26 +571,22 @@ events:
   - arguments: [tutStepDone, 52]
     type: var_lt
 - actions:
-  - arguments: [!!python/unicode 'NEW TASK: BUILD A WEAVER', !!python/unicode 'Now
-        the wool production is set up, you still need a weaver to produce cloth out
-        of this wool.
-
-
-        There are two spots where you can build it - either close to the farm or close
-        to a Storage Tent (or the Branch Office).
-
-
-        In both cases you should ensure the connection to a trail as well.
-
-
-        You can place the weaver close to the farm and tear down any trail to the
-        farm to see that it will still fetch the wool and produce.
-
-
-        TASK: Build a weaver positioned so it can get wool.']
+  - arguments:
+    - [Headline, !!python/unicode 'RAKENNA KUTOMO']
+    - [Image, content/gui/images/background/hr.png]
+    - "Nyt kun villan tuotanto on k\xE4ynniss\xE4, tarvitset viel\xE4 kutomon tuottamaan\
+      \ villasta vaatteita."
+    - "Kutomo voidaan rakentaa kolmeen paikkaan - joko maatilan, varaston tai sivutoimiston\
+      \ l\xE4helle."
+    - "Kaikissa tapauksissa sinun pit\xE4\xE4 luonnollisesti varmistaa polkuyhteys."
+    - "Voit testimieless\xE4 sijoittaa kutomon maatilan l\xE4hettyville ja tuhota\
+      \ kaikki maatilalle johtavat polut. N\xE4in voit havaita, ett\xE4 kutomo saa\
+      \ silti noudettua villaa ja tuotettua vaatteita."
+    - "\nTEHT\xC4V\xC4: Rakenna kutomo paikkaan, josta se saa villaa."
+    - - Gallery
+      - [content/gui/icons/buildmenu/007.png]
     type: logbook
-  - arguments: [!!python/unicode 'Build a weaver that can somehow reach the wool of
-        your farm.']
+  - arguments: [!!python/unicode 'Rakenna kutomo, joka saa jollain tavalla villaa.']
     type: message
   - arguments: [tutStepDone, 55]
     type: set_var
@@ -661,16 +598,22 @@ events:
   - arguments: [tutStepDone, 55]
     type: var_lt
 - actions:
-  - arguments: ["Asuta kaupungissasi v\xE4hint\xE4\xE4n 50 asukasta tai enemm\xE4\
-        n l\xE4p\xE4ist\xE4ksesi t\xE4m\xE4n tutoriaalin. Tarvitset kokonaisuutena\
-        \ voittoa tuottavan talouden."]
+  - arguments: ["Asuta siirtokuntaasi v\xE4hint\xE4\xE4n 50 asukasta ja l\xE4p\xE4\
+        ise t\xE4m\xE4 harjoituspeli. Tarvitset my\xF6s voittoa tuottavan talouden."]
     type: message
-  - arguments: ["L\xC4P\xC4ISE TUTORIAALI", "Yrit\xE4 asuttaa kaupungissasi kokonaiset\
-        \ 50 asukasta tai enemm\xE4n luomalla asuinrakennustarjontaa.\n\nKun olet\
-        \ saanut pidetty taloutta, joka voi el\xE4tt\xE4\xE4 t\xE4ll\xE4isen m\xE4\
-        \xE4r\xE4n kuluttajia, olet valmis l\xE4htem\xE4\xE4n kohti Tuntemattomia\
-        \ Taivaanrantoja!\n\nTEHT\xC4V\xC4: Ker\xE4\xE4 v\xE4hint\xE4\xE4n 50 asukasta\
-        \ ja rakenna kannattava talous, jotta l\xE4p\xE4isisit t\xE4m\xE4n tutoriaalin."]
+  - arguments:
+    - [Headline, "L\xC4P\xC4ISE HARJOITUSPELI"]
+    - [Image, content/gui/images/background/hr.png]
+    - "Yrit\xE4 saada siirtokuntaasi v\xE4hint\xE4\xE4n 50 asukasta rakentamalla lis\xE4\
+      \xE4 asuinrakennuksia."
+    - "Jos pystyt luomaan t\xE4llaisen talouden, joka kest\xE4\xE4 t\xE4llaista asukasm\xE4\
+      \xE4r\xE4\xE4, olet valmis l\xE4htem\xE4\xE4n kohti Tuntematonta Horisonttia!"
+    - "Teht\xE4v\xE4n suorittamiseksi my\xF6s talouden tulee olla tasapainossa (tarkista\
+      \ asia Budjetti-v\xE4lilehdelt\xE4 keskustorilta tai sivustoimistosta)."
+    - "\nTEHT\xC4V\xC4: Hanki v\xE4hint\xE4\xE4n 50 asukasta, varmista ett\xE4 taloutesi\
+      \ on tasapainossa ja l\xE4p\xE4ise t\xE4m\xE4 harjoituspeli."
+    - - Gallery
+      - [content/gui/icons/widgets/cityinfo/inhabitants.png]
     type: logbook
   - arguments: [tutStepDone, 58]
     type: set_var
@@ -684,16 +627,27 @@ events:
   - arguments: [tutStepDone, 58]
     type: var_lt
 - actions:
-  - arguments: ["EI TEHT\xC4VI\xC4 J\xC4LJELL\xC4", "There is nothing left to do now.\n\
-        \nJos sinulla on ehdotuksia, mit\xE4 me voisimme tai mit\xE4 pit\xE4isi kehitt\xE4\
-        \xE4, lis\xE4t\xE4 tai j\xE4tt\xE4\xE4 pois:\n\nwww.unknown-horizons.org\n\
-        \n#unknown-horizons @ irc.freenode.net\n\nteam@unknown-horizons.org\n\nKeskustelupalstamme\
-        \ ovat avoinna my\xF6s sinulle!\n\nParhaita tuloksia t\xE4h\xE4n menness\xE4\
-        \ on saatu aikaan liittym\xE4ll\xE4 IRC-kanavallemme, joten voit yritt\xE4\
-        \xE4 sit\xE4 ensimm\xE4isen\xE4 (-;"]
-    type: logbook
-  - arguments: [!!python/unicode 'Kiitoksia!', "\n\n\n\n\n\n\nKiitos, ett\xE4 pelasitte\
-        \ t\xE4t\xE4 tutoriaalia!\n\nAllekirjoittajana UH-Team"]
+  - arguments:
+    - [Headline, "EI TEHT\xC4VI\xC4 J\xC4LJELL\xC4"]
+    - [Image, content/gui/images/background/hr.png]
+    - "Kaikki t\xE4m\xE4n harjoituspelin teht\xE4v\xE4t on nyt suoritettu. Nyt siirtokunta\
+      \ jatkaa taivaltaan sinun tahtosi mukaan odottaen suuria tekoja ja mahtavia\
+      \ tutkimusmatkoja!"
+    - "Jos sinulle j\xE4i t\xE4st\xE4 harjoituspelist\xE4 jotain sanottavaa, kuten\
+      \ parannettavaa, moitittavaa tai kehuttavaa, kerro se meille:"
+    - !!python/unicode 'www.unknown-horizons.org'
+    - !!python/unicode '#unknown-horizons @ irc.freenode.net'
+    - !!python/unicode 'team@unknown-horizons.org'
+    - "Tervetuloa tutustumaan my\xF6s keskustelupalstoillemme!"
+    - "Parhaat tulokset ovat tulleet IRC-kanaviltamme, joten kokeile niit\xE4 ensimm\xE4\
+      isen\xE4 ;-)"
+    - [Pagebreak]
+    - [Headline, !!python/unicode 'Suuret kiitokset!']
+    - [Image, content/gui/images/background/hr.png]
+    - "\n\n\n\nKiitos, ett\xE4 pelasit t\xE4t\xE4 harjoituspeli\xE4!\n\nTerveisin,\n\
+      Unknown Horizonsin kehitt\xE4j\xE4t"
+    - - Gallery
+      - [content/unknown-horizons.xpm, content/gfx/misc/status_icons/as_book_flip/idle/45/book20125.png]
     type: logbook
   - arguments: [tutStepDone, 61]
     type: set_var
@@ -714,12 +668,13 @@ events:
     type: var_lt
 - actions:
   - {type: win}
-  - arguments: ["Onneksi olkoon! Olet saavuttanut t\xE4m\xE4n tutoriaalin lopun ja\
-        \ olet valmis kohtaamaan uusia haasteita!"]
+  - arguments: ["Onneksi olkoon! Olet pelannut t\xE4m\xE4n harjoituspelin l\xE4pi\
+        \ ja olet valmis kohtaamaan uusia haasteita!"]
     type: message
   conditions:
   - arguments: [tutStepDone, 60]
     type: var_gt
 locale: fi
 mapfile: development.sqlite
+translation_status: 190 translated messages, 1 untranslated message.
 

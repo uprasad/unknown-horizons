@@ -1,0 +1,35 @@
+id: 5
+name: _ Pavilion
+baseclass: production.ProductionBuilding
+radius: 0
+cost: 15
+cost_inactive: 5
+size_x: 2
+size_y: 2
+inhabitants: 1
+tooltip_text: _ Fulfills religious needs of sailors.
+settler_level: TIER.SAILORS
+buildingcosts: {RES.GOLD: 500, RES.BOARDS: 5, RES.TOOLS: 2}
+show_status_icons: false
+components:
+- SelectableComponent:
+    type: building
+    tabs: [ProductionOverviewTab,]
+    enemy_tabs: [EnemyBuildingOverviewTab,]
+- HealthComponent: {maxhealth: 1000}
+- ProducerComponent:
+    productionlines:
+      FAITH:
+        produces:
+        - [RES.FAITH, 1]
+        time: 4
+- StorageComponent:
+      SlotsStorage:
+        slot_sizes: {RES.FAITH: 10}
+- AmbientSoundComponent:
+    soundfiles: [content/audio/sounds/chapel.ogg]
+actionsets:
+  TIER.SAILORS:
+    as_sunsail0:
+  TIER.PIONEERS:
+    as_church_wooden0:

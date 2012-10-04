@@ -1,0 +1,43 @@
+id: 17
+name: _ Tree
+baseclass: nature.Tree
+radius: 0
+cost: 0
+cost_inactive: 0
+size_x: 1
+size_y: 1
+inhabitants: 0
+tooltip_text: _ Provides lumber. Chopped down by lumberjacks.
+settler_level: TIER.NATURE
+buildingcosts: {RES.GOLD: 50}
+show_status_icons: false
+translucent: true
+components:
+- HealthComponent: {maxhealth: 10}
+- ProducerComponent:
+    start_finished: false
+    productionlines:
+      1:
+        produces:
+        - [RES.TREES, 1]
+        time: 120
+      17:
+        changes_animation: false
+        produces:
+        - [RES.WILDANIMALFOOD, 1]
+        time: 25
+- StorageComponent:
+      SlotsStorage:
+        slot_sizes: {RES.TREES: 1, RES.WILDANIMALFOOD: 1}
+actionsets:
+  TIER.NATURE:
+    as_tupelo2:
+    as_spruce1:
+    as_spruce0:
+    as_birch0:
+    as_tupelo0:
+    as_tupelo1:
+    as_maple3:
+    as_maple2:
+    as_maple1:
+    as_maple0:

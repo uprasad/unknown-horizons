@@ -1,0 +1,36 @@
+id: 29
+name: _ Smeltery
+baseclass: production.ProductionBuilding
+radius: 10
+cost: 50
+cost_inactive: 15
+size_x: 4
+size_y: 4
+inhabitants: 2
+tooltip_text: _ Refines all kind of ores.
+settler_level: TIER.SETTLERS
+buildingcosts: {RES.GOLD: 1250, RES.BOARDS: 8, RES.TOOLS: 4, RES.BRICKS: 6}
+components:
+- SelectableComponent:
+    type: building
+    tabs: [ProductionOverviewTab]
+    enemy_tabs: [EnemyBuildingOverviewTab,]
+- HealthComponent: {maxhealth: 1000}
+- ProducerComponent:
+    productionlines:
+      IRON:
+        produces:
+        - [RES.IRON_INGOTS, 3]
+        consumes:
+        - [RES.IRON_ORE, -2]
+        - [RES.CHARCOAL, -1]
+        time: 30
+- StorageComponent:
+      SlotsStorage:
+        slot_sizes: {RES.IRON_ORE: 6, RES.IRON_INGOTS: 9, RES.CHARCOAL: 6}
+- CollectingComponent:
+    collectors:
+      UNITS.BUILDING_COLLECTOR: 2
+actionsets:
+  TIER.SETTLERS:
+    as_smeltery0:

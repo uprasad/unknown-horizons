@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -47,12 +47,12 @@ class WeakMethod(object):
 		if isinstance(other, WeakMethod):
 			# check also if either instance is None or else if instances are equal
 			return self.function == other.function and \
-						 (other.instance is None if self.instance is None else \
+						 (other.instance is None if self.instance is None else
 							self.instance() == other.instance())
 		elif callable(other):
 			return self == WeakMethod(other)
 		else:
-			raise ValueError("Can't compare to a non-function")
+			return False
 
 	def __ne__(self, other):
 		return not self.__eq__(other)

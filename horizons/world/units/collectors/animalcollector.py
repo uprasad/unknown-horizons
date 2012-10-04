@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -19,11 +19,10 @@
 # 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 # ###################################################
 
-import horizons.main
 from horizons.scheduler import Scheduler
 
-from horizons.world.storageholder import StorageHolder
-from horizons.util import Point, RadiusRect, decorators
+from horizons.util.python import decorators
+from horizons.util.shapes import RadiusRect
 from horizons.world.units.movingobject import MoveNotPossible
 from horizons.constants import GAME_SPEED
 from horizons.world.units.collectors.buildingcollector import BuildingCollector
@@ -48,17 +47,17 @@ class AnimalCollector(BuildingCollector):
 	def load(self, db, worldid):
 		super(AnimalCollector, self).load(db, worldid)
 
-	def apply_state(self, state, remaining_ticks = None):
+	def apply_state(self, state, remaining_ticks=None):
 		super(AnimalCollector, self).apply_state(state, remaining_ticks)
 		if state == self.states.waiting_for_animal_to_stop:
 			# register at target
 			self.setup_new_job()
 			self.stop_animal()
 		elif state == self.states.moving_home:
-			if not self.kill_animal:
+			if not self.__class__.kill_animal:
 				self.setup_new_job() # register at target if it's still alive
 
-	def cancel(self, continue_action = None):
+	def cancel(self, continue_action=None):
 		if self.job is not None:
 			if self.state == self.states.waiting_for_animal_to_stop:
 				self.job.object.remove_stop_after_job()
@@ -85,7 +84,7 @@ class AnimalCollector(BuildingCollector):
 
 	def finish_working(self):
 		"""Called when collector arrives at the animal. Move home with the animal"""
-		if self.kill_animal:
+		if self.__class__.kill_animal:
 			# get res now, and kill animal right after
 			super(AnimalCollector, self).finish_working()
 		else:
@@ -94,7 +93,7 @@ class AnimalCollector(BuildingCollector):
 
 	def reached_home(self):
 		"""Transfer res to home building and such. Called when collector arrives at it's home"""
-		if not self.kill_animal:
+		if not self.__class__.kill_animal:
 			# sheep and herder are inside the building now, pretending to work.
 			super(AnimalCollector, self).finish_working(collector_already_home=True)
 			self.release_animal()
@@ -108,11 +107,11 @@ class AnimalCollector(BuildingCollector):
 
 	@decorators.make_constants()
 	def check_possible_job_target_for(self, target, res):
-		# An animal can only be collected by one collector. 
+		# An animal can only be collected by one collector.
 		# Since a collector only retrieves one type of res, and
-		# an animal might produce more than one, two collectors 
+		# an animal might produce more than one, two collectors
 		# could take this animal as a target.
-		# This could also happen, if the animal has an inventory 
+		# This could also happen, if the animal has an inventory
 		# with a limit > 1. In this case, one collector might register
 		# for the first ton, then the animal produces another one, which
 		# might then be spotted by another collector.
@@ -132,17 +131,18 @@ class AnimalCollector(BuildingCollector):
 	def get_animal(self):
 		"""Sends animal to collectors home building"""
 		self.log.debug("%s getting animal %s",self, self.job.object)
-		if self.kill_animal:
+		if self.__class__.kill_animal:
 			self.job.object.die()
+			self.job.object = None # there is no target anymore now
 		else:
-			self.job.object.move(self.home_building.position, destination_in_building = True, \
+			self.job.object.move(self.home_building.position, destination_in_building = True,
 			                     action='move_full')
 
 	def release_animal(self):
 		"""Let animal free after shearing and schedules search for a new job for animal."""
-		if not self.kill_animal:
+		if not self.__class__.kill_animal:
 			self.log.debug("%s releasing animal %s",self, self.job.object)
-			Scheduler().add_new_object(self.job.object.search_job, self.job.object, \
+			Scheduler().add_new_object(self.job.object.search_job, self.job.object,
 			                           GAME_SPEED.TICKS_PER_SECOND)
 
 
@@ -162,4 +162,12 @@ class HunterCollector(AnimalCollector):
 	kill_animal = True
 
 	def get_animals_in_range(self, res=None):
-		return self.home_building.island.wild_animals
+		dist = self.home_building.position.distance
+		radius = self.home_building.radius
+		return [ animal for animal in self.home_building.island.wild_animals if
+		         dist(animal.position) <= radius ]
+
+
+decorators.bind_all(AnimalCollector)
+decorators.bind_all(FarmAnimalCollector)
+decorators.bind_all(HunterCollector)

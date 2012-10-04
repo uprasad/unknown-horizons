@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -26,7 +26,7 @@ import os
 
 args = sys.argv[1:]
 
-if len(args) == 0:
+if not args:
 	print "USAGE: "+sys.argv[0]+" map1.sqlite map2.sqlite ... mapx.sqlite"
 	print
 	print "maps will be saved as \"mapx.map\""
@@ -40,7 +40,7 @@ for filename in args:
 	infile = None
 	try:
 		infile = open(filename, "r")
-	except IOError, e:
+	except IOError as e:
 		print "Error:",e.message
 		continue
 

@@ -1,0 +1,29 @@
+id: 23
+name: _ Clay Deposit
+baseclass: nature.ResourceDeposit
+radius: 0
+cost: 0
+cost_inactive: 0
+size_x: 3
+size_y: 3
+inhabitants: 0
+tooltip_text: null
+settler_level: TIER.NATURE
+buildingcosts: {}
+components:
+- SelectableComponent:
+    type: building
+    tabs: [ResourceDepositOverviewTab,]
+    enemy_tabs: [ResourceDepositOverviewTab,]
+- HealthComponent: {maxhealth: 10}
+- DepositComponent:
+    resources:
+      RES.RAW_CLAY:
+        min_amount: 750
+        max_amount: 1250
+- StorageComponent:
+      SlotsStorage:
+        slot_sizes: {RES.RAW_CLAY: 1000000}
+actionsets:
+  TIER.NATURE:
+    as_clay0:

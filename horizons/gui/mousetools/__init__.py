@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -24,3 +24,5 @@ from cursortool import CursorTool
 from navigationtool import NavigationTool
 from selectiontool import SelectionTool
 from tearingtool import TearingTool
+from attackingtool import AttackingTool
+from pipettetool import PipetteTool

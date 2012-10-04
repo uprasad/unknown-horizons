@@ -1,0 +1,24 @@
+id: 6
+name: _ Signal Fire
+baseclass: building.DefaultBuilding
+radius: 13
+cost: 0
+cost_inactive: 0
+size_x: 1
+size_y: 1
+inhabitants: 0
+tooltip_text: _ Allows the player to trade with the free trader.
+settler_level: TIER.SAILORS
+buildingcosts: {RES.GOLD: 50, RES.BOARDS: 5}
+components:
+- SelectableComponent:
+    type: building
+    range_applies_only_on_island: False
+    tabs: [SignalFireOverviewTab,]
+    enemy_tabs: [EnemyBuildingOverviewTab,]
+- HealthComponent: {maxhealth: 1000}
+actionsets:
+  TIER.SAILORS:
+    as_signalfire0: as_preview_signalfire0
+  TIER.PIONEERS:
+    as_signalfire_wooden0:

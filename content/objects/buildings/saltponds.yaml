@@ -1,0 +1,30 @@
+id: 35
+name: _ Salt Ponds
+baseclass: production.CoastalProducer
+radius: 0
+cost: 10
+cost_inactive: 0
+size_x: 3
+size_y: 3
+inhabitants: 1
+tooltip_text: _ Evaporates salt. Built on sea coast.
+settler_level: TIER.SETTLERS
+buildingcosts: {RES.GOLD: 350, RES.BOARDS: 4, RES.TOOLS: 2}
+components:
+- SelectableComponent:
+    type: building
+    tabs: [ProductionOverviewTab,]
+    enemy_tabs: [EnemyBuildingOverviewTab,]
+- HealthComponent: {maxhealth: 1000}
+- ProducerComponent:
+    productionlines:
+      SALT:
+        produces:
+        - [RES.SALT, 2]
+        time: 45
+- StorageComponent:
+      SlotsStorage:
+        slot_sizes: {RES.SALT: 8}
+actionsets:
+  TIER.SETTLERS:
+    as_saltponds0:

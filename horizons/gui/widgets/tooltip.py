@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -21,13 +21,12 @@
 
 import textwrap
 from fife import fife
-from fife.extensions import pychan
-import horizons.main
+from fife.extensions.pychan.widgets import Icon, Label
+
+import horizons.globals
 
 from horizons.extscheduler import ExtScheduler
-from fife.extensions.pychan.widgets.common import UnicodeAttr
-from horizons.gui.widgets import ProgressBar
-from horizons.util.gui import load_uh_widget
+from horizons.gui.util import load_uh_widget
 
 class _Tooltip(object):
 	"""Base class for pychan widgets overloaded with tooltip functionality"""
@@ -35,31 +34,59 @@ class _Tooltip(object):
 	SIZE_BG_TOP = 17 # height of the image tooltip_bg_top.png
 	SIZE_BG_BOTTOM = 17 # height of the image tooltip_bg_bottom.png
 	CHARS_PER_LINE = 19 # character count after which we start new line. no wrap
-	def init_tooltip(self, tooltip):
-		self.gui = load_uh_widget('tooltip.xml')
-		self.gui.hide()
-		self.tooltip = tooltip
+	TOP_IMAGE = 'content/gui/images/background/widgets/tooltip_bg_top.png'
+	MIDDLE_IMAGE = 'content/gui/images/background/widgets/tooltip_bg_middle.png'
+	BOTTOM_IMAGE = 'content/gui/images/background/widgets/tooltip_bg_bottom.png'
+
+	def init_tooltip(self):
+		self.gui = None
 		self.mapEvents({
-			self.name + '/mouseEntered' : self.position_tooltip,
-			self.name + '/mouseExited' : self.hide_tooltip,
-			self.name + '/mousePressed' : self.hide_tooltip,
-			self.name + '/mouseMoved' : self.position_tooltip,
-			#self.name + '/mouseReleased' : self.position_tooltip,
-			self.name + '/mouseDragged' : self.hide_tooltip
+			self.name + '/mouseEntered/tooltip' : self.position_tooltip,
+			self.name + '/mouseExited/tooltip' : self.hide_tooltip,
+			self.name + '/mousePressed/tooltip' : self.hide_tooltip,
+			self.name + '/mouseMoved/tooltip' : self.position_tooltip,
+			#self.name + '/mouseReleased/tooltip' : self.position_tooltip,
+			self.name + '/mouseDragged/tooltip' : self.hide_tooltip
 			})
 		self.tooltip_shown = False
-		self.tooltip_items = []
 
 	def position_tooltip(self, event):
-		if (event.getButton() == fife.MouseEvent.MIDDLE):
-			return
-		widget_position = self.getAbsolutePos()
-		screen_width = horizons.main.fife.engine_settings.getScreenWidth()
-		self.gui.y = widget_position[1] + event.getY() + 5
-		if (widget_position[0] + event.getX() +self.gui.size[0] + 10) <= screen_width:
-			self.gui.x = widget_position[0] + event.getX() + 10
+		"""Calculates a nice position for the tooltip.
+		@param event: mouse event from fife or tuple screenpoint
+		"""
+		# TODO: think about nicer way of handling the polymorphism here,
+		# e.g. a position_tooltip_event and a position_tooltip_tuple
+		where = event # fife forces this to be called event, but here it can also be a tuple
+		if isinstance(where, tuple):
+			x, y = where
 		else:
-			self.gui.x = widget_position[0] + event.getX() - self.gui.size[0] - 5
+			if where.getButton() == fife.MouseEvent.MIDDLE:
+				return
+
+			x, y = where.getX(), where.getY()
+
+		if self.gui is None:
+			self.gui = load_uh_widget('tooltip.xml')
+		widget_position = self.getAbsolutePos()
+
+		# Sometimes, we get invalid events from pychan, it is probably related to changing the
+		# gui when the mouse hovers on gui elements.
+		# Random tests have given evidence to believe that pychan indicates invalid events
+		# by setting the top container's position to 0, 0.
+		# Since this position is currently unused, it can serve as invalid flag,
+		# and dropping these events seems to lead to the desired placements
+		def get_top(w):
+			return get_top(w.parent) if w.parent else w
+		top_pos = get_top(self).position
+		if top_pos == (0, 0):
+			return
+
+		screen_width = horizons.globals.fife.engine_settings.getScreenWidth()
+		self.gui.y = widget_position[1] + y + 5
+		if (widget_position[0] + x + self.gui.size[0] + 10) <= screen_width:
+			self.gui.x = widget_position[0] + x + 10
+		else:
+			self.gui.x = widget_position[0] + x - self.gui.size[0] - 5
 		if not self.tooltip_shown:
 			ExtScheduler().add_new_object(self.show_tooltip, self, run_in=0.3, loops=0)
 			self.tooltip_shown = True
@@ -67,91 +94,43 @@ class _Tooltip(object):
 			self.gui.show()
 
 	def show_tooltip(self):
-		if self.tooltip != "":
-			translated_tooltip = _(self.tooltip)
-			#HACK this looks better than splitting into several lines & joining
-			# them. works because replace_whitespace in fill defaults to True:
-			replaced = translated_tooltip.replace(r'\n', self.CHARS_PER_LINE*' ')
-			tooltip = textwrap.fill(replaced, self.CHARS_PER_LINE)
-			#----------------------------------------------------------------
-			line_count = len(tooltip.splitlines())-1
-			top_image = pychan.widgets.Icon(image='content/gui/images/background/widgets/tooltip_bg_top.png', position=(0, 0))
-			self.gui.addChild(top_image)
-			self.tooltip_items.append(top_image)
-			for i in xrange(0, line_count):
-				middle_image = pychan.widgets.Icon( \
-				        image='content/gui/images/background/widgets/tooltip_bg_middle.png',
-				        position=(top_image.position[0], \
-				                  top_image.position[1] + self.SIZE_BG_TOP + self.LINE_HEIGHT * i))
-				self.gui.addChild(middle_image)
-				self.tooltip_items.append(middle_image)
-			bottom_image = pychan.widgets.Icon( \
-			        image='content/gui/images/background/widgets/tooltip_bg_bottom.png',
-			        position=(top_image.position[0], \
-			                  top_image.position[1] + self.SIZE_BG_TOP + self.LINE_HEIGHT * line_count))
-			self.gui.addChild(bottom_image)
-			self.tooltip_items.append(bottom_image)
-			label = pychan.widgets.Label(text=u"", position=(10, 5))
-			label.text = tooltip
-			self.gui.addChild(label)
-			self.gui.stylize('tooltip')
-			self.tooltip_items.append(label)
-			self.gui.size = (145, self.SIZE_BG_TOP + self.LINE_HEIGHT * line_count + self.SIZE_BG_BOTTOM)
-			self.gui.show()
+		if not self.helptext:
+			return
+		# recreate full tooltip since new text needs to be relayouted
+		if self.gui is None:
+			self.gui = load_uh_widget('tooltip.xml')
+		else:
+			self.gui.removeAllChildren()
+		translated_tooltip = _(self.helptext)
+		#HACK this looks better than splitting into several lines & joining
+		# them. works because replace_whitespace in fill defaults to True:
+		replaced = translated_tooltip.replace(r'\n', self.CHARS_PER_LINE*' ')
+		replaced = replaced.replace(r'[br]', self.CHARS_PER_LINE*' ')
+		tooltip = textwrap.fill(replaced, self.CHARS_PER_LINE)
 
-	def hide_tooltip(self):
-		self.gui.hide()
+		line_count = len(tooltip.splitlines()) - 1
+		top_image = Icon(image=self.TOP_IMAGE, position=(0, 0))
+		self.gui.addChild(top_image)
+		top_x, top_y = top_image.position
+		top_y += self.SIZE_BG_TOP
+		for i in xrange(0, line_count):
+			middle_image = Icon(image=self.MIDDLE_IMAGE)
+			middle_image.position = (top_x, top_y + self.LINE_HEIGHT * i)
+			self.gui.addChild(middle_image)
+		bottom_image = Icon(image=self.BOTTOM_IMAGE)
+		bottom_image.position = (top_x, top_y + self.LINE_HEIGHT * line_count)
+		self.gui.addChild(bottom_image)
+
+		label = Label(text=tooltip, position=(10, 5))
+		self.gui.addChild(label)
+		self.gui.stylize('tooltip')
+		size_y = self.SIZE_BG_TOP + self.LINE_HEIGHT * line_count + self.SIZE_BG_BOTTOM
+		self.gui.size = (145, size_y)
+		self.gui.show()
+
+	def hide_tooltip(self, event=None):
+		if self.gui is not None:
+			self.gui.hide()
+			self.gui.removeAllChildren()
 		ExtScheduler().rem_call(self, self.show_tooltip)
-		for i in self.tooltip_items:
-			self.gui.removeChild(i)
-		self.tooltip_items = []
 		self.tooltip_shown = False
-
-
-class TooltipIcon(_Tooltip, pychan.widgets.Icon):
-	"""The TooltipIcon is a modified icon widget. It can be used in xml files like this:
-	<TooltipIcon tooltip=""/>
-	Used to display tooltip on hover on icons.
-	Attributes same as Icon widget with addition of tooltip="text string to display".
-	Use '\n' to force newline.
-	"""
-	ATTRIBUTES = pychan.widgets.Icon.ATTRIBUTES + [UnicodeAttr('tooltip')]
-	def __init__(self, tooltip = "", **kwargs):
-		super(TooltipIcon, self).__init__(**kwargs)
-		self.init_tooltip(tooltip)
-
-class TooltipButton(_Tooltip, pychan.widgets.ImageButton):
-	"""The TooltipButton is a modified image button widget. It can be used in xml files like this:
-	<TooltipButton tooltip=""/>
-	Used to display tooltip on hover on buttons.
-	Attributes same as ImageButton widget with addition of tooltip="text string to display".
-	Use '\n' to force newline.
-	"""
-	ATTRIBUTES = pychan.widgets.ImageButton.ATTRIBUTES + [UnicodeAttr('tooltip')]
-	def __init__(self, tooltip = "", **kwargs):
-		super(TooltipButton, self).__init__(**kwargs)
-		self.init_tooltip(tooltip)
-
-class TooltipLabel(_Tooltip, pychan.widgets.Label):
-	"""The TooltipButton is a modified label widget. It can be used in xml files like this:
-	<TooltipLabel tooltip=""/>
-	Used to display tooltip on hover on buttons.
-	Attributes same as Label widget with addition of tooltip="text string to display".
-	Use '\n' to force newline.
-	"""
-	ATTRIBUTES = pychan.widgets.Label.ATTRIBUTES + [UnicodeAttr('tooltip')]
-	def __init__(self, tooltip="", **kwargs):
-		super(TooltipLabel, self).__init__(**kwargs)
-		self.init_tooltip(tooltip)
-
-class TooltipProgressBar(_Tooltip, ProgressBar):
-	"""The TooltipProgressBar is a modified progress bar widget. It can be used in xml files like this:
-	<TooltipProgressbar tooltip=""/>
-	Used to display tooltip on hover on buttons.
-	Attributes same as Label widget with addition of tooltip="text string to display".
-	Use '\n' to force newline.
-	"""
-	ATTRIBUTES = pychan.widgets.Label.ATTRIBUTES + [UnicodeAttr('tooltip')]
-	def __init__(self, tooltip="", **kwargs):
-		super(TooltipProgressBar, self).__init__(**kwargs)
-		self.init_tooltip(tooltip)

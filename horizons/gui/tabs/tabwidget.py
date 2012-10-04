@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -18,19 +18,25 @@
 # Free Software Foundation, Inc.,
 # 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 # ###################################################
-from fife.extensions import pychan
-from horizons.gui.widgets.tooltip import TooltipButton
 
-import horizons.main
-from horizons.util.gui import load_uh_widget
-from horizons.util import Callback
+import logging
+import weakref
 
+from fife.extensions.pychan.widgets import Container, Icon, ImageButton
+
+import horizons.globals
+from horizons.gui.util import load_uh_widget
+from horizons.util.python.callback import Callback
+from horizons.util.changelistener import metaChangeListenerDecorator
+
+@metaChangeListenerDecorator('remove')
 class TabWidget(object):
 	"""The TabWidget class handles widgets which consist of many
 	different tabs(subpanels, switchable via buttons(TabButtons).
 	"""
+	log = logging.getLogger("gui.tabs.tabwidget")
 
-	def __init__(self, ingame_gui, tabs=[], position=None, name=None, active_tab=None):
+	def __init__(self, ingame_gui, tabs=None, position=None, name=None, active_tab=None):
 		"""
 		@param ingame_gui: IngameGui instance
 		@param tabs: tab instances to show
@@ -41,13 +47,13 @@ class TabWidget(object):
 		super(TabWidget, self).__init__()
 		self.name = name
 		self.ingame_gui = ingame_gui
-		self._tabs = tabs
+		self._tabs = [] if not tabs else tabs
 		self.current_tab = self._tabs[0] # Start with the first tab
 		self.widget = load_uh_widget("tab_base.xml")
 		if position is None:
 			# add positioning here
 			self.widget.position = (
-				horizons.main.fife.engine_settings.getScreenWidth() - 303,
+				horizons.globals.fife.engine_settings.getScreenWidth() - 290,
 				209
 			)
 		else:
@@ -60,14 +66,20 @@ class TabWidget(object):
 
 	def _init_tabs(self):
 		"""Add enough tabbuttons for all widgets."""
+		def on_tab_removal(tabwidget):
+			# called when a tab is being removed (via weakref since tabs shouldn't have references to the parent tabwidget)
+			# If one tab is removed, the whole tabwidget will die..
+			# This is easy usually the desired behaviour.
+			if tabwidget():
+				tabwidget().on_remove()
+
 		# Load buttons
 		for index, tab in enumerate(self._tabs):
-			tab.add_remove_listener(self.hide)
-			container = pychan.Container()
-			background = pychan.Icon()
-			background.name = "bg_%s" % index
-			button = TooltipButton()
-			button.name = index
+			# don't add a reference to the
+			tab.add_remove_listener(Callback(on_tab_removal, weakref.ref(self)))
+			container = Container(name="container_%s" % index)
+			background = Icon(name="bg_%s" % index)
+			button = ImageButton(name=str(index))
 			if self.current_tab is tab:
 				background.image = tab.button_background_image_active
 				button.up_image = tab.button_active_image
@@ -79,8 +91,8 @@ class TabWidget(object):
 			button.is_focusable = False
 			button.size = (50, 50)
 			button.capture(Callback(self._show_tab, index))
-			if hasattr(tab, 'tooltip') and tab.tooltip is not None:
-				button.tooltip = unicode(tab.tooltip)
+			if hasattr(tab, 'helptext') and tab.helptext is not None:
+				button.helptext = tab.helptext
 			container.size = background.size
 			container.addChild(background)
 			container.addChild(button)
@@ -88,34 +100,57 @@ class TabWidget(object):
 		self.widget.size = (50, 55*len(self._tabs))
 		self.widget.adaptLayout()
 
+		self._apply_layout_hack()
+
 	def _show_tab(self, number):
 		"""Used as callback function for the TabButtons.
 		@param number: tab number that is to be shown.
 		"""
-		self.current_tab.hide()
+		if not number in range(len(self._tabs)):
+			# this usually indicates a non-critical error, therefore we can handle it without crashing
+			import traceback
+			traceback.print_stack()
+			self.log.warn("Invalid tab number %s, available tabs: %s", number, self._tabs)
+			return
+		if self.current_tab.is_visible():
+			self.current_tab.hide()
 		new_tab = self._tabs[number]
 		old_bg = self.content.findChild(name = "bg_%s" % self._tabs.index(self.current_tab))
 		old_bg.image = self.current_tab.button_background_image
-		old_button = self.content.findChild(name=self._tabs.index(self.current_tab))
+		name = str(self._tabs.index(self.current_tab))
+		old_button = self.content.findChild(name=name)
 		old_button.up_image = self.current_tab.button_up_image
 
 		new_bg = self.content.findChild(name = "bg_%s" % number)
 		new_bg.image = self.current_tab.button_background_image_active
-		new_button = self.content.findChild(name=number)
+		new_button = self.content.findChild(name=str(number))
 		new_button.up_image = new_tab.button_active_image
 		self.current_tab = new_tab
 		# important to display the tabs correctly in front
 		self.widget.hide()
 		self.show()
 
+		self._apply_layout_hack()
+
+	def _apply_layout_hack(self):
+		# pychan layouting depends on time, it's usually in a better mood later.
+		# this introduces some flickering, but fixes #916
+		from horizons.extscheduler import ExtScheduler
+		def do_apply_hack():
+			# just query widget when executing, since if lazy loading is used, the widget
+			# does not exist yet in the outer function
+			self.current_tab.widget.adaptLayout()
+		ExtScheduler().add_new_object(do_apply_hack, self, run_in=0)
+
 	def _draw_widget(self):
 		"""Draws the widget, but does not show it automatically"""
 		self.current_tab.position = (self.widget.position[0] + self.widget.size[0] - 11,
-			self.widget.position[1] - 52)
+		                             self.widget.position[1] - 52)
 		self.current_tab.refresh()
 
 	def show(self):
 		"""Show the current widget"""
+		self.current_tab.ensure_loaded()
 		self._draw_widget()
 		self.current_tab.show()
 		self.widget.show()

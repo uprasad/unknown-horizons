@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -19,7 +19,9 @@
 # 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 # ###################################################
 
+from horizons.messaging import ResourceProduced
 from horizons.world.resourcehandler import ResourceHandler
+from horizons.world.production.producer import Producer
 
 class BuildingResourceHandler(ResourceHandler):
 	"""A Resourcehandler that is also a building.
@@ -27,32 +29,56 @@ class BuildingResourceHandler(ResourceHandler):
 	"""
 	def __init__(self, island, **kwargs):
 		super(BuildingResourceHandler, self).__init__(island=island, **kwargs)
-		self.__init(island)
+		self.island = island
 
-	def __init(self, island):
-		"""
-		@param island: the island where the building is located
-		"""
-		island.provider_buildings.append(self)
+	def initialize(self):
+		super(BuildingResourceHandler, self).initialize()
+		self.__init()
+
+	def __init(self):
+		self.island.provider_buildings.append(self)
+		if self.has_component(Producer):
+			self.get_component(Producer).add_activity_changed_listener(self._set_running_costs_to_status)
+			self.get_component(Producer).add_production_finished_listener(self.on_production_finished)
+			self._set_running_costs_to_status(None, self.get_component(Producer).is_active())
 
 	def load(self, db, worldid):
 		super(BuildingResourceHandler, self).load(db, worldid)
-		# workaround, fetch island from db cause self.island might not be initialised
-		location = self.load_location(db, worldid)
-		island = location[0]
-		self.__init(island)
+		self.__init()
 
 	def remove(self):
 		super(BuildingResourceHandler, self).remove()
 		self.island.provider_buildings.remove(self)
+		if self.has_component(Producer):
+			self.get_component(Producer).remove_activity_changed_listener(self._set_running_costs_to_status)
+			self.get_component(Producer).remove_production_finished_listener(self.on_production_finished)
 
-	def set_active(self, production=None, active=True):
-		super(BuildingResourceHandler, self).set_active(production, active)
-		# set running costs, if activity status has changed.
-		if self.running_costs_active():
-			if not self.is_active():
-				self.toggle_costs()
-		else:
-			if self.is_active():
-				self.toggle_costs()
-		self._changed()
+	def on_production_finished(self, caller, resources):
+		if self.is_valid_tradable_resource(resources):
+			ResourceProduced.broadcast(self, caller, resources)
+
+	def is_valid_tradable_resource(self, resources):
+		""" Checks if the produced resource tradable (can be carried by collectors).
+		"""
+		if not resources or not resources.keys():
+			return False
+
+		return resources.keys()[0] in \
+		       self.island.session.db.get_res(only_tradeable=True, only_inventory=True)
+
+	def _set_running_costs_to_status(self, caller, is_active):
+		current_setting_is_active = self.running_costs_active()
+		if current_setting_is_active and not is_active:
+			self.toggle_costs()
+			self._changed()
+		elif not current_setting_is_active and is_active:
+			self.toggle_costs()
+			self._changed()
+
+
+class UnitProducerBuilding(BuildingResourceHandler):
+	"""Class for building that produce units.
+	Uses a BuildingResourceHandler additionally to ResourceHandler to enable
+	building specific behaviour."""
+	pass
+

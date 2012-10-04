@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -19,24 +19,27 @@
 # 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 # ###################################################
 
-import random
 import logging
 
 from horizons.scheduler import Scheduler
 
-from horizons.world.production.producer import Producer
-from horizons.util import Point, RadiusRect, Rect, WorldObject
-from horizons.world.pathfinding.pather import SoldierPather
+from horizons.util.pathfinding.pather import SoldierPather
+from horizons.util.shapes import Point
+from horizons.util.worldobject import WorldObject
 from horizons.command.unit import CreateUnit
-from collectors import Collector, BuildingCollector, JobList
+from horizons.world.units.collectors import Collector, BuildingCollector, JobList, Job
 from horizons.constants import RES, WILD_ANIMAL
 from horizons.world.units.movingobject import MoveNotPossible
+from horizons.component.storagecomponent import StorageComponent
+from horizons.world.resourcehandler import ResourceHandler
 
-class Animal(Producer):
+class Animal(ResourceHandler):
 	"""Base Class for all animals. An animal is a unit, that consumes resources (e.g. grass)
 	and usually produce something (e.g. wool, meat)."""
 	log = logging.getLogger('world.units.animal')
 
+	def __init__(self, *args, **kwargs):
+		super(Animal, self).__init__(*args, **kwargs)
 
 class CollectorAnimal(Animal):
 	"""Animals that will inherit from collector"""
@@ -89,7 +92,7 @@ class CollectorAnimal(Animal):
 			super(CollectorAnimal, self).search_job()
 
 	def get_home_inventory(self):
-		return self.inventory
+		return self.get_component(StorageComponent).inventory
 
 	def get_collectable_res(self):
 		return self.get_needed_resources()
@@ -108,14 +111,14 @@ class WildAnimal(CollectorAnimal, Collector):
 	work_duration = 96
 	pather_class = SoldierPather
 
-	def __init__(self, owner, start_hidden=False, can_reproduce = True, **kwargs):
+	def __init__(self, owner, start_hidden=False, can_reproduce=True, **kwargs):
 		super(WildAnimal, self).__init__(start_hidden=start_hidden, owner=owner, **kwargs)
 		self.__init(owner, can_reproduce)
-		self.log.debug("Wild animal %s created at "+str(self.position)+\
-									 "; can_reproduce: %s; population now: %s", \
+		self.log.debug("Wild animal %s created at " + str(self.position) +
+		               "; can_reproduce: %s; population now: %s",
 				self.worldid, can_reproduce, len(self.home_island.wild_animals))
 
-	def __init(self, island, can_reproduce, health = None):
+	def __init(self, island, can_reproduce, health=None):
 		"""
 		@param island: Hard reference to island
 		@param can_reproduce: bool
@@ -131,14 +134,14 @@ class WildAnimal(CollectorAnimal, Collector):
 		self.home_island.wild_animals.append(self)
 
 		resources = self.get_needed_resources()
-		assert resources == [RES.WILDANIMALFOOD_ID]
-		self._required_resource_id = resources[0]
+		assert resources == [RES.WILDANIMALFOOD] or resources == []
+		self._required_resource_id = RES.WILDANIMALFOOD
 		self._building_index = self.home_island.get_building_index(self._required_resource_id)
 
 	def save(self, db):
 		super(WildAnimal, self).save(db)
 		# save members
-		db("INSERT INTO wildanimal(rowid, health, can_reproduce) VALUES(?, ?, ?)", \
+		db("INSERT INTO wildanimal(rowid, health, can_reproduce) VALUES(?, ?, ?)",
 			 self.worldid, self.health, int(self.can_reproduce))
 		# set island as owner
 		db("UPDATE unit SET owner = ? WHERE rowid = ?", self.home_island.worldid, self.worldid)
@@ -148,7 +151,7 @@ class WildAnimal(CollectorAnimal, Collector):
 			calls = Scheduler().get_classinst_calls(self, self.handle_no_possible_job)
 			assert(len(calls) == 1), 'calls: %s' % calls
 			remaining_ticks = max(calls.values()[0], 1) # we have to save a number > 0
-			db("UPDATE collector SET remaining_ticks = ? WHERE rowid = ?", \
+			db("UPDATE collector SET remaining_ticks = ? WHERE rowid = ?",
 				 remaining_ticks, self.worldid)
 
 	def load(self, db, worldid):
@@ -158,6 +161,9 @@ class WildAnimal(CollectorAnimal, Collector):
 		# get home island
 		island = WorldObject.get_object_by_id(db.get_unit_owner(worldid))
 		self.__init(island, bool(can_reproduce), health)
+
+	def get_collectable_res(self):
+		return [self._required_resource_id]
 
 	def apply_state(self, state, remaining_ticks=None):
 		super(WildAnimal, self).apply_state(state, remaining_ticks)
@@ -192,10 +198,12 @@ class WildAnimal(CollectorAnimal, Collector):
 		for i in xrange(min(5, self._building_index.get_num_buildings_in_range(pos))):
 			provider = self._building_index.get_random_building_in_range(pos)
 			if provider is not None and self.check_possible_job_target(provider):
-				job = self.check_possible_job_target_for(provider, self._required_resource_id)
-				if job is not None:
-					path = self.check_move(job.object.loading_area)
+				# animals only collect one resource
+				entry = self.check_possible_job_target_for(provider, self._required_resource_id)
+				if entry:
+					path = self.check_move(provider.loading_area)
 					if path:
+						job = Job(provider, [entry])
 						job.path = path
 						return job
 
@@ -203,8 +211,6 @@ class WildAnimal(CollectorAnimal, Collector):
 		# it speeds up animal.search_job by a third (0.00321 -> 0.00231)
 		# and animal.get_job by 3/4 (0.00231 -> 0.00061)
 		return None
-
-
 
 		jobs = JobList(self, JobList.order_by.random)
 		# try all possible jobs
@@ -234,7 +240,7 @@ class WildAnimal(CollectorAnimal, Collector):
 		self.log.debug("%s end_job; health: %s", self, self.health)
 		self.health += WILD_ANIMAL.HEALTH_INCREASE_ON_FEEDING
 		if self.can_reproduce and self.health >= WILD_ANIMAL.HEALTH_LEVEL_TO_REPRODUCE and \
-			len(self.home_island.wild_animals) < (len(self.home_island.ground_map) // 4):
+			len(self.home_island.wild_animals) < (self.home_island.num_trees // WILD_ANIMAL.POPULATION_LIMIT):
 			self.reproduce()
 			# reproduction costs health
 			self.health = WILD_ANIMAL.HEALTH_INIT_VALUE
@@ -246,11 +252,11 @@ class WildAnimal(CollectorAnimal, Collector):
 
 		self.log.debug("%s REPRODUCING", self)
 		# create offspring
-		CreateUnit(self.owner.worldid, self.id, self.position.x, self.position.y, \
+		CreateUnit(self.owner.worldid, self.id, self.position.x, self.position.y,
 		           can_reproduce = self.next_clone_can_reproduce())(issuer=None)
 		# reset own resources
 		for res in self.get_consumed_resources():
-			self.inventory.reset(res)
+			self.get_component(StorageComponent).inventory.reset(res)
 
 	def next_clone_can_reproduce(self):
 		"""Returns, whether the next child will be able to reproduce himself.
@@ -264,11 +270,13 @@ class WildAnimal(CollectorAnimal, Collector):
 		self.home_island.wild_animals.remove(self)
 		self.remove()
 
-	def cancel(self):
-		super(WildAnimal, self).cancel(continue_action=self.search_job)
+	def cancel(self, continue_action=None):
+		if continue_action is None:
+			continue_action = self.search_job
+		super(WildAnimal, self).cancel(continue_action=continue_action)
 
 	def __str__(self):
-		return "%s(health=%s)" % (super(WildAnimal, self).__str__(), \
+		return "%s(health=%s)" % (super(WildAnimal, self).__str__(),
 															self.health if hasattr(self, 'health') else None)
 
 
@@ -281,7 +289,7 @@ class FarmAnimal(CollectorAnimal, BuildingCollector):
 	grazingTime = 2
 
 	def __init__(self, home_building, start_hidden=False, **kwargs):
-		super(FarmAnimal, self).__init__(home_building = home_building, \
+		super(FarmAnimal, self).__init__(home_building = home_building,
 																 start_hidden = start_hidden, **kwargs)
 
 	def register_at_home_building(self, unregister=False):

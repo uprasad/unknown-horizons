@@ -64,8 +64,7 @@ class EnumException(Exception):
 	def __init__(self):
 		super(EnumException, self).__init__()
 		if self.__class__ is EnumException:
-			raise NotImplementedError, \
-				  "%s is an abstract class for subclassing" % self.__class__
+			raise NotImplementedError("%s is an abstract class for subclassing" % self.__class__)
 
 class EnumEmptyError(AssertionError, EnumException):
 	""" Raised when attempting to create an empty enumeration """
@@ -97,34 +96,40 @@ class EnumValue(object):
 
 	def __init__(self, enumtype, index, key):
 		""" Set up a new instance """
-		self.__enumtype = enumtype
-		self.__index = index
-		self.__key = key
+		self._enumtype = enumtype
+		self._index = index
+		self._key = key
 
-	def __get_enumtype(self):
-		return self.__enumtype
-	enumtype = property(__get_enumtype)
+	def _get_enumtype(self):
+		return self._enumtype
+	enumtype = property(_get_enumtype)
 
-	def __get_key(self):
-		return self.__key
-	key = property(__get_key)
+	def _get_key(self):
+		return self._key
+	key = property(_get_key)
 
 	def __str__(self):
 		return "%s" % (self.key)
 
-	def __get_index(self):
-		return self.__index
-	index = property(__get_index)
+	def _get_index(self):
+		return self._index
+	index = property(_get_index)
 
 	def __repr__(self):
 		return "EnumValue(%s, %s, %s)" % (
-			repr(self.__enumtype),
-			repr(self.__index),
-			repr(self.__key),
+			repr(self._enumtype),
+			repr(self._index),
+			repr(self._key),
 		)
 
 	def __hash__(self):
-		return hash(self.__index)
+		return hash(self._index)
+
+	def __eq__(self, other):
+		try:
+			return self._enumtype == other._enumtype and self._index == other._index
+		except AttributeError:
+			return False
 
 	def __cmp__(self, other):
 		result = NotImplemented
@@ -157,7 +162,7 @@ class Enum(object):
 			values[i] = value
 			try:
 				super(Enum, self).__setattr__(key, value)
-			except TypeError, e:
+			except TypeError as e:
 				raise EnumBadKeyError(key)
 
 		super(Enum, self).__setattr__('_keys', keys)
@@ -167,7 +172,7 @@ class Enum(object):
 	def get_extended(cls, base_enum, *keys, **kwargs):
 		keys = base_enum._keys + keys
 		return cls(*keys, **kwargs)
-	
+
 	def __setattr__(self, name, value):
 		raise EnumImmutableError(name)
 
@@ -196,7 +201,7 @@ class Enum(object):
 		else:
 			try:
 				is_member = (value in self._values)
-			except EnumValueCompareError, e:
+			except EnumValueCompareError as e:
 				is_member = False
 		return is_member
 
@@ -205,7 +210,7 @@ class Enum(object):
 		@throws KeyError on key not found"""
 		try:
 			try:
-				index =  self._keys.index(key)
+				index = self._keys.index(key)
 			except AttributeError:
 				# WORKAROUND: python 2.5 doesn't have tuple.index
 				index = 0

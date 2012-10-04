@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -21,6 +21,6 @@
 
 __all__ = ['collector','buildingcollector','animalcollector']
 
-from buildingcollector import BuildingCollector, FieldCollector, StorageCollector, FisherShipCollector
+from buildingcollector import BuildingCollector, FieldCollector, StorageCollector, FisherShipCollector, DisasterRecoveryCollector, SettlerCollector
 from animalcollector import AnimalCollector, HunterCollector, FarmAnimalCollector
 from collector import Collector, Job, JobList

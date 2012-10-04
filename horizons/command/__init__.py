@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -21,12 +21,25 @@
 
 __all__ = ['building', 'unit', 'sounds']
 
-import horizons.main
-from horizons.util import WorldObject
+import logging
+
+from horizons.util.python import get_all_subclasses
+from horizons.util.worldobject import WorldObject
+from horizons.network.packets import SafeUnpickler
 
 class Command(object):
 	"""Base class for every Command."""
-	def execute(self, session, local = False):
+	log = logging.getLogger("command")
+	@classmethod
+	def allow_network(self, klass):
+		"""
+		NOTE: this is a security related method and may lead to
+		execution of arbritary code if used in a wrong way
+		see documentation inside horizons.network.packets.SafeUnpickler
+		"""
+		SafeUnpickler.add('server', klass)
+
+	def execute(self, session, local=False):
 		"""Execute command.
 		@param session: Execute command on this session's manager.
 		@param local: Execute the command only locally (only used in multiplayer manager)
@@ -34,10 +47,16 @@ class Command(object):
 		"""
 		return session.manager.execute(self, local)
 
+	@classmethod
+	def get_all_commands(cls):
+		return list(get_all_subclasses(cls))
+
+
 class GenericCommand(Command):
 	"""Code generator for trivial commands on an object.
 	It saves an object's world id, and executes a method specified as string on it in __call__
 
+	NOTE: Do not use floats! 2.6 and 2.7 handle them differently.
 	Use like this to call obj.mymethod(42, 1337):
 
 	class MyCommand(GenericCommand):
@@ -56,3 +75,23 @@ class GenericCommand(Command):
 	def _get_object(self):
 		return WorldObject.get_object_by_id(self.obj_id)
 
+	def __str__(self):
+		return "GenericCommand(%s, %s, %s, %s, %s)" % (self.__class__, self._get_object(), self.method, self.args, self.kwargs)
+
+class GenericComponentCommand(Command):
+	"""Code generator for trivial commands on a component."""
+	def __init__(self, component, method, *args, **kwargs):
+		self.obj_id = component.instance.worldid
+		self.method = method
+		self.component_name = component.NAME
+		self.args = args
+		self.kwargs = kwargs
+
+	def __call__(self, issuer):
+		return getattr(self._get_object().get_component_by_name(self.component_name), self.method)(*self.args, **self.kwargs)
+
+	def _get_object(self):
+		return WorldObject.get_object_by_id(self.obj_id)
+
+	def __str__(self):
+		return "GenericCompCommand(%s, %s, %s, %s, %s, %s)" % (self.__class__, self._get_object(), self.component_name, self.method, self.args, self.kwargs)

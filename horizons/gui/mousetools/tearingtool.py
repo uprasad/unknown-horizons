@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -21,73 +21,91 @@
 
 from fife import fife
 
-import horizons.main
+import horizons.globals
 
-from navigationtool import NavigationTool
-from selectiontool import SelectionTool
+from horizons.gui.mousetools.navigationtool import NavigationTool
 from horizons.command.building import Tear
-from horizons.util import Point
+from horizons.util.python.weaklist import WeakList
+from horizons.util.shapes import Point
+from horizons.constants import BUILDINGS
+from horizons.messaging import WorldObjectDeleted
 
 class TearingTool(NavigationTool):
 	"""
 	Represents a dangling tool to remove (tear) buildings.
 	"""
-
 	tear_selection_color = (255, 255, 255)
 
 	def __init__(self, session):
 		super(TearingTool, self).__init__(session)
 		self.coords = None
-		self.selected = set()
+		self.selected = WeakList()
 		self.oldedges = None
 		self.tear_tool_active = True
 		self.session.gui.on_escape = self.on_escape
-		horizons.main.fife.cursor.set(fife.CURSOR_IMAGE, horizons.main.fife.tearing_cursor_image)
+		self.session.ingame_gui.hide_menu()
+		self.session.selected_instances.clear()
+		horizons.globals.fife.set_cursor_image("tearing")
+		self._hovering_over = WeakList()
+		WorldObjectDeleted.subscribe(self._on_object_deleted)
 
-	def end(self):
+	def remove(self):
+		self._mark()
 		self.tear_tool_active = False
-		horizons.main.fife.cursor.set(fife.CURSOR_IMAGE, horizons.main.fife.default_cursor_image)
-		super(TearingTool, self).end()
+		horizons.globals.fife.set_cursor_image("default")
+		WorldObjectDeleted.subscribe(self._on_object_deleted)
+		super(TearingTool, self).remove()
 
 	def mouseDragged(self, evt):
-		coords = self.session.view.cam.toMapCoordinates(fife.ScreenPoint(evt.getX(), evt.getY()), False)
+		coords = self.get_world_location(evt).to_tuple()
 		if self.coords is None:
-			self.coords = (int(round(coords.x)), int(round(coords.y)))
-		self._mark(self.coords, (int(round(coords.x)), int(round(coords.y))))
+			self.coords = coords
+		self._mark(self.coords, coords)
 		evt.consume()
 
-	def mouseMoved(self,  evt):
+	def mouseMoved(self, evt):
 		super(TearingTool, self).mouseMoved(evt)
-		coords = self.session.view.cam.toMapCoordinates(fife.ScreenPoint(evt.getX(), evt.getY()), False)
-		self._mark((int(round(coords.x)), int(round(coords.y))))
+		coords = self.get_world_location(evt).to_tuple()
+		self._mark(coords)
 		evt.consume()
 
 	def on_escape(self):
-		self._mark()
-		self.tear_tool_active = False
-		self.session.cursor = SelectionTool(self.session)
+		self.session.set_cursor()
 
-	def mouseReleased(self,  evt):
+	def mouseReleased(self, evt):
 		"""Tear selected instances and set selection tool as cursor"""
+		self.log.debug("TearingTool: mouseReleased")
 		if fife.MouseEvent.LEFT == evt.getButton():
-			coords = self.session.view.cam.toMapCoordinates(fife.ScreenPoint(evt.getX(), evt.getY()), False)
+			coords = self.get_world_location(evt).to_tuple()
 			if self.coords is None:
-				self.coords = (int(round(coords.x)), int(round(coords.y)))
-			self._mark(self.coords, (int(round(coords.x)), int(round(coords.y))))
-			for i in self.selected:
+				self.coords = coords
+			self._mark(self.coords, coords)
+			for i in [i for i in self.selected]:
+				self.session.view.renderer['InstanceRenderer'].removeColored(i._instance)
 				Tear(i).execute(self.session)
+			else:
+				if self._hovering_over:
+					# we're hovering over a building, but none is selected, so this tear action isn't allowed
+					warehouses = [ b for b in self._hovering_over if
+					               b.id == BUILDINGS.WAREHOUSE ]
+					if warehouses:
+						# tried to tear a warehouse, this is especially non-tearable
+						pos = warehouses[0].position.origin
+						self.session.ingame_gui.message_widget.add(point=pos, string_id="WAREHOUSE_NOT_TEARABLE" )
 
-			if not evt.isShiftPressed():
+			self.selected = WeakList()
+			self._hovering_over = WeakList()
+
+			if not evt.isShiftPressed() and not horizons.globals.fife.get_uh_setting('UninterruptedBuilding'):
 				self.tear_tool_active = False
-				self.session.cursor = SelectionTool(self.session)
+				self.on_escape()
 			evt.consume()
 
-	def mousePressed(self,  evt):
+	def mousePressed(self, evt):
 		if fife.MouseEvent.RIGHT == evt.getButton():
 			self.on_escape()
 		elif fife.MouseEvent.LEFT == evt.getButton():
-			coords = self.session.view.cam.toMapCoordinates(fife.ScreenPoint(evt.getX(), evt.getY()), False)
-			self.coords = (int(round(coords.x)), int(round(coords.y)))
+			self.coords = self.get_world_location(evt).to_tuple()
 			self._mark(self.coords)
 		else:
 			return
@@ -96,24 +114,38 @@ class TearingTool(NavigationTool):
 
 	def _mark(self, *edges):
 		"""Highights building instances and keeps self.selected up to date."""
+		self.log.debug("TearingTool: mark")
 		if len(edges) == 1:
 			edges = (edges[0], edges[0])
 		elif len(edges) == 2:
-			edges = ((min(edges[0][0], edges[1][0]), min(edges[0][1], edges[1][1])), \
+			edges = ((min(edges[0][0], edges[1][0]), min(edges[0][1], edges[1][1])),
 					 (max(edges[0][0], edges[1][0]), max(edges[0][1], edges[1][1])))
 		else:
 			edges = None
 		if self.oldedges != edges or edges is None:
 			for i in self.selected:
 				self.session.view.renderer['InstanceRenderer'].removeColored(i._instance)
-			self.selected = set()
+			self.selected = WeakList()
 			self.oldedges = edges
 		if edges is not None:
+			self._hovering_over = WeakList()
 			for x in xrange(edges[0][0], edges[1][0] + 1):
 				for y in xrange(edges[0][1], edges[1][1] + 1):
 					b = self.session.world.get_building(Point(x, y))
-					if b is not None and b.tearable and self.session.world.player == b.owner:
-						self.selected.add(b)
+					if b is not None:
+						if b not in self._hovering_over:
+							self._hovering_over.append(b)
+						if b.tearable and b.owner is not None and b.owner.is_local_player:
+							if b not in self.selected:
+								self.selected.append(b)
 			for i in self.selected:
-				self.session.view.renderer['InstanceRenderer'].addColored(i._instance, \
+				self.session.view.renderer['InstanceRenderer'].addColored(i._instance,
 				                                                          *self.tear_selection_color)
+		self.log.debug("TearingTool: mark done")
+
+
+	def _on_object_deleted(self, message):
+		self.log.debug("TearingTool: on deletion notification %s", message.worldid)
+		if message.sender in self.selected:
+			self.log.debug("TearingTool: deleted obj present")
+			self.selected.remove(message.sender)

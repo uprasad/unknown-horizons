@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -23,9 +23,12 @@ import random
 
 from horizons.session import Session
 from horizons.manager import MPManager
+from horizons.timer import Timer
+from horizons.savegamemanager import SavegameManager
+from horizons.command.game import SaveCommand
 
 class MPSession(Session):
-	"""Session class for multiplayer games."""
+	"""Session class fo multiplayer games."""
 
 	def __init__(self, gui, db, network_interface, **kwargs):
 		"""
@@ -34,6 +37,11 @@ class MPSession(Session):
 		"""
 		self.__network_interface = network_interface
 		super(MPSession, self).__init__(gui, db, **kwargs)
+
+	def speed_set(self, ticks, suggestion=False):
+		"""Set game speed to ticks ticks per second"""
+		if not suggestion:
+			super(MPSession, self).speed_set(ticks, suggestion)
 
 	def create_manager(self):
 		return MPManager(self, self.__network_interface)
@@ -44,18 +52,33 @@ class MPSession(Session):
 	def create_timer(self):
 		return Timer(freeze_protection=False)
 
-	def speed_set(self, ticks):
-		self.gui.show_popup(_("Not possible"), _("You cannot change the speed of a multiplayer game"))
-
 	def end(self):
 		self.__network_interface.disconnect()
 		super(MPSession, self).end()
 
 	def autosave(self):
-		self.gui.show_popup(_("Not possible"), _("Save/load for multiplayer games is not possible yet"))
+		SaveCommand( SavegameManager.create_multiplayer_autosave_name() ).execute(self)
+
 	def quicksave(self):
-		self.gui.show_popup(_("Not possible"), _("Save/load for multiplayer games is not possible yet"))
+		SaveCommand( SavegameManager.create_multiplayer_quicksave_name() ).execute(self)
+
 	def quickload(self):
 		self.gui.show_popup(_("Not possible"), _("Save/load for multiplayer games is not possible yet"))
-	def save(self, savegame):
-		self.gui.show_popup(_("Not possible"), _("Save/load for multiplayer games is not possible yet"))
+
+	def save(self, savegamename=None):
+		if savegamename is None:
+			def sanity_checker(string):
+				try:
+					SavegameManager.create_multiplayersave_filename(string)
+				except RuntimeError:
+					return False
+				else:
+					return True
+			sanity_criteria = _("The filename must consist only of letters, numbers, spaces and _.-")
+			savegamename = self.gui.show_select_savegame(mode='mp_save', sanity_checker=sanity_checker,
+			                                             sanity_criteria=sanity_criteria)
+			if savegamename is None:
+				return True # user aborted dialog
+
+		SaveCommand( savegamename ).execute(self)
+		return True

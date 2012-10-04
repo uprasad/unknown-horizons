@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -19,18 +19,8 @@
 # 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 # ###################################################
 
+# Seed that is used by all tests to initialize the RNG
+RANDOM_SEED = 42
 
-import horizons.main
-from horizons.ext.dummy import Dummy
-
-import fife
-
-
-def mock_fife():
-	"""
-	Replace the fife module with a dummy. We leave fife.extensions as it is,
-	pychan / horizons.gui have isinstance checks which our Dummy objects fails.
-	That's okay, we won't test the GUI now.
-	"""
-	fife.fife = Dummy()
-	horizons.main.fife = Dummy()
+# use this instead of the direct pdb version when debugging tests
+from game import set_trace

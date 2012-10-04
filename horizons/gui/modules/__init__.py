@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -22,5 +22,6 @@
 """Modules for gui/ingamegui"""
 
 from playerdataselection import PlayerDataSelection
+from aidataselection import AIDataSelection
 from singleplayermenu import SingleplayerMenu
 from multiplayermenu import MultiplayerMenu

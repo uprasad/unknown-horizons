@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -19,35 +19,49 @@
 # 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 # ###################################################
 
-import yaml
-
-from horizons.util.gui import load_uh_widget
+from horizons.gui.util import load_uh_widget
+from horizons.util import YamlCache
 from horizons.savegamemanager import SavegameManager
 from horizons.gui.widgets.logbook import LogBook
+from horizons.scheduler import Scheduler
 
 class StringPreviewWidget(object):
 	"""Widget for testing Logbook strings.
 	It provides a list of scenarios, of which the user can select one and display
 	its strings in a logbook"""
-	def __init__(self):
-		self._init_gui()
+	def __init__(self, session):
+		self._init_gui(session)
+		# allow for misc delayed initialisation to finish before pausing
+		Scheduler().add_new_object(session.speed_pause, self, 2)
 
 	def show(self):
 		self._gui.show()
 
-	def _init_gui(self):
+	def _init_gui(self, session):
 		self._gui = load_uh_widget("stringpreviewwidget.xml")
 		self._gui.mapEvents({ 'load' : self.load })
 		self.scenarios = SavegameManager.get_scenarios()
 		self.listbox = self._gui.findChild(name="scenario_list")
 		self.listbox.items = self.scenarios[1]
+		self.listbox.capture(self.update_infos)
 
-		self.logbook = LogBook()
+		self.statslabel = self._gui.findChild(name="stats")
+
+		self.logbook = LogBook(session)
+
+	def update_infos(self):
+		"""Updates the status label while scrolling the scenario list. No up-
+		date to logbook messages. Those are loaded after Load/Reload is clicked.
+		"""
+		scenario_file_path = self.scenarios[0][self.listbox.selected]
+		data = YamlCache.load_yaml_data(open(scenario_file_path, 'r'))
+		stats = data.get('translation_status', '') # no stats available => empty label
+		self.statslabel.text = unicode(stats)
 
 	def load(self):
 		"""Load selected scenario and show strings"""
 		if self.listbox.selected == -1:
-			self._gui.findChild(name="hintlbl").text = u"you need to select sth in the list above"
+			self._gui.findChild(name="hintlbl").text = u"Select a scenario first."
 		else:
 			self._gui.findChild(name="hintlbl").text = u""
 
@@ -58,22 +72,16 @@ class StringPreviewWidget(object):
 
 			# get logbook actions from scenario file and add them to our logbook
 			scenario_file_path = self.scenarios[0][self.listbox.selected]
-			data = yaml.load(open(scenario_file_path, 'r'))
+			data = YamlCache.load_yaml_data(open(scenario_file_path, 'r'))
 			events = data['events']
 			for event in events:
 				for action in event['actions']:
-					if action['type'] in ('logbook', 'logbook_w'):
-						head= action['arguments'][0]
-						msg = action['arguments'][1]
-						self.logbook.add_entry(unicode(head), unicode(msg), show_logbook=False)
+					if action['type'] in ('logbook', 'logbook'):
+						self.logbook.add_captainslog_entry(action['arguments'], show_logbook=False)
 
-			self.logbook.set_cur_entry(cur_entry)
-			self.logbook._redraw()
+			try:
+				self.logbook.set_cur_entry(cur_entry)
+			except ValueError:
+				pass # no entries
+			self.logbook._redraw_captainslog()
 			self.logbook.show()
-
-
-
-
-
-
-

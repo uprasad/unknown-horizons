@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -19,19 +19,14 @@
 # 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 # ###################################################
 
-from gettext import translation
+from horizons.constants import FONTDEFS, LANGUAGENAMES
 
-"""
-N_ takes care of plural forms for different languages. It masks ungettext
-calls (unicode, plural-aware _() ) to operate on module level after import.
-We will need to make it recognise namespaces some time, but hardcoded
-'unknown-horizons' works for now since we currently only use one namespace.
-"""
-namespace_translation = translation('unknown-horizons', fallback=True)
-N_ = namespace_translation.ungettext
-
-
-def find_available_languages():
+LANGCACHE = {}
+def find_available_languages(domain='unknown-horizons', update=False):
+	"""Returns a dict( lang_key -> locale_dir )"""
+	global LANGCACHE
+	if len(LANGCACHE) and not update:
+		return LANGCACHE
 	alternatives = ('content/lang',
 	                'build/mo',
 	                '/usr/share/locale',
@@ -42,13 +37,23 @@ def find_available_languages():
 	import os
 	from glob import glob
 
-	languages = []
+	languages = {}
 
 	for i in alternatives:
-		for j in glob('%s/*/*/unknown-horizons.mo' % i):
+		for j in glob('%s/*/*/%s.mo' % (i, domain)):
 			splited = j.split(os.sep)
-			languages.append((splited[-3], os.sep.join(splited[:-3])))
-			#TODO we need to strip strings here if an "@" occurs and only
-			# use the language code itself (e.g. ca@valencia.po -> ca.po)
+			key = splited[-3]
+			if not key in languages:
+				languages[key] = os.sep.join(splited[:-3])
+
+	# there's always a default, which is english
+	languages[LANGUAGENAMES['']] = ''
+	languages['en'] = ''
+	LANGCACHE = languages
 
 	return languages
+
+def get_fontdef_for_locale(locale):
+	"""Returns path to the fontdef file for a locale. Unifont is default."""
+	fontdef_file = FONTDEFS.get(locale, 'unifont')
+	return u'content/fonts/{filename}.fontdef'.format(filename = fontdef_file)

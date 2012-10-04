@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -19,128 +19,133 @@
 # 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 # ###################################################
 
-
+import contextlib
+import inspect
 import os
-import shutil
-import tempfile
+from functools import wraps
 
+import mock
+
+import horizons.globals
 import horizons.main
 import horizons.world	# needs to be imported before session
-from horizons.ai.trader import Trader
-from horizons.command.building import Build
+from horizons.ai.aiplayer import AIPlayer
 from horizons.command.unit import CreateUnit
-from horizons.constants import PATHS, GROUND, UNITS, BUILDINGS, GAME_SPEED
-from horizons.entities import Entities
+from horizons.constants import UNITS
 from horizons.ext.dummy import Dummy
 from horizons.extscheduler import ExtScheduler
 from horizons.scheduler import Scheduler
 from horizons.spsession import SPSession
-from horizons.util import (Color, DbReader, Rect, WorldObject, NamedObject, LivingObject,
-						   SavegameAccessor, Point)
-from horizons.world import World
+from horizons.util.dbreader import DbReader
+from horizons.util.difficultysettings import DifficultySettings
+from horizons.util.savegameaccessor import SavegameAccessor
+from horizons.util.color import Color
+from horizons.component.storagecomponent import StorageComponent
 
+from tests import RANDOM_SEED
+from tests.utils import Timer
+
+# path where test savegames are stored (tests/game/fixtures/)
+TEST_FIXTURES_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fixtures')
+
+
+db = None
 
 def setup_package():
 	"""
 	Setup read-only database. This might have to change in the future, tests should not
 	fail only because a production now takes 1 second more in the game.
 	"""
-	horizons.main.db = horizons.main._create_db()
+	global db
+	db = horizons.main._create_main_db()
 
 
-def create_map():
+@contextlib.contextmanager
+def _dbreader_convert_dummy_objects():
 	"""
-	Create a map with a square island (20x20) at position (20, 20) and return the path
-	to the database file.
+	Wrapper around DbReader.__call__ to convert Dummy objects to valid values.
+
+	This is needed because some classes attempt to store Dummy objects in the
+	database, e.g. ConcreteObject with self._instance.getActionRuntime().
+	We fix this by replacing it with zero, SQLite doesn't care much about types,
+	and hopefully a number is less likely to break code than None.
+
+	Yes, this is ugly and will most likely break later. For now, it works.
 	"""
+	def deco(func):
+		@wraps(func)
+		def wrapper(self, command, *args):
+			args = list(args)
+			for i in range(len(args)):
+				if args[i].__class__.__name__ == 'Dummy':
+					args[i] = 0
+			return func(self, command, *args)
+		return wrapper
 
-	# Create island.
-	islandfile = tempfile.mkstemp()[1]
-
-	db = DbReader(islandfile)
-	db("CREATE TABLE ground(x INTEGER NOT NULL, y INTEGER NOT NULL, ground_id INTEGER NOT NULL)")
-	db("CREATE TABLE island_properties(name TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)")
-
-	db("BEGIN TRANSACTION")
-	tiles = []
-	for x, y in Rect.init_from_topleft_and_size(0, 0, 20, 20).tuple_iter():
-		if (2 < x < 18) or (2 < y < 18):
-			ground = GROUND.DEFAULT_LAND
-		else:
-			# Add coastline at the borders.
-			ground = 49
-		tiles.append((x, y, ground))
-	db.execute_many("INSERT INTO ground VALUES(?, ?, ?)", tiles)
-	db("COMMIT")
-
-	# Create savegame with the island above.
-	savegame = tempfile.mkstemp()[1]
-	shutil.copyfile(PATHS.SAVEGAME_TEMPLATE, savegame)
-
-	db = DbReader(savegame)
-	db("BEGIN TRANSACTION")
-	db("INSERT INTO island (x, y, file) VALUES(?, ?, ?)", 20, 20, islandfile)
-	db("COMMIT")
-
-	return (savegame, islandfile)
+	original = DbReader.__call__
+	DbReader.__call__ = deco(DbReader.__call__)
+	yield
+	DbReader.__call__ = original
 
 
 class SPTestSession(SPSession):
 
-	def __init__(self, db, rng_seed=None):
-		"""
-		Unfortunately, right now there is no other way to setup Dummy versions of the GUI,
-		View etc., unless we want to patch the references in the session module.
-		"""
-		super(LivingObject, self).__init__()
-		self.gui = Dummy()
-		self.db = db
-		self.savecounter = 0	# this is a new game.
-		self.is_alive = True
-
-		WorldObject.reset()
-		NamedObject.reset()
-
-		# Game
-		self.current_tick = 0
-		self.random = self.create_rng(rng_seed)
-		self.timer = self.create_timer()
-		Scheduler.create_instance(self.timer)
+	@mock.patch('horizons.session.View', Dummy)
+	def __init__(self, rng_seed=None):
 		ExtScheduler.create_instance(Dummy)
-		self.manager = self.create_manager()
-		self.view = Dummy()
-		self.view.renderer = Dummy()
-		Entities.load(self.db)
-		self.scenario_eventhandler = Dummy()
-		self.campaign = {}
+		super(SPTestSession, self).__init__(Dummy, horizons.globals.db, rng_seed)
+		self.reset_autosave = mock.Mock()
 
-		# GUI
-		self.gui.session = self
-		self.ingame_gui = Dummy()
-
-		GAME_SPEED.TICKS_PER_SECOND = 16
-
-	def load(self, db_files, players):
+	def save(self, *args, **kwargs):
 		"""
-		Stripped version of the original code. We don't need to load selections,
-		or a scenario, setting up the gui or view.
+		Wrapper around original save function to fix some things.
 		"""
-		self.db_files = db_files	# keep the paths to the databases, so we can clean up
-		savegame_db = SavegameAccessor(db_files[0])
+		# SavegameManager._write_screenshot tries to create a screenshot and breaks when
+		# accessing fife properties
+		with mock.patch('horizons.session.SavegameManager._write_screenshot'):
+			# We need to covert Dummy() objects to a sensible value that can be stored
+			# in the database
+			with _dbreader_convert_dummy_objects():
+				return super(SPTestSession, self).save(*args, **kwargs)
 
-		self.world = World(self)
-		self.world._init(savegame_db)
-		for i in sorted(players):
-			self.world.setup_player(i['id'], i['name'], i['color'], i['local'])
-		self.manager.load(savegame_db)
+	def load(self, savegame, players, is_ai_test):
+		# keep a reference on the savegame, so we can cleanup in `end`
+		self.savegame = savegame
+		if is_ai_test:
+			# enable trader, pirate and natural resources in AI tests.
+			super(SPTestSession, self).load(savegame, players, True, True, 1)
+		else:
+			# disable the above in usual game tests for simplicity.
+			super(SPTestSession, self).load(savegame, players, False, False, 0)
 
-	def end(self):
+	def end(self, keep_map=False, remove_savegame=True):
 		"""
 		Clean up temporary files.
 		"""
 		super(SPTestSession, self).end()
-		for f in self.db_files:
-			os.remove(f)
+
+		# Find all islands in the map first
+		savegame_db = SavegameAccessor(self.savegame)
+		if not keep_map:
+			for (island_file, ) in savegame_db('SELECT file FROM island'):
+				if not island_file.startswith('random:'): # random islands don't exist as files
+					os.remove(island_file)
+
+		# Finally remove savegame
+		savegame_db.close()
+		if remove_savegame:
+			os.remove(self.savegame)
+
+	@classmethod
+	def cleanup(cls):
+		"""
+		If a test uses manual session management, we cannot be sure that session.end was
+		called before a crash, leaving the game in an unclean state. This method should
+		return the game to a valid state.
+		"""
+		Scheduler.destroy_instance()
+		ExtScheduler.destroy_instance()
+		SPSession._clear_caches()
 
 	def run(self, ticks=1, seconds=None):
 		"""
@@ -150,40 +155,143 @@ class SPTestSession(SPSession):
 		if seconds:
 			ticks = self.timer.get_ticks(seconds)
 
-		for i in range(ticks):
-			Scheduler().tick(self.current_tick)
-			self.current_tick += 1
+		while ticks > 0:
+			Scheduler().tick(Scheduler().cur_tick + 1)
+			ticks -= 1
 
 
-def new_session(mapgen=create_map, rng_seed=None):
+# import helper functions here, so tests can import from tests.game directly
+from tests.game.utils import create_map, new_settlement, settle
+
+
+def new_session(mapgen=create_map, rng_seed=RANDOM_SEED, human_player=True, ai_players=0):
 	"""
 	Create a new session with a map, add one human player and a trader (it will crash
-	otherwise). It returns both session and player to avoid making the function-baed
+	otherwise). It returns both session and player to avoid making the function-based
 	tests too verbose.
 	"""
-	session = SPTestSession(horizons.main.db, rng_seed=rng_seed)
-	players = [{'id': 1, 'name': 'foobar', 'color': Color[1], 'local': True}]
+	session = SPTestSession(rng_seed=rng_seed)
+	human_difficulty = DifficultySettings.DEFAULT_LEVEL
+	ai_difficulty = DifficultySettings.EASY_LEVEL
 
-	session.load(create_map(), players)
-	session.world.trader = Trader(session, 99999, 'Free Trader', Color())
+	players = []
+	if human_player:
+		players.append({'id': 1, 'name': 'foobar', 'color': Color[1], 'local': True, 'ai': False, 'difficulty': human_difficulty})
+	for i in xrange(ai_players):
+		id = i + human_player + 1
+		players.append({'id': id, 'name': ('AI' + str(i)), 'color': Color[id], 'local': id == 1, 'ai': True, 'difficulty': ai_difficulty})
 
+	session.load(mapgen(), players, ai_players > 0)
 	return session, session.world.player
 
 
-def new_settlement(session, pos=Point(20, 20)):
+def load_session(savegame, rng_seed=RANDOM_SEED):
 	"""
-	Creates a settlement at the given position. It returns the settlement and the island
-	where it was created on, to avoid making function-baed tests too verbose.
+	Start a new session with the given savegame.
 	"""
-	island = session.world.get_island(pos)
-	assert island, "No island found at %s" % pos
-	player = session.world.player
+	session = SPTestSession(rng_seed=rng_seed)
 
-	ship = CreateUnit(player.worldid, UNITS.PLAYER_SHIP_CLASS, pos.x, pos.y)(player)
-	for res, amount in session.db("SELECT resource, amount FROM start_resources"):
-		ship.inventory.alter(res, amount)
+	session.load(savegame, [], False)
 
-	building = Build(BUILDINGS.BRANCH_OFFICE_CLASS, pos.x, pos.y, island, ship=ship)(player)
-	assert building, "Could not build branch office at %s" % pos
+	return session
 
-	return (player.settlements[0], island)
+
+def game_test(*args, **kwargs):
+	"""
+	Decorator that is needed for each test in this package. setup/teardown of function
+	based tests can't pass arguments to the test, or keep a reference somewhere.
+	If a test fails, we need to reset the session under all circumstances, otherwise we
+	break the rest of the tests. The global database reference has to be set each time too,
+	unittests use this too, and we can't predict the order tests run (we should not rely
+	on it anyway).
+
+	The decorator can be used in 2 ways:
+
+		1. No decorator arguments
+
+			@game_test
+			def foo(session, player):
+				pass
+
+		2. Pass extra arguments (timeout, different map generator)
+
+			@game_test(timeout=10, mapgen=my_map_generator)
+			def foo(session, player):
+				pass
+	"""
+	no_decorator_arguments = len(args) == 1 and not kwargs and inspect.isfunction(args[0])
+
+	timeout = kwargs.get('timeout', 15 * 60)	# zero means no timeout, 15min default
+	mapgen = kwargs.get('mapgen', create_map)
+	human_player = kwargs.get('human_player', True)
+	ai_players = kwargs.get('ai_players', 0)
+	manual_session = kwargs.get('manual_session', False)
+	use_fixture = kwargs.get('use_fixture', False)
+
+	def handler(signum, frame):
+		raise Exception('Test run exceeded %ds time limit' % timeout)
+
+	def deco(func):
+		@wraps(func)
+		def wrapped(*args):
+			horizons.globals.db = db
+			if not manual_session and not use_fixture:
+				s, p = new_session(mapgen=mapgen, human_player=human_player, ai_players=ai_players)
+			elif use_fixture:
+				path = os.path.join(TEST_FIXTURES_DIR, use_fixture + '.sqlite')
+				if not os.path.exists(path):
+					raise Exception('Savegame %s not found' % path)
+				s = load_session(path)
+
+			timelimit = Timer(handler)
+			timelimit.start(timeout)
+
+			try:
+				if use_fixture:
+					return func(s, *args)
+				elif not manual_session:
+					return func(s, p, *args)
+				else:
+					return func(*args)
+			finally:
+				try:
+					if use_fixture:
+						s.end(remove_savegame=False, keep_map=True)
+					elif not manual_session:
+						s.end()
+				except:
+					pass
+					# An error happened after cleanup after an error.
+					# This is ok since cleanup is only defined to work when invariants are in place,
+					# but the first error could have violated one.
+					# Therefore only use failsafe cleanup:
+				finally:
+					SPTestSession.cleanup()
+
+
+				timelimit.stop()
+		return wrapped
+
+	if no_decorator_arguments:
+		# return the wrapped function
+		return deco(args[0])
+	else:
+		# return a decorator
+		return deco
+
+game_test.__test__ = False
+
+
+def set_trace():
+	"""
+	Use this function instead of directly importing if from pdb. The test run
+	time limit will be disabled and stdout restored (so the debugger actually
+	works).
+	"""
+	Timer.stop()
+
+	from nose.tools import set_trace
+	set_trace()
+
+
+_multiprocess_can_split_ = True

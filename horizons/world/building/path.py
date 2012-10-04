@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -21,29 +21,35 @@
 
 from fife import fife
 
-import horizons.main
-
-from building import BasicBuilding
-from buildable import BuildableLine, BuildableSingle
 from horizons.constants import LAYERS, BUILDINGS
+from horizons.world.building.building import BasicBuilding
+from horizons.world.building.buildable import BuildableLine
+from horizons.scheduler import Scheduler
+from horizons.component.componentholder import ComponentHolder
 
-class Path(BasicBuilding, BuildableLine):
+
+class Path(ComponentHolder):
+	"""Object with path functionality"""
 	walkable = True
-	show_buildingtool_preview_tab = False
-	layer = LAYERS.FIELDS
 
-	def init(self):
-		super(Path, self).init()
-		self.__init()
-		self.recalculate_surrounding_tile_orientation()
+	# no __init__
 
 	def load(self, db, worldid):
 		super(Path, self).load(db, worldid)
+
+	def init(self):
+		# this does not belong in __init__, it's just here that all the data should be consistent
 		self.__init()
 
 	def __init(self):
 		self.island.path_nodes.register_road(self)
-		self.recalculate_orientation()
+		if self.session.world.inited:
+			self.recalculate_surrounding_tile_orientation()
+			self.recalculate_orientation()
+		else:
+			# don't always recalculate while loading, we'd recalculate too often.
+			# do it once when everything is finished.
+			Scheduler().add_new_object(self.recalculate_orientation, self, run_in=0)
 
 	def remove(self):
 		super(Path, self).remove()
@@ -51,13 +57,12 @@ class Path(BasicBuilding, BuildableLine):
 		self.recalculate_surrounding_tile_orientation()
 
 	def recalculate_surrounding_tile_orientation(self):
-		for tile in self.island.get_surrounding_tiles(self.position.origin):
-			if tile is not None and self.island.path_nodes.is_road(tile.x, tile.y):
+		for tile in self.island.get_surrounding_tiles(self.position):
+			if tile is not None and tile.object is not None and \
+			   self.island.path_nodes.is_road(tile.x, tile.y):
 				tile.object.recalculate_orientation()
 
 	def recalculate_orientation(self):
-		"""
-		"""
 		# orientation is a string containing a, b, c and/or d
 		# corresponding actions are saved in the db
 		action = ''
@@ -67,21 +72,17 @@ class Path(BasicBuilding, BuildableLine):
 		for action_part in sorted(BUILDINGS.ACTION.action_offset_dict): # order is important here
 			offset = BUILDINGS.ACTION.action_offset_dict[action_part]
 			tile = self.island.get_tile(origin.offset(*offset))
-			if tile is not None and path_nodes.is_road(tile.x, tile.y) and self.owner == self.island.get_building(origin.offset(*offset)).owner:
+			if tile is not None and tile.object is not None and \
+			   path_nodes.is_road(tile.x, tile.y) and \
+			   self.owner == tile.object.owner:
 				action += action_part
 		if action == '':
-			action = 'ac' # default
+			action = 'single' # single trail piece with no neighbours
 
 		location = self._instance.getLocation()
 		location.setLayerCoordinates(fife.ModelCoordinate(int(origin.x + 1), int(origin.y), 0))
 		self.act(action, location, True)
 
-class Bridge(BasicBuilding, BuildableSingle):
+class Road(Path, BasicBuilding, BuildableLine):
+	"""Actual buildable road."""
 	layer = LAYERS.FIELDS
-
-	def init(self):
-		super(Bridge, self).init()
-		origin = self.position.origin
-		for tile in self.island.get_surrounding_tiles(origin):
-			if tile is not None and self.island.path_nodes.is_road(tile.x, tile.y):
-				tile.object.recalculate_orientation()

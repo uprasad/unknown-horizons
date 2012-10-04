@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -19,11 +19,10 @@
 # 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 # ###################################################
 
-from fife.extensions import pychan
+from fife.extensions.pychan.widgets import ImageButton
 
-from horizons.gui.widgets.tooltip import TooltipButton
 
-class OkButton(TooltipButton):
+class OkButton(ImageButton):
 	"""The OkButton is a shortcut for an ImageButton with our OK / apply icon.
 	Its default attributes are:
 	name="okButton"
@@ -31,14 +30,20 @@ class OkButton(TooltipButton):
 	hover_image="content/gui/images/buttons/ok_h.png"
 	down_image="content/gui/images/buttons/ok.png"
 	"""
-	def __init__(self, name='okButton', **kwargs):
+	DEFAULT_NAME = 'okButton'
+	def __init__(self, name=None, **kwargs):
+		if name is None:
+			name = self.__class__.DEFAULT_NAME
+		size = (34, 40)
 		super(OkButton, self).__init__(
 			name=name,
+			is_focusable=False,
+			max_size=size, min_size=size, size=size,
 			up_image="content/gui/images/buttons/ok.png",
 			hover_image="content/gui/images/buttons/ok_h.png",
 			down_image="content/gui/images/buttons/ok.png", **kwargs)
 
-class CancelButton(TooltipButton):
+class CancelButton(ImageButton):
 	"""The CancelButton is a shortcut for an ImageButton with our cancel / close
 	icon. Its default attributes are:
 	name="cancelButton"
@@ -46,14 +51,20 @@ class CancelButton(TooltipButton):
 	hover_image="content/gui/images/buttons/close_h.png"
 	down_image="content/gui/images/buttons/close.png"
 	"""
-	def __init__(self, name='cancelButton', **kwargs):
+	DEFAULT_NAME = 'cancelButton'
+	def __init__(self, name=None, **kwargs):
+		if name is None:
+			name = self.__class__.DEFAULT_NAME
+		size = (34, 40)
 		super(CancelButton, self).__init__(
 			name=name,
+			is_focusable=False,
+			max_size=size, min_size=size, size=size,
 			up_image="content/gui/images/buttons/close.png",
 			hover_image="content/gui/images/buttons/close_h.png",
 			down_image="content/gui/images/buttons/close.png", **kwargs)
 
-class DeleteButton(TooltipButton):
+class DeleteButton(ImageButton):
 	"""The DeleteButton is a shortcut for an ImageButton with our delete / tear
 	icon. Its default attributes are:
 	name="deleteButton"
@@ -61,9 +72,15 @@ class DeleteButton(TooltipButton):
 	hover_image="content/gui/images/buttons/delete_h.png"
 	down_image="content/gui/images/buttons/delete.png"
 	"""
-	def __init__(self, name='deleteButton',  **kwargs):
+	DEFAULT_NAME = 'deleteButton'
+	def __init__(self, name=None, **kwargs):
+		if name is None:
+			name = self.__class__.DEFAULT_NAME
+		size = (34, 40)
 		super(DeleteButton, self).__init__(
 			name=name,
+			is_focusable=False,
+			max_size=size, min_size=size, size=size,
 			up_image="content/gui/images/buttons/delete.png",
 			hover_image="content/gui/images/buttons/delete_h.png",
 			down_image="content/gui/images/buttons/delete.png", **kwargs)

@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -22,8 +22,11 @@
 import os
 import logging
 
+import horizons.globals
+
 from horizons.constants import PATHS
-from loader import GeneralLoader
+from horizons.util.loaders.loader import GeneralLoader
+from horizons.util.loaders.jsondecoder import JsonDecoder
 
 class ActionSetLoader(object):
 	"""The ActionSetLoader loads action sets from a directory tree. The directories loaded
@@ -48,14 +51,17 @@ class ActionSetLoader(object):
 			if entry.startswith("as_"):
 				cls.action_sets[entry] = GeneralLoader._load_action(full_path)
 			else:
-				if os.path.isdir(full_path) and entry != ".svn":
+				if os.path.isdir(full_path) and entry != ".svn" and entry != ".DS_Store":
 					cls._find_action_sets(full_path)
 
 	@classmethod
 	def load(cls):
 		if not cls._loaded:
 			cls.log.debug("Loading action_sets...")
-			cls._find_action_sets(PATHS.ACTION_SETS_DIRECTORY)
+			if not horizons.globals.fife.use_atlases:
+				cls._find_action_sets(PATHS.ACTION_SETS_DIRECTORY)
+			else:
+				cls.action_sets = JsonDecoder.load(PATHS.ACTION_SETS_JSON_FILE)
 			cls.log.debug("Done!")
 			cls._loaded = True
 
@@ -69,7 +75,7 @@ class ActionSetLoader(object):
 		#				print "File:", key3, "length:", value3
 
 	@classmethod
-	def get_action_sets(cls):
+	def get_sets(cls):
 		if not cls._loaded:
 			cls.load()
 		return cls.action_sets

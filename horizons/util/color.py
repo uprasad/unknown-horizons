@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -19,7 +19,7 @@
 # 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 # ###################################################
 
-import horizons.main
+import horizons.globals
 
 class ColorIter(object):
 	"""Makes iterating through standard colors possible"""
@@ -29,9 +29,9 @@ class ColorIter(object):
 	def next(self):
 		try:
 			if hasattr(self, 'last'):
-				id = horizons.main.db('SELECT id FROM data.colors WHERE id > ? ORDER BY id LIMIT 1', self.last)[0][0]
+				id = horizons.globals.db('SELECT id FROM colors WHERE id > ? ORDER BY id LIMIT 1', self.last)[0][0]
 			else:
-				id = horizons.main.db('SELECT id FROM data.colors ORDER BY id LIMIT 1')[0][0]
+				id = horizons.globals.db('SELECT id FROM colors ORDER BY id LIMIT 1')[0][0]
 		except:
 			raise StopIteration
 		self.last = id
@@ -42,7 +42,7 @@ class ColorMeta(type):
 		"""Gets a color by name or id in the db"""
 		if key == 0:
 			return None
-		r, g, b = horizons.main.db('SELECT red, green, blue FROM data.colors WHERE name = ? OR id = ?', \
+		r, g, b = horizons.globals.db('SELECT red, green, blue FROM colors WHERE name = ? OR id = ?',
 		                           key, key)[0]
 		c = Color(r, g, b)
 		return c
@@ -61,7 +61,7 @@ class Color(object):
 	 name: name of the Color or None
 	"""
 	__metaclass__ = ColorMeta
-	def __init__(self, r = 0, g = 0, b = 0, a = 255):
+	def __init__(self, r=0, g=0, b=0, a=255):
 		"""
 		@params: float (0.0, 1.0) or int (0, 255)
 		"""
@@ -78,7 +78,7 @@ class Color(object):
 		self.name = None
 		try:
 			# load name for the color, if it's a standard color
-			self.name, self.id = horizons.main.db('SELECT name, rowid FROM data.colors WHERE red = ? AND green = ? AND blue = ?', self.r, self.g, self.b)[0]
+			self.name, self.id = horizons.globals.db('SELECT name, rowid FROM colors WHERE red = ? AND green = ? AND blue = ?', self.r, self.g, self.b)[0]
 		except:
 			pass
 
@@ -92,3 +92,9 @@ class Color(object):
 
 	def __str__(self):
 		return 'Color'+str(self.to_tuple())
+
+	def __eq__(self, other):
+		return(self.r == other.r and self.g == other.g and self.b == other.b and self.a == other.a)
+
+	def __hash__(self):
+		return hash("%s%s%s%s" % (self.r, self.g, self.b, self.a))

@@ -1,46 +1,93 @@
 <?xml version="1.0"?>
-<Container size="255,215"> <!-- positioning happens in ingamegui#init -->
-	<Label name="speed_text" text="" position="35,22" font="libertine_18"/>
-	<Icon name="minimap_overlay_image" position="40,-2"
-		image="content/gui/images/background/widgets/map_bg.png" />
 
-	<TooltipButton name="speedUp" size="28,28" position="62,16"
+<Container size="230,230" name="mainhud"> <!-- positioning happens in ingamegui#init -->
+<!-- This size only needs to be "210,230", but is larger to prevent accidental scrolling.
+In case you change the size of this Container, also adapt the ingamegui positioning value.  -->
+<!-- The actual minimap Icon is placed after everything else so that it gets focus  -->
+
+<Container name="background_and_buttons" position="-30,0" size="240,240">
+	<Icon name="minimap_overlay_image" position="31, 1"
+		image="content/gui/images/background/widgets/map_bg.png" />
+	<Label name="speed_text" text="" position="48,88" font="small_black"/>
+
+	<ToggleImageButton name="speedUp" position="48,63"
+		inactive_image="content/gui/icons/widgets/minimap/speed_up_bw.png"
 		up_image="content/gui/icons/widgets/minimap/speed_up.png"
 		down_image="content/gui/icons/widgets/minimap/speed_up_h.png"
 		hover_image="content/gui/icons/widgets/minimap/speed_up_h.png"
-		tooltip="Increase game speed"
+		helptext="Increase game speed (+)"
 		is_focusable="0" />
-	<TooltipButton name="speedDown" size="28,28" position="43,38"
+	<ToggleImageButton name="speedDown" position="48,105"
+		inactive_image="content/gui/icons/widgets/minimap/speed_down_bw.png"
 		up_image="content/gui/icons/widgets/minimap/speed_down.png"
 		down_image="content/gui/icons/widgets/minimap/speed_down_h.png"
 		hover_image="content/gui/icons/widgets/minimap/speed_down_h.png"
-		tooltip="Decrease game speed"
+		helptext="Decrease game speed (-)"
 		is_focusable="0" />
 
-	<TooltipButton name="rotateLeft" size="28,28" position="91,5"
+	<ImageButton name="rotateLeft" position="96,19"
 		up_image="content/gui/icons/widgets/minimap/rotate_left.png"
 		down_image="content/gui/icons/widgets/minimap/rotate_left_h.png"
 		hover_image="content/gui/icons/widgets/minimap/rotate_left_h.png"
-		tooltip="Rotate map counterclockwise"
+		helptext="Rotate map counterclockwise (,)"
 		is_focusable="0" />
-	<TooltipButton name="rotateRight" size="28,28" position="155,5"
+	<ImageButton name="rotateRight" position="150,19"
 		up_image="content/gui/icons/widgets/minimap/rotate_right.png"
 		down_image="content/gui/icons/widgets/minimap/rotate_right_h.png"
 		hover_image="content/gui/icons/widgets/minimap/rotate_right_h.png"
-		tooltip="Rotate map clockwise"
+		helptext="Rotate map clockwise (.)"
 		is_focusable="0" />
 
-	<TooltipButton name="zoomIn" size="28,28" position="181,16"
+	<ToggleImageButton name="zoomIn" position="195,63"
+		inactive_image="content/gui/icons/widgets/minimap/zoom_in_bw.png"
 		up_image="content/gui/icons/widgets/minimap/zoom_in.png"
 		down_image="content/gui/icons/widgets/minimap/zoom_in_h.png"
 		hover_image="content/gui/icons/widgets/minimap/zoom_in_h.png"
-		tooltip="Zoom in"
+		helptext="Zoom in"
 		is_focusable="0" />
-	<TooltipButton name="zoomOut" size="28,28" position="201,36"
+	<ToggleImageButton name="zoomOut" position="195,105"
+		inactive_image="content/gui/icons/widgets/minimap/zoom_out_bw.png"
 		up_image="content/gui/icons/widgets/minimap/zoom_out.png"
 		down_image="content/gui/icons/widgets/minimap/zoom_out_h.png"
 		hover_image="content/gui/icons/widgets/minimap/zoom_out_h.png"
-		tooltip="Zoom out"
+		helptext="Zoom out"
 		is_focusable="0" />
+</Container>
 
+<Container size="250,90"  position="11,149">
+<!-- Main buttons that are under minimap, including build menu, diplomacy etc-->
+	<!--<Icon image="content/gui/images/buttons/glass_small.png" position="2,0" size="64,64" />-->
+	<Icon position="0,0"  image="content/gui/images/buttons/glass_small.png" />
+	<Icon position="35,28"  image="content/gui/images/buttons/glass_small.png" />
+	<Icon position="77,38"  image="content/gui/images/buttons/glass_big.png" />
+	<Icon position="126,28" image="content/gui/images/buttons/glass_small.png" />
+	<Icon position="157,0"  image="content/gui/images/buttons/glass_small.png" />
+
+	<ImageButton name="destroy_tool" position="3,2"
+		up_image="content/gui/icons/widgets/minimap/tear.png"
+		down_image="content/gui/icons/widgets/minimap/tear_h.png"
+		hover_image="content/gui/icons/widgets/minimap/tear_h.png"
+		is_focusable="0" helptext="Destroy (X)" />
+	<ImageButton name="logbook" position="39,32"
+		up_image="content/gui/icons/widgets/minimap/captainslog.png"
+		down_image="content/gui/icons/widgets/minimap/captainslog_h.png"
+		hover_image="content/gui/icons/widgets/minimap/captainslog_h.png"
+		is_focusable="0" helptext="Captain's log (L)" />
+	<ImageButton name="build" position="82,42"
+		up_image="content/gui/icons/widgets/minimap/build.png"
+		down_image="content/gui/icons/widgets/minimap/build_h.png"
+		hover_image="content/gui/icons/widgets/minimap/build_h.png"
+		is_focusable="0" helptext="Build menu (B)" />
+	<ImageButton name="diplomacyButton" position="130,32"
+		up_image="content/gui/icons/widgets/minimap/diplomacy.png"
+		down_image="content/gui/icons/widgets/minimap/diplomacy_h.png"
+		hover_image="content/gui/icons/widgets/minimap/diplomacy_h.png"
+		helptext="Diplomacy" is_focusable="0"/>
+	<ImageButton name="gameMenuButton" position="160,0"
+		up_image="content/gui/icons/widgets/minimap/gamemenu.png"
+		down_image="content/gui/icons/widgets/minimap/gamemenu_h.png"
+		hover_image="content/gui/icons/widgets/minimap/gamemenu_h.png"
+		helptext="Game menu (Esc)" is_focusable="0"/>
+</Container>
+<Icon name="minimap"  size="120,120"  max_size="120,120"  position="47,46" />
 </Container>

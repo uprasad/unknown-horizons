@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -19,67 +19,118 @@
 # 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 # ###################################################
 
-import logging
+"""
+Maps _ to the ugettext unicode gettext call. Use: _(string).
+N_ takes care of plural forms for different languages. It masks ungettext
+calls (unicode, plural-aware _() ) to create different translation strings
+depending on the counter value. Not all languages have only two plural forms
+"One" / "Anything else". Use: N_("{n} dungeon", "{n} dungeons", n).format(n=n)
+where n is a counter.
+
+We will need to make gettext recognise namespaces some time, but hardcoded
+'unknown-horizons' works for now since we currently only use one namespace.
+"""
+
+import platform
+import gettext
 import os
+import logging
+import locale
 import weakref
 
-from fife.extensions import pychan
+import horizons.globals
 
-import horizons.main
-from horizons.i18n.guitranslations import set_translations, text_translations
+from horizons.constants import LANGUAGENAMES
+from horizons.i18n import objecttranslations, guitranslations
+from horizons.i18n.utils import get_fontdef_for_locale, find_available_languages
 
 log = logging.getLogger("i18n")
-
-# init translations
-set_translations()
 
 # save translated widgets
 translated_widgets = {}
 
 def translate_widget(untranslated, filename):
+	"""
+	Load widget translations from guitranslations.py file.
+	Its entries look like {element_name: (attribute, translation)}.
+	The translation is not applied to inactive widgets.
+	Check update_all_translations for the application.
+	"""
 	global translated_widgets
 	if filename in guitranslations.text_translations:
-		for i in guitranslations.text_translations[filename].iteritems():
-			try:
-				widget = untranslated.findChild(name=i[0])
-				#TODO what happens to TooltipLabels? their text is untouched (elif)
-				# we currently do not use any, but this could cause bugs.
-				if hasattr(widget, 'tooltip'):
-					widget.tooltip = i[1]
-				elif isinstance(widget, pychan.widgets.Label)\
-						or isinstance(widget, pychan.widgets.Button):
-					widget.text = i[1]
-				elif isinstance(widget, pychan.widgets.Window):
-					widget.title = i[1]
+		for entry in guitranslations.text_translations[filename].iteritems():
+			widget = untranslated.findChild(name=entry[0][0])
+			if widget is not None:
+				replace_attribute(widget, entry[0][1], entry[1])
 				widget.adaptLayout()
-			except AttributeError, e:
-				print e
-				print i, ' in ', filename
 	else:
-		log.debug('No translation for file %s', filename)
+		log.debug('No translation key in i18n.guitranslations for file %s', filename)
 
 	# save as weakref for updates to translations
 	translated_widgets[filename] = weakref.ref(untranslated)
 
 	return untranslated
 
+
 def update_all_translations():
 	"""Update the translations in every active widget"""
+	from horizons.gui.gui import build_help_strings
 	global translated_widgets
-	set_translations()
+	guitranslations.set_translations()
+	objecttranslations.set_translations()
 	for (filename, widget) in translated_widgets.iteritems():
 		widget = widget() # resolve weakref
 		if not widget:
 			continue
-		for element_name, translation in guitranslations.text_translations.get(filename,{}).iteritems():
-			try:
-				w = widget.findChild(name=element_name)
-				#TODO presumably doesn't work with TooltipLabels, see above
-				if hasattr(w, 'tooltip'):
-					w.tooltip = translation
-				else:
-					w.text = translation
-				widget.adaptLayout()
-			except AttributeError, e:
-				print e
-				print filename, widget
+		all_widgets = guitranslations.text_translations.get(filename, {})
+		for (element_name, attribute), translation in all_widgets.iteritems():
+			element = widget.findChild(name=element_name)
+			replace_attribute(element, attribute, translation)
+		if filename == 'help.xml':
+			build_help_strings(widget)
+		widget.adaptLayout()
+
+
+def replace_attribute(widget, attribute, text):
+	if hasattr(widget, attribute):
+		setattr(widget, attribute, text)
+	else:
+		log.debug("Could not replace attribute %s in widget %s", attribute, widget)
+
+
+def change_language(language=None):
+	"""Load/change the language of Unknown Horizons.
+
+	Called on startup and when changing the language in the settings menu.
+	"""
+
+	if language: # non-default
+		try:
+			# NOTE about gettext fallback mechanism:
+			# English is not shipped as .mo file, thus if English is
+			# selected we use NullTranslations to get English output.
+			fallback = (language == 'en')
+			trans = gettext.translation('unknown-horizons', find_available_languages()[language],
+										languages=[language], fallback=fallback)
+			trans.install(unicode=True, names=['ngettext',])
+		except IOError:
+			#xgettext:python-format
+			print "Configured language {lang} could not be loaded.".format(lang=language)
+			horizons.globals.fife.set_uh_setting('Language', LANGUAGENAMES[''])
+			return change_language() # recurse
+	else:
+		# default locale
+		if platform.system() == "Windows": # win doesn't set the language variable by default
+			os.environ[ 'LANGUAGE' ] = locale.getdefaultlocale()[0]
+		gettext.install('unknown-horizons', 'content/lang', unicode=True, names=['ngettext',])
+
+	# expose the plural-aware translate function as builtin N_ (gettext does the same to _)
+	import __builtin__
+	__builtin__.__dict__['N_'] = __builtin__.__dict__['ngettext']
+
+	# update fonts
+	fontdef = get_fontdef_for_locale(language or horizons.globals.fife.get_locale())
+	horizons.globals.fife.pychan.loadFonts(fontdef)
+
+	# dynamically reset all translations of active widgets
+	update_all_translations()

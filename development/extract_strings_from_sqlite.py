@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -19,46 +19,60 @@
 # Free Software Foundation, Inc.,
 # 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 # ###################################################
-"""
-Currently the unit table is not extracted for translation purposes as it is not
-visible ingame. Once that changes, please uncomment lines 109f.
-"""
+
+###############################################################################
+#
+# == I18N DEV USE CASES: CHEATSHEET ==
+#
+# ** Refer to  development/copy_pofiles.sh  for help with building or updating
+#    the translation files for Unknown Horizons.
+#
+###############################################################################
+#
+# THIS SCRIPT IS A HELPER SCRIPT. DO NOT INVOKE MANUALLY!
+#
+###############################################################################
 
 import sqlalchemy
 import sqlalchemy.orm
 import sqlalchemy.ext.declarative
+import sqlite3
+import tempfile
+import os
+import sys
 
-engine = sqlalchemy.create_engine('sqlite:///content/game.sqlite')
-Session = sqlalchemy.orm.sessionmaker(bind=engine)
-session_game = Session()
+sys.path.append(".")
+sys.path.append("./horizons")
 
-engine = sqlalchemy.create_engine('sqlite:///content/settler.sqlite')
+from horizons.constants import PATHS
+
+
+# sqlalchemy doesn't support importing sql files,
+# therefore we work around this by using sqlite3
+
+filename = tempfile.mkstemp(text = True)[1]
+conn = sqlite3.connect(filename)
+
+for db_file in PATHS.DB_FILES:
+	conn.executescript( open(db_file, "r").read())
+
+conn.commit()
+
+engine = sqlalchemy.create_engine('sqlite:///'+filename) # must be 4 slashes total, sqlalchemy breaks the unixoid conventions here
+
 Session = sqlalchemy.orm.sessionmaker(bind=engine)
-session_settler = Session()
+db_session = Session()
 
 Base = sqlalchemy.ext.declarative.declarative_base()
+
+
 
 #
 # Classes
 #
 
-class Building(Base):
-	__tablename__ = 'building'
-
-	name = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-
-class Unit(Base):
-	__tablename__ = 'unit'
-
-	name = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-
-class Colors(Base):
-	__tablename__ = 'colors'
-
-	name = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-
 class Message(Base):
-	__tablename__ = 'message'
+	__tablename__ = 'message_text'
 
 	text = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
 
@@ -90,38 +104,31 @@ class MSGID_collect:
 
 	def __str__(self):
 		s = []
-		for pair in self.msgids.items():
-			s += ['#: sqlite/%s\nmsgid "%s"\nmsgstr ""\n' % (' '.join(pair[1]), pair[0])]
+		for text, locations in self.msgids.items():
+			comment = '#. This is a database entry: %s.\n#: sql database files\n' % ','.join(locations)
+			if "{" in text and "}" in text:
+				comment += '#, python-format\n'
+			s += [comment + build_msgid(text)]
 		return '\n'.join(s).strip()
 
-def collect_msgid(msgid, place):
-	pass
-
-def print_msgid(msgid):
-	print 'msgid "%s"\nmsgstr ""\n' % msgid
+def build_msgid(msgid):
+	return 'msgid "%s"\nmsgstr ""\n' % msgid.replace('"','\\"')
 
 def collect_all():
 	collector = MSGID_collect()
 
-	for building in session_game.query(Building):
-		collector.add_to_collection(building.name, 'Building')
+	for message in db_session.query(Message):
+		collector.add_to_collection(message.text, 'a messagewidget message (left part of the screen)')
 
-#	for unit in session_game.query(Unit):
-#		collector.add_to_collection(unit.name, 'Unit')
+	for resource in db_session.query(Resource):
+		collector.add_to_collection(resource.name, 'the name of a resource')
 
-	for color in session_game.query(Colors):
-		collector.add_to_collection(color.name, 'Colors')
-
-	for message in session_game.query(Message):
-		collector.add_to_collection(message.text, 'Messages')
-
-	for resource in session_game.query(Resource):
-		collector.add_to_collection(resource.name, 'Resources')
-
-	for settler_level in session_settler.query(SettlerLevel):
-		collector.add_to_collection(settler_level.name, 'SettlerLevel')
+	for settler_level in db_session.query(SettlerLevel):
+		collector.add_to_collection(settler_level.name, 'the name of an inhabitant increment (tier / level)')
 
 	return collector
 
-if __name__ == '__main__':
-	print collect_all()
+
+print collect_all()
+os.unlink(filename)
+

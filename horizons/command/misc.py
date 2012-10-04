@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -26,5 +26,6 @@ class Chat(Command):
 		self.message = unicode(message)
 
 	def __call__(self, issuer):
-		msg = unicode(issuer.name) + u": " + self.message
-		issuer.session.ingame_gui.message_widget.add_custom(None, None, msg)
+		issuer.session.ingame_gui.message_widget.add_chat(player=issuer.name, messagetext=self.message)
+
+Command.allow_network(Chat)

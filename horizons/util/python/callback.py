@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -35,6 +35,7 @@ class Callback(object):
 	def ChainedCallbacks(*args):
 		"""Named constructor for callbacks executed in a row.
 		Use Callback objects to pass arguments to the callbacks.
+		It is guaranteed that the callbacks are executed in order.
 		@param args: callables"""
 		callbacks = [ Callback(i) for i in args ]
 		def tmp():
@@ -60,7 +61,7 @@ class Callback(object):
 		return not self.__eq__(other)
 
 	def __hash__(self):
-		return hash((self.callback, self.args, \
+		return hash((self.callback, self.args,
 		             tuple(self.kwargs.iteritems()))) # to tuple, dict is unhashable
 
 	def __str__(self):

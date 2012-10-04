@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -21,15 +21,13 @@
 
 import logging
 import datetime
-import time
-
+import bz2
 
 from horizons.network import packets
 from horizons import network
 from horizons.network.common import *
-from horizons.constants import MULTIPLAYER
 from horizons.network import find_enet_module
-import socket # needed for socket.fromfd
+from horizons.savegamemanager import SavegameManager
 
 enet = find_enet_module()
 # during pyenets move to cpython they renamed a few constants...
@@ -37,53 +35,60 @@ if not hasattr(enet, 'PEER_STATE_DISCONNECTED') and hasattr(enet, 'PEER_STATE_DI
 	enet.PEER_STATE_DISCONNECTED = enet.PEER_STATE_DISCONNECT
 
 # maximal peers enet should handle
-# this must be at least maxplayers (supported by the game) + 1
-MAX_PEERS = MULTIPLAYER.MAX_PLAYER_COUNT + 1
+MAX_PEERS = 1
+# time in ms the client will wait for a packet
+# on error client may wait twice that time
 SERVER_TIMEOUT = 5000
-CLIENT_TIMEOUT = SERVER_TIMEOUT * 3
-UPNP_TIMEOUT = 200
-NATPMP_TIMEOUT = 200
-NATPMP_LIFETIME = 8 * 60 * 60 # max 24 hours
+# current server/client protocol the client understands
+# increment that after incompatible protocol changes
+SERVER_PROTOCOL = 1
 
-class ClientMode:
+class ClientMode(object):
 	Server = 0
-	Peer2Peer = 1
+	Game = 1
 
 class Client(object):
 	log = logging.getLogger("network")
 
-	def __init__(self, name, version, server_address, client_address = None):
+	def __init__(self, name, version, server_address, client_address=None, color=None, clientid=None):
 		try:
 			clientaddress = enet.Address(client_address[0], client_address[1]) if client_address is not None else None
 			self.host = enet.Host(clientaddress, MAX_PEERS, 0, 0, 0)
 		except (IOError, MemoryError):
+			# these exceptions do not provide any information.
 			raise network.NetworkException("Unable to create network structure. Maybe invalid or irresolvable client address.")
+
 		self.name          = name
 		self.version       = version
 		self.serveraddress = Address(server_address[0], server_address[1])
 		self.serverpeer    = None
-		self.mode          = ClientMode.Server
+		self.mode          = None
+		self.sid           = None
+		self.capabilities  = None
 		self.game          = None
+		self.clientid      = clientid
+		self.color         = color
 		self.packetqueue   = []
 		self.callbacks     = {
-			'lobbygame_chat':   [],
-			'lobbygame_join':   [],
-			'lobbygame_leave':  [],
-			'lobbygame_state':  [],
-			'lobbygame_starts': [],
-			'p2p_ready':        [],
-			'p2p_data':         [],
+			'lobbygame_chat':        [],
+			'lobbygame_join':        [],
+			'lobbygame_leave':       [],
+			'lobbygame_terminate':   [],
+			'lobbygame_toggleready': [],
+			'lobbygame_changename':  [],
+			'lobbygame_kick':        [],
+			'lobbygame_changecolor': [],
+			'lobbygame_state':       [],
+			'lobbygame_starts':      [],
+			'game_starts':    [],
+			'game_data':      [],
+			'savegame_data':  [], #TODO
 		}
-
-		self.localport = client_address[1] if client_address is not None else None
-		self.extport   = None
-		self.upnp      = None
-		self.natpmp    = None
-		self.upnp_init()
-		self.natpmp_init()
+		self.register_callback('lobbygame_changename',  self.onchangename, True)
+		self.register_callback('lobbygame_changecolor', self.onchangecolor, True)
 		pass
 
-	def register_callback(self, type, callback, prepend = False, unique = True):
+	def register_callback(self, type, callback, prepend=False, unique=True):
 		if type in self.callbacks:
 			if unique and callback in self.callbacks[type]:
 				return
@@ -100,43 +105,16 @@ class Client(object):
 		for callback in self.callbacks[type]:
 			callback(*args)
 
-	def upnp_init(self):
-		try:
-			import miniupnpc
-			self.upnp = miniupnpc.UPnP()
-			self.upnp.discoverdelay = UPNP_TIMEOUT
-			self.log.debug("[UPNP] Module available")
-			devices = self.upnp.discover()
-			if devices > 0:
-				self.log.debug("[UPNP] %s device(s) detected" % (devices))
-			else:
-				self.log.debug("[UPNP] No devices detected. Disabling")
-				self.upnp = None
-		except ImportError:
-			self.log.debug("[UPNP] Module not available")
-			pass
-
-	def natpmp_init(self):
-		try:
-			import libnatpmp
-			self.natpmp = True
-			self.log.debug("[NATPMP] Module available")
-		except ImportError:
-			self.log.debug("[NATPMP] Module not available")
-			pass
-
 	#-----------------------------------------------------------------------------
 
 	def connect(self):
 		if self.serverpeer is not None:
 			raise network.AlreadyConnected("We are already connected to a server")
-		if self.mode is None:
-			self.mode = ClientMode.Server
-		if self.mode is not ClientMode.Server:
-			raise network.NotInServerMode("You can't connect to a server while client is not in server mode")
 		self.log.debug("[CONNECT] to server %s" % (self.serveraddress))
 		try:
-			self.serverpeer = self.host.connect(enet.Address(self.serveraddress.host, self.serveraddress.port), 1, 0)
+			self.serverpeer = self.host.connect(enet.Address(self.serveraddress.host,
+			                                                 self.serveraddress.port),
+			                                    1, SERVER_PROTOCOL)
 		except (IOError, MemoryError):
 			raise network.NetworkException("Unable to connect to server. Maybe invalid or irresolvable server address.")
 		self.mode = ClientMode.Server
@@ -144,261 +122,72 @@ class Client(object):
 		if event.type != enet.EVENT_TYPE_CONNECT:
 			self.reset()
 			raise network.UnableToConnect("Unable to connect to server")
-		self.log.debug("[CONNECT] done")
-
-		if self.localport is None and hasattr(socket, 'fromfd'):
-			s = socket.fromfd(self.host.socket.fileno(), socket.AF_INET, socket.SOCK_DGRAM)
-			self.localport = s.getsockname()[1]
-		if self.localport is not None:
-			self.log.debug("[CONNECT] localport=%s" % (self.localport))
-			if self.extport is None:
-				self.extport = self.upnp_connect(self.localport)
-			if self.extport is None:
-				self.extport = self.natpmp_connect(self.localport)
-		else:
-			self.log.debug("[CONNECT] Unable to determine local port");
-
-	def p2p_connect(self):
-		if self.mode is not ClientMode.Peer2Peer:
-			raise network.NotInServerMode("You can't create the p2p network while client is not in p2p mode")
-		start = False
-		for player in self.game.players:
-			if self.name == player.name:
-				start = True
-				continue
-			if not start:
-				continue
-			self.log.debug("[P2P CONNECT] to player %s (%s)" % (player.name, player.address))
-			player.peer = self.host.connect(enet.Address(player.address.host, player.address.port), 1, 0)
-
-		self.log.debug("[P2P CONNECT] Waiting")
-		waiting = len(self.game.players) -1
-		while waiting > 0:
-			event = self.host.service(CLIENT_TIMEOUT)
-			if event.type == enet.EVENT_TYPE_NONE:
-				break
-			elif event.type == enet.EVENT_TYPE_DISCONNECT:
-				break
-			elif event.type == enet.EVENT_TYPE_CONNECT:
-				player = None
-				for _player in self.game.players:
-					if _player.address == event.peer.address:
-						player = _player
-				if player is None:
-					event.peer.disconnect()
-					self.flush()
-					event.peer.reset()
-					continue
-				if player.peer is None:
-					player.peer = event.peer
-				if not player.ready:
-					player.ready = True
-					waiting -= 1
-				self.log.debug("[P2P CONNECT] Got connection from %s (%s)" % (player.name, player.address))
-
-		for player in self.game.players:
-			if self.name == player.name:
-				continue
-			if not player.ready:
-				self.reset()
-				self.log.warning("Unable to connect to %s (%s)" % (player.name, player.address))
-				raise network.UnableToConnect("Unable to connect to %s (%s)" % (player.name, player.address))
-		self.log.debug("[P2P CONNECT] done")
-
-	def upnp_connect(self, localport):
-		if self.upnp is None:
-			return None
-		if localport == 0:
-			self.log.debug("[UPNP] Unable to fetch local port (port can't be 0)")
-			return None
-		try:
-			self.upnp.selectigd()
-
-			# search for free port
-			extport = localport
-			mapping = self.upnp.getspecificportmapping(extport, 'UDP')
-			while mapping != None and extport < 65536:
-				extport = extport + 1
-				mapping = self.upnp.getspecificportmapping(extport, 'UDP')
-
-			b = self.upnp.addportmapping(extport, 'UDP', self.upnp.lanaddr, localport, 'Unknown-Horizons', '')
-			if b:
-				self.log.debug("[UPNP] Redirect udp://%s:%s => udp://%s:%s successfully" % (self.upnp.externalipaddress(), extport, self.upnp.lanaddr, localport))
-				return extport
-			else:
-				self.log.debug("[UPNP] Redirect failed")
-		except Exception, e:
-			self.log.debug("[UPNP] Exception: %s" % (e))
-			self.upnp = None
-			pass
-		return None
-
-	def natpmp_connect(self, localport):
-		if self.natpmp is None:
-			return None
-		if localport == 0:
-			self.log.debug("[NATPMP] Unable to fetch local port (port can't be 0)")
-			return None
-		try:
-			# always create a new instance for NATPMP
-			import libnatpmp
-			natpmp = libnatpmp.NATPMP()
-			natpmp.discoverdelay = NATPMP_TIMEOUT
-			# search for free port
-			extport = natpmp.addportmapping(localport, 'UDP', localport, NATPMP_LIFETIME)
-			if extport is not None:
-				self.log.debug("[NATPMP] Redirect udp://%s:%s => udp://<local>:%s successfully" % (natpmp.externalipaddress(), extport, localport))
-				return extport
-			else:
-				self.log.debug("[NATPMP] Redirect failed")
-		except Exception, e:
-			self.log.debug("[NATPMP] Exception: %s" % (e))
-			self.natpmp = None
-			pass
-		return None
-
+		# wait for session id
+		packet = self.recv_packet([packets.server.cmd_session])
+		if packet is None:
+			raise network.FatalError("No reply from server")
+		elif not isinstance(packet[1], packets.server.cmd_session):
+			raise network.CommandError("Unexpected packet")
+		self.sid = packet[1].sid
+		self.capabilities = packet[1].capabilities
+		self.log.debug("[CONNECT] done (session=%s)" % (self.sid))
 
 	#-----------------------------------------------------------------------------
 
-	def disconnect(self, later = False):
-		if self.extport is not None:
-			self.upnp_disconnect(self.extport) or self.natpmp_disconnect(self.extport, self.localport)
-			self.extport = None
-		if self.mode is ClientMode.Server:
-			return self.server_disconnect(later)
-		elif self.mode is ClientMode.Peer2Peer:
-			return self.p2p_disconnect(later)
-		raise network.NotConnected()
-
-	def server_disconnect(self, later = False):
+	def disconnect(self, server_may_disconnect=False, later=False):
+		""" disconnect should _never_ throw an exception """
+		self.mode = None
 		if self.serverpeer is None:
 			return
-		if self.serverpeer.state == enet.PEER_STATE_DISCONNECTED:
-			self.serverpeer = None
-			return
-		try:
-			if later:
-				self.serverpeer.disconnect_later()
-			else:
-				self.serverpeer.disconnect()
-			while True:
-				event = self.host.service(SERVER_TIMEOUT)
-				if event.type == enet.EVENT_TYPE_DISCONNECT:
-					break
-				elif event.type == enet.EVENT_TYPE_NONE:
-					raise IOError("No packet from server")
-		except IOError:
-			self.log.debug("Error while disconnecting from server. Maybe server isn't answering any more")
-			self.reset()
-		self.reset()
-		self.log.debug("[DISCONNECT] done")
 
-	def p2p_disconnect(self, later = False):
-		for player in self.game.players:
-			if player.peer is None:
-				continue
-			if player.peer.state == enet.PEER_STATE_DISCONNECTED:
-				player.peer = None
-				continue
-			try:
+		if self.serverpeer.state == enet.PEER_STATE_DISCONNECTED:
+			self.reset()
+			return
+
+		try:
+			# wait for a disconnect event or empty event
+			if server_may_disconnect:
+				while True:
+					event = self.host.service(SERVER_TIMEOUT)
+					if event.type == enet.EVENT_TYPE_DISCONNECT:
+						break
+					elif event.type == enet.EVENT_TYPE_NONE:
+						break
+
+			# disconnect from server if we're still connected
+			if self.serverpeer.state != enet.PEER_STATE_DISCONNECTED:
 				if later:
-					player.peer.disconnect_later()
+					self.serverpeer.disconnect_later()
 				else:
-					player.peer.disconnect()
+					self.serverpeer.disconnect()
 				while True:
 					event = self.host.service(SERVER_TIMEOUT)
 					if event.type == enet.EVENT_TYPE_DISCONNECT:
 						break
 					elif event.type == enet.EVENT_TYPE_NONE:
 						raise IOError("No packet from server")
-			except IOError:
-				self.log.debug("Error while disconnecting from player: %s" % (player.name))
-				player.peer.reset()
-			player.peer = None
+		except IOError:
+			self.log.debug("[DISCONNECT] Error while disconnecting from server. Maybe server isn't answering any more")
 		self.reset()
-		self.log.debug("[P2P DISCONNECT] done")
-
-	def upnp_disconnect(self, extport):
-		if self.upnp is None:
-			return False
-		try:
-			b = self.upnp.deleteportmapping(extport, 'UDP')
-			if b:
-				self.log.debug("[UPNP] Successfully deleted port mapping")
-				return True
-			else:
-				self.log.debug("[UPNP] Failed to remove port mapping")
-		except Exception, e:
-			self.log.debug("[UPNP] Exception: %s" % (e))
-			self.upnp = None
-			pass
-		return False
-
-
-	def natpmp_disconnect(self, extport, localport):
-		if self.natpmp is None:
-			return False
-		try:
-			# always create a new instance for NATPMP
-			import libnatpmp
-			natpmp = libnatpmp.NATPMP()
-			natpmp.discoverdelay = NATPMP_TIMEOUT
-			natpmp.deleteportmapping(extport, 'UDP', localport)
-			self.log.debug("[NATPMP] Successfully deleted port mapping")
-			return True
-		except Exception, e:
-			self.log.debug("[NATPMP] Exception: %s" % (e))
-			self.natpmp = None
-			pass
-		return False
-
+		self.log.debug("[DISCONNECT] done")
 
 	#-----------------------------------------------------------------------------
 
 	def isconnected(self):
-		if self.mode is ClientMode.Server:
-			return self.server_isconnected()
-		elif self.mode is ClientMode.Peer2Peer:
-			return self.p2p_isconnected()
-
-	def server_isconnected(self):
 		if self.serverpeer is None:
 			return False
 		return True
-
-	def p2p_isconnected(self):
-		connected = True
-		for player in self.game.players:
-			if player.name == self.name:
-				continue
-			if player.peer is None:
-				connected = False
-		return connected
 
 	#-----------------------------------------------------------------------------
 
 	def reset(self):
 		self.log.debug("[RESET]")
-		if self.mode is ClientMode.Server:
-			return self.server_reset()
-		elif self.mode is ClientMode.Peer2Peer:
-			return self.p2p_reset()
-
-	def server_reset(self):
 		if self.serverpeer is not None:
 			self.serverpeer.reset()
 			self.serverpeer = None
+		self.mode = None
 		self.game = None
 		self.flush()
-
-	def p2p_reset(self):
-		for player in self.game.players:
-			if player.peer is None:
-				continue
-			player.peer.reset()
-			player.peer = None
-		self.server_reset()
-		self.mode = ClientMode.Server
 
 	#-----------------------------------------------------------------------------
 
@@ -410,22 +199,8 @@ class Client(object):
 	# enet doesn't need to send pings. instead we need to call enet_host_service
 	# on a regular basis. we call this ping and save received events
 	def ping(self):
-		if self.mode is ClientMode.Server:
-			return self.server_ping()
-		elif self.mode is ClientMode.Peer2Peer:
-			return self.p2p_ping()
-
-	def server_ping(self):
 		if self.serverpeer is None:
 			raise network.NotConnected()
-		packet = self.recv(0)
-		if packet is not None:
-			if not self.process_async_packet(packet):
-				self.packetqueue.append(packet)
-			return True
-		return False
-
-	def p2p_ping(self):
 		packet = self.recv(0)
 		if packet is not None:
 			if not self.process_async_packet(packet):
@@ -435,37 +210,17 @@ class Client(object):
 
 	#-----------------------------------------------------------------------------
 
-	def send(self, packet, channelid = 0):
-		if self.mode is ClientMode.Server:
-			self.server_send(packet, channelid)
-		elif self.mode is ClientMode.Peer2Peer:
-			self.p2p_send(packet, channelid)
-
-	def server_send(self, packet, channelid = 0):
+	def send(self, packet, channelid=0):
 		if self.serverpeer is None:
 			raise network.NotConnected()
-		packet.send(self.serverpeer, channelid)
-
-	def p2p_send(self, data, channelid = 0):
-		self.log.debug("[P2P SEND]")
-		packet = packets.p2p.data(data)
-		for player in self.game.players:
-			if self.name == player.name:
-				continue
-			if player.peer is None:
-				continue
-			packet.send(player.peer, channelid)
+		if self.mode is ClientMode.Game:
+			packet = packets.client.game_data(packet)
+		packet.send(self.serverpeer, self.sid, channelid)
 
 	#-----------------------------------------------------------------------------
 
 	# wait for event from network
-	def recv_event(self, timeout = SERVER_TIMEOUT):
-		if self.mode is ClientMode.Server:
-			return self.server_recv_event(timeout)
-		elif self.mode is ClientMode.Peer2Peer:
-			return self.p2p_recv_event(timeout)
-
-	def server_recv_event(self, timeout = SERVER_TIMEOUT):
+	def _recv_event(self, timeout=SERVER_TIMEOUT):
 		if self.serverpeer is None:
 			raise network.NotConnected()
 		event = self.host.service(timeout)
@@ -476,61 +231,50 @@ class Client(object):
 			self.log.warning("Unexpected disconnect from %s" % (event.peer.address))
 			raise network.CommandError("Unexpected disconnect from %s" % (event.peer.address))
 		elif event.type == enet.EVENT_TYPE_CONNECT:
-			# ignore connect events during holepunching
-			if self.game is not None:
-				for player in self.game.players:
-					if player.address == event.peer.address:
-						self.log.debug("[HOLEPUNCH CONNECTION] %s" % (event.peer.address))
-						event.peer.disconnect()
-						event.peer.reset()
-						return None
 			self.reset()
-			self.log.warning("Unexpected connection from %s" % (event.peer.address))
-			raise network.CommandError("Unexpected connection from %s" % (event.peer.address))
-		return event
-
-	def p2p_recv_event(self, timeout = SERVER_TIMEOUT):
-		event = self.host.service(timeout)
-		if event.type == enet.EVENT_TYPE_NONE:
-			return None
-		elif event.type == enet.EVENT_TYPE_DISCONNECT:
-			# ignore disconnect from server
-			if self.serverpeer is not None and Address(self.serverpeer.address) == event.peer.address:
-				self.log.debug("[DISCONNECT] done")
-				self.serverpeer = None
-				return None
-			self.reset()
-			self.log.warning("Unexpected disconnect from %s" % (event.peer.address))
-			raise network.CommandError("Unexpected disconnect from %s" % (event.peer.address))
-		elif event.type == enet.EVENT_TYPE_CONNECT:
-			event.peer.disconnect()
-			event.peer.reset()
 			self.log.warning("Unexpected connection from %s" % (event.peer.address))
 			raise network.CommandError("Unexpected connection from %s" % (event.peer.address))
 		return event
 
 	# receives event from network and returns the unpacked packet
-	def recv(self, timeout = SERVER_TIMEOUT):
-		event = self.recv_event(timeout)
+	def recv(self, timeout=SERVER_TIMEOUT):
+		event = self._recv_event(timeout)
 		if event is None:
 			return None
 		elif event.type == enet.EVENT_TYPE_RECEIVE:
-			packet = packets.unserialize(event.packet.data)
-			if packet is None:
+			packet = None
+			try:
+				packet = packets.unserialize(event.packet.data)
+			except Exception as e:
 				self.log.error("Unknown packet from %s!" % (event.peer.address))
+				errstr = "Pickle/Security: %s" % (e)
+				print "[FATAL] %s" % (errstr) # print that even when no logger is enabled!
+				self.log.error("[FATAL] %s" % (errstr))
 				self.disconnect()
-				return None
-			#elif isinstance(packet, packets.cmd_error):
-			#  raise network.CommandError(packet.errorstr)
+				raise network.FatalError(errstr)
+
+			if isinstance(packet, packets.cmd_error):
+				# handle special errors here
+				# FIXME: it's better to pass that to the interface,
+				# but our ui error handler currently can't handle that
+
+				# the game got terminated by the client
+				if packet.type == ErrorType.TerminateGame:
+					game = self.game
+					# this will destroy self.game
+					self.leavegame(stealth=True)
+					self.call_callbacks("lobbygame_terminate", game, packet.errorstr)
+					return None
+				raise network.CommandError(packet.errorstr)
 			elif isinstance(packet, packets.cmd_fatalerror):
 				self.log.error("[FATAL] Network message: %s" % (packet.errorstr))
-				self.disconnect()
+				self.disconnect(True)
 				raise network.FatalError(packet.errorstr)
 			return [event.peer, packet]
 
 	# return the first received packet of type [in packettypes]
-	def recv_packet(self, packettypes = None, timeout = SERVER_TIMEOUT):
-		if len(self.packetqueue) > 0:
+	def recv_packet(self, packettypes=None, timeout=SERVER_TIMEOUT):
+		if self.packetqueue:
 			if packettypes is None:
 				return self.packetqueue.pop(0)
 			for packettype in packettypes:
@@ -571,58 +315,119 @@ class Client(object):
 			if self.game is None:
 				return True
 			self.call_callbacks("lobbygame_state", self.game, packet[1].game)
-			oldset = set(self.game.players)
-			newset = set(packet[1].game.players)
+
+			oldplayers = list(self.game.players)
 			self.game = packet[1].game
-			for x in oldset - newset:
-				self.call_callbacks("lobbygame_leave", self.game, x.name)
-			for x in newset - oldset:
-				self.call_callbacks("lobbygame_join", self.game, x.name)
+
+			# calculate changeset
+			for pnew in self.game.players:
+				found = None
+				for pold in oldplayers:
+					if pnew.sid == pold.sid:
+						found = pold
+						myself = (pnew.sid == self.sid)
+						if pnew.name != pold.name:
+							self.call_callbacks("lobbygame_changename", self.game, pold, pnew, myself)
+						if pnew.color != pold.color:
+							self.call_callbacks("lobbygame_changecolor", self.game, pold, pnew, myself)
+						if pnew.ready != pold.ready:
+							self.call_callbacks("lobbygame_toggleready", self.game, pold, pnew, myself)
+						break
+				if found is None:
+					self.call_callbacks("lobbygame_join", self.game, pnew)
+				else:
+					oldplayers.remove(found)
+			for pold in oldplayers:
+				self.call_callbacks("lobbygame_leave", self.game, pold)
 			return True
-		elif isinstance(packet[1], packets.server.cmd_holepunching):
+		elif isinstance(packet[1], packets.server.cmd_preparegame):
 			# ignore packet if we are not a game lobby
 			if self.game is None:
 				return True
-			self.onholepunching()
+			self.ongameprepare()
 		elif isinstance(packet[1], packets.server.cmd_startgame):
 			# ignore packet if we are not a game lobby
 			if self.game is None:
 				return True
 			self.ongamestart()
-		elif isinstance(packet[1], packets.p2p.data):
-			self.log.debug("[P2P RECV] from %s" % (packet[0].address))
-			self.call_callbacks("p2p_data", packet[0].address, packet[1].data)
+		elif isinstance(packet[1], packets.client.game_data):
+			self.log.debug("[GAMEDATA] from %s" % (packet[0].address))
+			self.call_callbacks("game_data", packet[1].data)
+		elif isinstance(packet[1], packets.server.cmd_kickplayer):
+			player = packet[1].player
+			game = self.game
+			myself = (player.sid == self.sid)
+			if myself:
+				# this will destroy self.game
+				self.leavegame(stealth=True)
+			self.call_callbacks("lobbygame_kick", game, player, myself)
+		#TODO elif isinstance(packet[1], packets.server.cmd_fetch_game):
+		#	if self.game is None:
+		#		return True
+		#	path = SavegameManager.get_multiplayersave_map(self.game.mapname)
+		#	compressed_data = bz2.compress(open(path).read())
+		#	self.send(packets.client.savegame_data(compressed_data, packet[1].psid))
+		#elif isinstance(packet[1], packets.server.savegame_data):
+		#	with open(SavegameManager.get_multiplayersave_map(packet[1].mapname), "w") as f:
+		#		f.write(bz2.decompress(packet[1].data))
+		#	self.call_callbacks("savegame_data", self.game)
 
 		return False
 
 	#-----------------------------------------------------------------------------
 
-	def listgames(self, mapname = None, maxplayers = None, onlyThisVersion = False):
+	def setprops(self, lang):
+		if self.mode is None:
+			raise network.NotConnected()
 		if self.mode is not ClientMode.Server:
-			raise network.NotInServerMode("We are not connected to any server")
-		self.log.debug("[LIST]")
-		self.send(packets.client.cmd_listgames(self.version if onlyThisVersion else -1, mapname, maxplayers))
-		packet = self.recv_packet([packets.cmd_error, packets.server.data_gameslist])
+			raise network.NotInServerMode("We are not in server mode")
+		self.log.debug("[SETPROPS]")
+		self.send(packets.client.cmd_sessionprops(lang))
+		packet = self.recv_packet([packets.cmd_ok])
 		if packet is None:
-			raise network.CommandError("No reply from server")
-		elif isinstance(packet[1], packets.cmd_error):
-			raise network.CommandError(packet[1].errorstr)
+			raise network.FatalError("No reply from server")
+		elif not isinstance(packet[1], packets.cmd_ok):
+			raise network.CommandError("Unexpected packet")
+		return True
+
+	#-----------------------------------------------------------------------------
+
+	def listgames(self, mapname=None, maxplayers=None, only_this_version=False):
+		if self.mode is None:
+			raise network.NotConnected()
+		if self.mode is not ClientMode.Server:
+			raise network.NotInServerMode("We are not in server mode")
+		self.log.debug("[LIST]")
+		version = self.version if only_this_version else -1
+		self.send(packets.client.cmd_listgames(version, mapname, maxplayers))
+		packet = self.recv_packet([packets.server.data_gameslist])
+		if packet is None:
+			raise network.FatalError("No reply from server")
 		elif not isinstance(packet[1], packets.server.data_gameslist):
 			raise network.CommandError("Unexpected packet")
 		return packet[1].games
 
 	#-----------------------------------------------------------------------------
 
-	def creategame(self, mapname, maxplayers):
+	def creategame(self, mapname, maxplayers, gamename, maphash="", password=""):
+		if self.mode is None:
+			raise network.NotConnected()
 		if self.mode is not ClientMode.Server:
-			raise network.NotInServerMode("We are not connected to any server")
+			raise network.NotInServerMode("We are not in server mode")
 		self.log.debug("[CREATE] mapname=%s maxplayers=%d" % (mapname, maxplayers))
-		self.send(packets.client.cmd_creategame(self.version, mapname, maxplayers, self.name))
-		packet = self.recv_packet([packets.cmd_error, packets.server.data_gamestate])
+		self.send(packets.client.cmd_creategame(
+			clientver   = self.version,
+			clientid    = self.clientid,
+			playername  = self.name,
+			playercolor = self.color,
+			gamename    = gamename,
+			mapname     = mapname,
+			maxplayers  = maxplayers,
+			maphash     = maphash,
+			password    = password))
+		packet = self.recv_packet([packets.server.data_gamestate])
 		if packet is None:
-			raise network.CommandError("No reply from server")
-		elif isinstance(packet[1], packets.cmd_error):
-			raise network.CommandError(packet[1].errorstr)
+			raise network.FatalError("No reply from server")
 		elif not isinstance(packet[1], packets.server.data_gamestate):
 			raise network.CommandError("Unexpected packet")
 		self.game = packet[1].game
@@ -630,18 +435,23 @@ class Client(object):
 
 	#-----------------------------------------------------------------------------
 
-	def joingame(self, uuid):
+	def joingame(self, uuid, password="", fetch=False):
+		if self.mode is None:
+			raise network.NotConnected()
 		if self.mode is not ClientMode.Server:
-			raise network.NotInServerMode("We are not connected to any server")
-		if not isinstance(uuid, UUID):
-			uuid = UUID(uuid)
+			raise network.NotInServerMode("We are not in server mode")
 		self.log.debug("[JOIN] %s" % (uuid))
-		self.send(packets.client.cmd_joingame(uuid, self.version, self.name))
-		packet = self.recv_packet([packets.cmd_error, packets.server.data_gamestate])
+		self.send(packets.client.cmd_joingame(
+			uuid        = uuid,
+			clientver   = self.version,
+			clientid    = self.clientid,
+			playername  = self.name,
+			playercolor = self.color,
+			password    = password,
+			fetch       = fetch))
+		packet = self.recv_packet([packets.server.data_gamestate])
 		if packet is None:
-			raise network.CommandError("No reply from server")
-		elif isinstance(packet[1], packets.cmd_error):
-			raise network.CommandError(packet[1].errorstr)
+			raise network.FatalError("No reply from server")
 		elif not isinstance(packet[1], packets.server.data_gamestate):
 			raise network.CommandError("Unexpected packet")
 		self.game = packet[1].game
@@ -649,18 +459,21 @@ class Client(object):
 
 	#-----------------------------------------------------------------------------
 
-	def leavegame(self):
+	def leavegame(self, stealth=False):
+		if self.mode is None:
+			raise network.NotConnected()
 		if self.mode is not ClientMode.Server:
-			raise network.NotInServerMode("We are not connected to any server")
+			raise network.NotInServerMode("We are not in server mode")
 		if self.game is None:
 			raise network.NotInGameLobby("We are not in a game lobby")
 		self.log.debug("[LEAVE]")
+		if stealth:
+			self.game = None
+			return
 		self.send(packets.client.cmd_leavegame())
-		packet = self.recv_packet([packets.cmd_error, packets.cmd_ok])
+		packet = self.recv_packet([packets.cmd_ok])
 		if packet is None:
-			raise network.CommandError("No reply from server")
-		elif isinstance(packet[1], packets.cmd_error):
-			raise network.CommandError(packet[1].errorstr)
+			raise network.FatalError("No reply from server")
 		elif not isinstance(packet[1], packets.cmd_ok):
 			raise network.CommandError("Unexpected packet")
 		self.game = None
@@ -669,8 +482,10 @@ class Client(object):
 	#-----------------------------------------------------------------------------
 
 	def chat(self, message):
+		if self.mode is None:
+			raise network.NotConnected()
 		if self.mode is not ClientMode.Server:
-			raise network.NotInServerMode("We are not connected to any server")
+			raise network.NotInServerMode("We are not in server mode")
 		if self.game is None:
 			raise network.NotInGameLobby("We are not in a game lobby")
 		self.log.debug("[CHAT] %s" % (message))
@@ -679,26 +494,89 @@ class Client(object):
 
 	#-----------------------------------------------------------------------------
 
-	def onholepunching(self):
-		for player in self.game.players:
-			if self.name == player.name:
-				continue
-			self.log.debug("[HOLEPUNCHING] Player %s (%s)" % (player.name, player.address))
-			temp = self.host.connect(enet.Address(player.address.host, player.address.port), 1)
-			self.flush()
-			temp.reset()
-		self.send(packets.client.cmd_holepunchingok())
+	def changename(self, name):
+		""" NOTE: this returns False if the name must be validated by
+		the server. In that case this will trigger a lobbygame_changename-
+		event with parameter myself=True. if this functions returns true
+		your name has been changed but there was no need to sent it to
+		the server."""
+		if self.name == name:
+			return True
+		self.log.debug("[CHANGENAME] %s" % (name))
+		if self.mode is None or self.game is None:
+			self.name = name
+			return True
+		self.send(packets.client.cmd_changename(name))
+		return False
+
+	#-----------------------------------------------------------------------------
+
+	def onchangename(self, game, plold, plnew, myself):
+		self.log.debug("[ONCHANGENAME] %s -> %s" % (plold.name, plnew.name))
+		if myself:
+			self.name = plnew.name
+		return True
+
+	#-----------------------------------------------------------------------------
+
+	def changecolor(self, color):
+		""" NOTE: this returns False if the name must be validated by
+		 the server. In that case this will trigger a lobbygame_changecolor-
+		 event with parameter myself=True. if this functions returns true
+		 your name has been changed but there was no need to sent it to
+		 the server."""
+		if self.color == color:
+			return True
+		self.log.debug("[CHANGECOLOR] %s" % (color))
+		if self.mode is None or self.game is None:
+			self.color = color
+			return True
+		self.send(packets.client.cmd_changecolor(color))
+		return False
+
+	#-----------------------------------------------------------------------------
+
+	def onchangecolor(self, game, plold, plnew, myself):
+		self.log.debug("[ONCHANGECOLOR] %s: %s -> %s" % (plnew.name, plold.color, plnew.color))
+		if myself:
+			self.color = plnew.color
+		return True
+
+	#-----------------------------------------------------------------------------
+
+	def ongameprepare(self):
+		self.log.debug("[GAMEPREPARE]")
+		self.game.state = Game.State.Prepare
+		self.call_callbacks("lobbygame_starts", self.game)
+		self.send(packets.client.cmd_preparedgame())
+		return True
 
 	#-----------------------------------------------------------------------------
 
 	def ongamestart(self):
-		self.game.gamestarts = True
 		self.log.debug("[GAMESTART]")
-		self.mode = ClientMode.Peer2Peer
-		self.call_callbacks("lobbygame_starts", self.game)
-		self.p2p_connect()
-		# disconnect from server
-		# dont use self.disconnect as we need to catch the event in p2p_recv_event
-		self.serverpeer.disconnect()
-		self.call_callbacks("p2p_ready")
+		self.game.state = Game.State.Running
+		self.mode = ClientMode.Game
+		self.call_callbacks("game_starts", self.game)
+		return True
 
+	#-----------------------------------------------------------------------------
+
+	def toggleready(self):
+		self.log.debug("[TOGGLEREADY]")
+		self.send(packets.client.cmd_toggleready())
+		return True
+
+	#-----------------------------------------------------------------------------
+
+	def kick(self, player_sid):
+		self.log.debug("[KICK]")
+		self.send(packets.client.cmd_kickplayer(player_sid))
+		return True
+
+	#-----------------------------------------------------------------------------
+
+	#TODO
+	def send_fetch_game(self, clientversion, uuid):
+		self.send(packets.client.cmd_fetch_game(clientversion, uuid))
+		return True

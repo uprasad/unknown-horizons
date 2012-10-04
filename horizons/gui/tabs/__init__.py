@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -19,17 +19,26 @@
 # 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 # ###################################################
 
-from inventorytab import InventoryTab, ShipInventoryTab
-from overviewtab import OverviewTab, ProductionOverviewTab, ShipOverviewTab, \
-                        BranchOfficeOverviewTab, SettlerOverviewTab, \
-                        MarketPlaceOverviewTab, SignalFireOverviewTab, \
-                        TraderShipOverviewTab, EnemyBuildingOverviewTab, \
-                        EnemyShipOverviewTab, ResourceDepositOverviewTab
+from inventorytab import InventoryTab
+from tradetab import TradeTab
+from overviewtab import OverviewTab, GroundUnitOverviewTab, FireStationOverviewTab
+from buildingtabs import SignalFireOverviewTab, ResourceDepositOverviewTab, \
+						TowerOverviewTab, WarehouseOverviewTab
+from enemybuildingtabs import EnemyBuildingOverviewTab, EnemyWarehouseOverviewTab
+from productiontabs import ProductionOverviewTab, SmallProductionOverviewTab
+from residentialtabs import SettlerOverviewTab
+from shiptabs import ShipOverviewTab, FightingShipOverviewTab, \
+						TraderShipOverviewTab, EnemyShipOverviewTab
 from buyselltab import BuySellTab
 from buildtabs import BuildTab
 from tabwidget import TabWidget
-from boatbuildertab import BoatbuilderTab, BoatbuilderFisherTab, \
-                           BoatbuilderTradeTab, BoatbuilderWar1Tab, \
-                           BoatbuilderWar2Tab, BoatbuilderConfirmTab
-from marketplacetabs import AccountTab, MarketPlaceSettlerTabSettlerTab
+from boatbuildertabs import BoatbuilderTab, BoatbuilderFisherTab, \
+						BoatbuilderTradeTab, BoatbuilderWar1Tab, \
+						BoatbuilderWar2Tab, BoatbuilderConfirmTab
+from mainsquaretabs import AccountTab, MainSquareOverviewTab, \
+						MainSquareSailorsTab, MainSquarePioneersTab, \
+						MainSquareSettlersTab, MainSquareCitizensTab
 from buildrelatedtab import BuildRelatedTab
+
+from diplomacytab import DiplomacyTab
+from selectmultitab import SelectMultiTab

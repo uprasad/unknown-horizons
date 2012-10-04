@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -20,41 +20,52 @@
 # 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 # ###################################################
 
-import copy
-
-import horizons.main
+from horizons.constants import UNITS
 
 class ProductionLine(object):
-	"""Data structure for handling production lines of Producers. A production line
-	is a way of producing something (contains needed and produced resources for this line,
-	as well as the time, that it takes to complete the product.
+	"""Class that collects the production line data."""
 
-	Attributes: see _ProductionLineData.__init__
-	"""
-	# here we store templates for the prod_lines, since they are inited from db and therefore
-	# on construction, every instance is the same. a reference instance (template) is created
-	# and copied on demand.
-	data = {} # { id : ProductionLineInstance }
+	def __init__(self, id, data):
+		"""Inits self from yaml data"""
+		self.__data = data or {}
+		self.id = id
+		self.__init()
 
-	def __init__(self, ident):
-		# check if we already created a prodline of this id
-		if not ident in self.data:
-			self.load_data(ident)
+	def __init(self):
+		self._init_finished = False
+		# time in seconds that production takes:
+		self.time = self.__data.get('time', 1)
+		# whether this prodline influences animation:
+		self.changes_animation = self.__data.get('changes_animation', True)
+		# whether statistics about this production line should be kept:
+		self.save_statistics = self.__data.get('save_statistics', True)
 
-		self.__dict__ = copy.deepcopy(self.data[ident].__dict__)
+		# here we store all resource information.
+		# needed resources have a negative amount, produced ones are positive.
+		self.production = {}
+		self.produced_res = {} # contains only produced
+		self.consumed_res = {} # contains only consumed
+		self.unit_production = {} # Stores unit_id: amount entries, if units are to be produced
+		if 'produces' in self.__data:
+			for produced_object, amount in self.__data['produces']:
+				if produced_object < UNITS.DIFFERENCE_BUILDING_UNIT_ID:
+					self.production[produced_object] = amount
+					self.produced_res[produced_object] = amount
+				else:
+					self.unit_production[produced_object] = amount
+		if 'consumes' in self.__data:
+			for res, amount in self.__data['consumes']:
+				self.production[res] = amount
+				self.consumed_res[res] = amount
 
-	@classmethod
-	def load_data(cls, ident):
-		if not ident in cls.data:
-			cls.data[ident] = _ProductionLineData(ident)
+		self._init_finished = True
 
-	@classmethod
-	def reset(cls):
-		cls.data.clear()
+	def __str__(self):
+		return "ProductionLineData(lineid=%s)" % self.id
 
 	def alter_production_time(self, modifier):
 		"""Sets time to original production time multiplied by modifier"""
-		self.time = self.data[self.id].time * modifier
+		self.time = self.__data.get('time', 1) * modifier
 
 	def change_amount(self, res, amount):
 		"""Alters an amount of a res at runtime. Because of redundancy, you can only change
@@ -65,44 +76,42 @@ class ProductionLine(object):
 		if res in self.produced_res:
 			self.produced_res[res] = amount
 
-	def __str__(self): # debug
-		return 'ProductionLine(id=%s;prod=%s)' % (self.id, self.production)
+	def save(self, db, for_worldid):
+		# we don't have a worldid, we load it for another world id
+		for res, amount in self.production.iteritems():
+			db("INSERT INTO production_line(for_worldid, type, res, amount) VALUES(?, ?, ?, ?)",
+			   for_worldid, "NORMAL", res, amount)
+		for res, amount in self.consumed_res.iteritems():
+			db("INSERT INTO production_line(for_worldid, type, res, amount) VALUES(?, ?, ?, ?)",
+			   for_worldid, "CONSUMED", res, amount)
+		for res, amount in self.produced_res.iteritems():
+			db("INSERT INTO production_line(for_worldid, type, res, amount) VALUES(?, ?, ?, ?)",
+			   for_worldid, "PRODUCED", res, amount)
+		for unit, amount in self.unit_production.iteritems():
+			db("INSERT INTO production_line(for_worldid, type, res, amount) VALUES(?, ?, ?, ?)",
+			   for_worldid, "UNIT", unit, amount)
+
+		db("INSERT INTO production_line(for_worldid, type, res, amount) VALUES(?, ?, ?, ?)",
+			   for_worldid, "TIME", self.time, None)
 
 
-class _ProductionLineData(object):
-	"""Actually saves the data under the hood. Internal Use Only!"""
-	def __init__(self, ident):
-		"""Inits self from db and registers itself as template"""
-		self._init_finished = False
-		self.id = ident
-		db_data = horizons.main.db("SELECT time, changes_animation FROM data.production_line WHERE id = ?", self.id)[0]
-		self.time = float(db_data[0]) # time in seconds that production takes
-		self.changes_animation = bool(db_data[1]) # whether this prodline influences animation
-		# here we store all resource information.
-		# needed resources have a negative amount, produced ones are positive.
+	def load(self, db, for_worldid):
+		# we don't have a worldid, we load it for another world id
 		self.production = {}
-		self.produced_res = {} # contains only produced
-		self.consumed_res = {} # contains only consumed
-		for res, amount in horizons.main.db("SELECT resource, amount FROM balance.production WHERE production_line = ?", self.id):
-			self.production[res] = amount
-			if amount > 0:
-				self.produced_res[res] = amount
-			elif amount < 0:
-				self.consumed_res[res] = amount
-			else:
-				assert False
-		# Stores unit_id: amount entries, if units are to be produced by this production line
+		self.consumed_res = {}
+		self.produced_res = {}
 		self.unit_production = {}
-		for unit, amount in horizons.main.db("SELECT unit, amount FROM balance.unit_production WHERE production_line = ?", self.id):
-			self.unit_production[int(unit)] = amount # Store the correct unit id =>  -1.000.000
+		for t, res, amount in db.get_production_line_row(for_worldid):
+			if t == "TIME":
+				self.time = res
+			else:
+				{ "NORMAL"   : self.production,
+				  "CONSUMED" : self.consumed_res,
+				  "PRODUCED" : self.produced_res,
+				  "UNIT"     : self.unit_production }[t][res] = amount
 
-		self._init_finished = True
 
-	def __setattr__(self, name, value):
-		if hasattr(self, "_init_finished") and self._init_finished:
-			raise TypeError, 'ProductionLineData is const, use ProductionLine'
-		else:
-			self.__dict__[name] = value
-
-	def __str__(self):
-		return "ProductionLineData(lineid=%s)" % self.id
+	def get_original_copy(self):
+		"""Returns a copy of this production, in its original state, no changes
+		applied"""
+		return ProductionLine(self.id, self.__data)

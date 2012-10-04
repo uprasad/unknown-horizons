@@ -1,0 +1,36 @@
+id: 32
+name: _ Tavern
+baseclass: production.ProductionBuilding
+radius: 6
+cost: 5
+cost_inactive: 0
+size_x: 2
+size_y: 2
+inhabitants: 2
+tooltip_text: _ Provides get-together.
+settler_level: TIER.SETTLERS
+buildingcosts: {RES.GOLD: 250, RES.BOARDS: 4, RES.BRICKS: 4}
+show_status_icons: false
+components:
+- SelectableComponent:
+    type: building
+    tabs: [ProductionOverviewTab]
+    enemy_tabs: [EnemyBuildingOverviewTab,]
+- HealthComponent: {maxhealth: 1000}
+- ProducerComponent:
+    productionlines:
+      40:
+        produces:
+        - [RES.GET_TOGETHER, 4]
+        consumes:
+        - [RES.LIQUOR, -1]
+        time: 16
+- StorageComponent:
+      SlotsStorage:
+        slot_sizes: {RES.GET_TOGETHER: 12, RES.LIQUOR: 4}
+- CollectingComponent:
+    collectors:
+      UNITS.BUILDING_COLLECTOR: 1
+actionsets:
+  TIER.SETTLERS:
+    as_tavern0:

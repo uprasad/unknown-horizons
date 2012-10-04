@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -25,7 +25,6 @@
 from unittest import TestCase
 
 from horizons.world.storage import *
-
 
 class TestGenericStorage(TestCase):
 
@@ -108,9 +107,6 @@ class TestSpecializedStorages(TestCase):
 		self.assertEqual(s.get_free_space_for(1), 10)
 
 		self.assertEqual(s.alter(1, 12), 2)
-
-		s.change_resource_slot_size(1, 5)
-		self.assertEqual(s.alter(1, 5), 0)
 
 
 class TestGlobalLimitStorage(TestCase):

@@ -3,8 +3,603 @@ Unknown Horizons
 
 -----------------------------------------------------
 
-2011-06-??: Milestone 2011.2
-changelog date: JUN 03; rev: 68b24535e1fe7254e96ab52b6fba8e97c7e4290f
+2012-??-??: Milestone 2012.2
+changelog date: OCT 03
+
+Gameplay and Balancing
+* New features
+  + AI players learned to handle diplomacy and war
+  + new buildings: alvearies, barracks, blender, cocoa field, doctor,
+      herbary, lookout, pastry shop, spice field, vineyard, vintner
+  + build preview jumps to valid build locations nearby
+  + production building storage indicators when finishing production
+* Modifications and changes
+  # collectors pick up resources produced while walking over - #929
+  # collectors can retrieve multiple resources at the same time - #994
+  # fire station: 4 bricks (was: 5), tavern: 4 bricks (was: 2)
+  # trees take 120s to grow (was: 60) and cost 50 gold coins (was: 10)
+  # producing boards requires 2 trees (was: 1)
+* Fixed bugs and problems
+  ~ fixed wrong graphics of tree growth sequence - #924
+  ~ burnt down residential buildings replaced by ruin
+
+Media Content
+* New files and features
+  + docs: contribution guidelines
+  + font: GNU Unifont as general font fallback
+  + sound: error sound, refresh sound, click sound (Kinshuk)
+  + building: three citizen houses, citizen street (Viktoria)
+  + building: pioneer, settler, citizen main square (Viktoria)
+  + building: barracks, brewery, herbary (Daniel)
+  + building: doctor (mrkramps)
+  + unit: fisherman (Daniel)
+  + music: track "Battle" (Thomas Davey)
+* Brush-ups and modifications
+  # resource icons are now 32px everywhere
+  # buildings retain their rotation when upgraded
+
+User Interface
+* Additions and new features
+  + Balance display in top left corner (click to expand) - #1671
+  + loading screen displays gameplay tips / quotes (toggle in settings)
+  + new cursor above TextFields when keyboard input is possible - #674
+  + Esc triggers the cancel action, Enter the ok action in all dialogs
+  + kick players in multiplayer lobby, 'ready' flag to start game
+  + password protection for multiplayer games
+  + menu background image can be toggled and persists
+  + mouse wheel zoom behavior can be changed in settings
+  + list to select available scenario translations, shows completeness
+  + error sounds for invalid and impossible actions
+  + click sound for all gui actions
+  + second build menu layout (toggle with icon)
+* Repositioning and modifications
+  # BuildRelated tabs now use one line per tier
+  # cleaned up and polished production overview, inventory tabs, boat
+      builder, main square, inhabitant overviews, trade route config
+  # mouse wheel no longer changes ListBox selection, only scrolls view
+  # highlight fish deposits in range of fishers, improve fish highlight
+  # dynamic cityinfo placement, depends on resource overview bar size
+  # popups now modal by default
+* Fixed bugs and usability problems
+  ~ only display status icons when and where they make sense
+  ~ multiplayer: check required building costs early - #1486
+  ~ do not show fisher boats on minimap
+  ~ used action sets are stored in savegame
+  ~ clicks on scenario messages open corresponding logbook page
+  ~ warehouse selection unintuitive - #1246
+  ~ select most recent savegame in "Load game" dialog
+
+Codebase
+* New functionalities
+  + icon_path and delayed updates are now available in TabInterface
+  + setup: creates content/gitversion.txt containing detected git HEAD
+  + build menu layouts can be defined via yaml
+  + 'fife' logger, activate by --debug-module='fife' or -d
+  + scenario actions:
+      highlight_position, change_increment, alter_inventory
+  + scenario tests
+* Modified structures
+  # own implementation of yaml cache, replacing shelve
+  # less verbose api for horizons.messaging
+  # soft constants instead of hardcoded numerical ids in yaml files
+  # moved some more properties to yaml object files
+  # --nature-seed flag is gone, --sp-seed provides its functionality
+  # rewrote mp client/server methods, support older client protocols
+  # globals in horizons.main now live in horizons.globals
+* Fixed crashes and inconsistencies
+  ~ use unicode everywhere, only convert it when talking to fife
+  ~ storages provide itercontents() and iterslots() instead of __iter__
+  ~ invalid LC_TIME, LANG, LOCALE environment variables no longer crash
+
+User-Contributed Content
+* Translations
+   + new translation project: multiplayer error messages
+   + new translations:
+   + new terminology translations:
+   + new tutorial translations:
+   + new translations of 'The Unknown': de, es
+
+* Campaigns, scenarios and maps
+
+* New team members with this release, Annotations
+   + Push access was granted to: mesutcank, Kiryx,
+   + We accepted pull requests or patches by:
+     Foaly, Srijan Mishra, Vivek Sagar, MasterofJOKers, Magnus Knutas,
+     desophos,
+   + Translators that joined our teams and contributed several strings:
+     Please refer to the credits!
+
+-----------------------------------------------------
+
+2012-04-22: Milestone 2012.1
+changelog date: APR 22; rev: 589a1f461b749b1d05bd29ae7e73dd19ce52677f
+
+Gameplay and Balancing
+* New features
+   + screenshots of savegames
+   + highlight buildings in range in construction preview
+   + map preview, using a subprocess
+   + disasters: fire as proof of concept, fire station as remedy of choice
+   + allow generating different random maps and using own random seeds
+   + status icon system for buildings
+   + major overhaul of buy/sell interface
+   + major overhaul of resource overview bar, custom bars per settlement
+   + many new hotkeys (see section User Interface)
+   + statistics widgets: player scores, settlement/ship overview, chat history
+   + Unknown Horizons automatically checks for updates on startup
+   + support for CJKV translations
+   + save/load in multiplayer games
+
+* Modifications and changes
+   # AI founds more settlements
+   # lower running costs for several buildings when paused:
+     # charcoal burning, distillery, farm, tobacconist, weaver: 0 (was: 5)
+     # salt ponds: 0 (was: 10)
+     # doctor: 5 (was: 15)
+   # maximum game speed now: 20x
+   # multiplayer mode: game names
+   # boat builder now displays queue and allows modifications
+   # "Branch Office" renamed to "Warehouse", "Tent Ruin" to "Ruined Tent"
+   # only allow fires from the 2nd increment onward
+   # signal fire range now: 13 (was: 10)
+   # make fisher invincible
+   # trader: Sell and buy for same price, increase max amount
+   # round displayed resource values
+   # make the AI work better on level 4
+   # make trade make smaller offers in case settlements don't accept big ones
+   # don't pause game on routeconfig (#1692)
+   # make mountains unclonable (#1703)
+
+* Fixed bugs and problems
+   ~ main square and ruined tent now walkable, i.e. behave like a road
+   ~ ships only load as many tons of a res as specified in the route at max
+   ~ fix count problem in warehouse buy/sell tab
+   ~ assign appropriate level to settler on build (#1561)
+   ~ crash on hovering the resource overview bar (#1564)
+   ~ crash when trying to drag a line of buildings on the ocean (#1574)
+   ~ crash when pressing "j" while a building is selected
+
+
+Media Content
+* New files and features
+   + building: new fish (lmg)
+   + building: fire station
+   + building: single tile roads
+   + building: all rotations for the birch tree
+   + building: windmill
+   + building: bakery
+   + animated status icons: full inventory, decommissioned, mine cart, book
+   + animated status icons: question mark, exclamation mark, building on fire
+   + sound: invalid actions / error
+   + sound: build sound (Novatlan)
+   + sound: flipping page
+   + icon: capacity utilisation (also used for other stats)
+   + icon: different happiness stage smileys
+   + icon: pipette cursor
+   + icon: rename (20 and 50px)
+   + icon: ship on minimap
+   + icon: animated cogs for active production lines
+   + icon: medium and large popup background images
+   + icon: three new mainmenu background images
+   + icon: messagewidget background images
+   + icon: new icon for tobaccos (#692)
+   + icon: Leather and tannery icons (#692)
+   + unit: animated pirate ship
+   + font: UMing for CJKV
+
+* Brush-ups and modifications
+   # building: new renders of charcoal burning
+   # building: new renders of distillery
+   # building: improve increment 3 house
+   # icon: save/load in main / pause menu
+   # icon: inhabitant amount
+   # icon: minimap background image
+   # fish animations run at different speeds
+   # overview bar resource selection menu default config button style
+   # 300px UH logo
+   # Make farm use small cogs in production animation (#1474)
+   # 24px flour icon (#1594)
+   # new images of the mine and mountains (#906)
+   # update and reposition FIFE logo
+
+User Interface
+* Additions and new features
+   + tooltips for status icons
+   + prices are now displayed in the hint for selling/buying resources
+   + minimap in ship route config dialog, click on BO to add it to the route
+   + sending ships via click on minimap, highlight selected ships in minimap
+   + captain's log entries can now contain images and multiple entries per page
+   + pipette tool to clone existing buildings (O)
+   + save and show trade history
+   + support for dynamic hotkey configuration
+   + hotkey A to display owner color on tiles
+   + hotkey J jumps to selected units
+   + hotkey K toggles healthbars
+   + hotkey R to enter road building mode
+   + enter key confirms a popup
+   + delete key removes units and buildings
+   + zoom to mouse position as new center
+   + remove resources in buy, sell, load, unload slots on right click
+   + setting for mouse sensitivity
+   + setting to enable logging
+   + setting to disable auto-unloading goods on founding settlements
+   + highlight position of messagewidget events on minimap
+   + show unit route on minimap when player owns selected unit
+   + build multiple tents by holding the mouse (same as trees)
+   + dynamic build menu (highlight buildings currently buildable)
+   + show building costs when hovering build menu buttons
+   + highlight related buildings in build preview mode
+   + enhanced player name and color selection
+   + re-enabled map panning with middle mouse button
+   + display random background image in mainmenu
+   + load and display messagewidget items in logbook game message widget
+   + setting for number of frames per second
+   + add minimap icon for pirate and neutral ships
+   + colored flags for minimap ship icons
+   + notify the player when his buildings catch fire
+
+* Repositioning and modifications
+   # improved random name selection algorithm (prefer unused names)
+   # improved diplomacy UI and messages
+   # sliders for map creation always start in center position
+   # ship status now clickable in ship list
+   # show warehouse locations on minimap
+   # combine widgets minimap and menu_panel to new widget 'minimap'
+   # simplified ship and main square tabs
+   # tooltip explanations of some settings
+   # minimap and tabwidget positioning changed: prevent unintentional scrolling
+   # RouteConfig: Move activity icon into focus of attention area
+   # zooming depends on cursor location
+   # brighter and hopefully less obtrusive range highlight colors
+   # multiselection improvements
+   # improved resource configuration restore button
+   # end session when the game is closed
+   # individual shipicons on the minimap
+   # Use abcd shape as preview image for trail, gravel path
+   # only show building range when the building is buildable
+   # display building costs even if it's not buildable at the current position
+
+* Fixed bugs and usability problems
+   ~ reduce tooltip flickering
+   ~ camera view rotation directions were incorrectly named
+   ~ show message when autosaving
+   ~ faster first access to pause menu
+   ~ mousetool destruction between sessions
+   ~ sound got cut off on scroll (#1277)
+   ~ sort players in player scores overview according to total score
+   ~ add summary to settlement list
+   ~ rotate natural resources randomly
+   ~ add savegame date and time to filenames
+   ~ main widgets could be displayed twice, resulting in an infinite pause loop
+   ~ build roads clockwise or counterclockwise based on user input
+   ~ display hint when a field is fully grown, but has no farm access
+   ~ consider keyboard scrolling when determining active settlement
+   ~ also show radius of signal fire on sea tiles
+   ~ stay in warehouse build mode when trying to build at invalid location
+   ~ delay cityinfo hide after hovering own settlements, renaming improvements
+   ~ allow to rename ships/settlement in statistics widget
+   ~ notification threshold depending on event distance wrt. time and space
+   ~ lots of is_focusable fixes (buttons previously caught keyboard events)
+   ~ keep gold amount widget stable (don't blink) in resource bar (#1560)
+   ~ allow logbook entries with multiple pages and always show first new entry
+   ~ fix problem with minimized minimap ship icons
+   ~ stop scrolling when the mouse leaves the window
+   ~ stop windmill animation if decommissioned (#1625)
+   ~ distinguish idle and idle_full of our mill
+   ~ make esc close the chat dialog
+   ~ don't show decommissioned status of buildings that shouldn't have them
+   ~ do not run update checker with gui tests or with cmd line start parameters
+
+
+Codebase
+* New functionalities
+   + Components!
+   + MessageBus and Message system
+   + gui logger (store all input actions) to help creating gui tests
+   + pre-commit hook for developers
+   + interactive iPython shell: allows executing any available Command
+   + support for gui tests and many gui tests
+   + tests can make use of savegames
+   + map saver and loader plugin for editor
+   + script to pull and compile .po files from TL repo (dev/copy_pofiles)
+   + change pychan widgets on runtime for tooltips to use helptext= attribute
+   + comment= widget attribute as context help for translators
+   + save random map settings to settings.xml file
+   + save maps (shift + F12)
+   + status icons above buildings and units, status icon exclusions
+   + minimap highlights
+   + cmd line option --game-speed
+   + use fife.Point.set where reasonable (performance)
+   + lazy loading for tabs
+   + dynamically update data of older savegames to current format
+   + locale-aware fontdef loading (LinLibertine vs. UMing)
+   + support starting 2-player mp game via command line
+   + coupling between selectability and tabs
+   + session property for all components
+   + stop multiplayer game when detecting desync, print hash differences
+   + modular messagewidget (dynamic height depending on message)
+   + use YamlCache for object files to speed up loading
+   + several robustness improvements to YamlCache
+   + make catching gcn::exceptions more robust
+   + add tests for buildingtool highlights, hunter and settler save/load
+   + add new enet library-files
+   + add mac build support
+
+* Modified structures
+   # adapt all widgets to new pychan keyword API
+   # removed all custom Tooltip* widgets
+   # speed up build mode by 40% (6000% for buildings with related buildings)
+   # allow human-readable resource ids in object files, like RES.FOOD
+   # refactored i18n methods to replace widget content
+   # improved loading speed for production lines, PathNodes, AbstractPather,
+     # ComponentHolder and GlobalLimitStorage
+   # minimap no longer uses GenericRenderer and supports more than one minimap
+   # road pathfinder now prefers straight lines
+   # default ai player amount is 0 for games started from cmd line
+   # save tile ownership instead of autogenerating it on load
+   # speed improvements to loading/saving huge settlements (scheduler)
+   # inventory tab uses ExtScheduler instead of Scheduler
+   # refactored management of all mousetools
+   # rename ConcretObject to ConcreteObject
+   # building and unit outline parameters (threshold, width) now configureable
+   # now using python's '{foo}'.format(foo=bar) for all i18n strings
+   # use python string formatting instead of string.Template
+   # store savegame template as sql statements instead of binary sqlite file
+   # lazy loading of action sets
+   # level-depending building names (lumberjack tent -> lumberjack hut)
+   # exclude certain status icons from certain buildings
+   # save language code instead of language name
+   # settings and logbook now use a PickBeltWidget
+   # removed several tables from our databases. Data now in yaml objects.
+   # registry pattern to keep track of scenario actions/conditions
+   # large amount of fixes and workarounds for styling widgets
+   # removed log.yaml and useless Bridge class
+   # modularize all the buildingtool functions
+   # explicit imports in horizons.i18n
+   # move language switch logic and gettext setup to horizons.i18n
+
+* Fixed crashes and inconsistencies
+   ~ reduced memory leaks when ending a session
+   ~ more than 40 crashes related to merging the branch "component"
+   ~ crash when clicking on savegames in save dialog (#1223)
+   ~ uninterrupted building setting now also affects destruction tool
+   ~ crash when player name contained unreasonable characters
+   ~ sand tiles are buildable again
+   ~ crash when removing main square
+   ~ trader now respect settlement needs when selling (buying 1 was impossible)
+   ~ routeconfig crash
+   ~ faulty parameter name caused endless loops when FIFE was not found
+   ~ crash with inaccessible entries in guitranslations
+   ~ rounding issue caused problems with minimap
+   ~ handle random crashes that are defined behavior for python shelves
+   ~ use os-independent paths in the savegame manager
+   ~ crash when trying to overwrite a read-only file on windows
+   ~ some bugs in our core scheduler and timer code
+
+
+User-Contributed Content
+* Translations
+   + new translations: ja, ro, hr
+   + new terminology translations: ja, ro
+   + new tutorial translations: bg, et, hu, ja, ro
+   # updates to translations: bg, ca, cs, de, es, et, fi, fr, hu, it, lt, nb,
+                              nl, pl, pt, pt_BR, ru, sl, sv
+   # updates to tutorial translations: cs, de, fi, fr, pl, ru
+
+* Campaigns, scenarios and maps
+   ~ removed old maps and islands (incompatibility with new tileset structure)
+   + island bay_and_lake
+   + map development
+   + map singularity40
+   + map triple
+   + map test-map-tiny
+   + map quattro
+   + map Full House (3)
+   + map Rouver (4-6)
+   + map FightForRes
+   + map mp-dev
+   + scenario The Unknown by Kikody
+   + scenario deathmatch
+   # included images in tutorial scenarios
+
+* Media Content
+
+* New team members with this release, Annotations
+   + Push access was granted to:
+   + We accepted pull requests or patches by:
+   + Translators that joined our teams and contributed several strings:
+     Please refer to the credits!
+
+
+-----------------------------------------------------
+
+2011-11-11: Milestone 2011.3
+changelog date: NOV 11; rev: 52f9d95664860098e1a53f5995b3e7a84b9ce32c
+
+Gameplay and Balancing
+* New features
+   + trade routes can wait for load and unload
+   + support for international trade routes: player<->player trade
+   + new in-game pause menu, replaces pause popup and in-game menu
+   + hotkey "T" toggles translucency of trees and mountains
+   + player score widget, accessed through F2
+   + player settlement overview, accessed through F3
+   + player ship list, accessed through F4
+   + allow/deny inhabitant upgrades
+   + show hint when user tries to build something without a settlement
+   + option to build uninterrupted (was: need to hold SHIFT)
+
+* Modifications and changes
+   # unload all resources in ship inventory when a new settlement gets founded
+   # allow lower resolutions until 800x600
+   # rename market place to main square
+   # modified ALL resource values, refer to development/print_db_data.py res
+     for the new values. Drastically lowered the price of most resources.
+   # settler consumption formula now properly considers number of inhabitants
+   # settler tax and happiness formula
+   # increase base taxes paid by one settler level. Now 3/6/10 (was: 2/3/6)
+   # game speed array now is [0.5x 1x 2x 3x 4x 6x 8x 11x]
+   # 'raw' resources now have reasonable names (sugar cane, tobacco plants).
+     Also renamed raw iron and raw clay to iron and clay deposit, respectively.
+   # better distribution of resource deposits
+   # player starts with 12 cannons
+   # fisher boats cannot be built as of now
+   # boat builder allows construction of huker and frigate
+   # open ship inventory tab after trade became impossible (ship left BO range)
+   # free trader and fisher boats are invincible
+   # boat builder and branch office build restrictions: need deep sea water now
+
+* Fixed bugs and problems
+   ~ mutable default arguments caused resource deposits to be empty
+   ~ check full area of branch office for other settlements before building
+   ~ loading caused decommissioned buildings to have active production costs
+
+
+Media Content
+* New files and features
+   + building: gravel path
+   + building: wooden storage hut
+   + icon: diplomacy in minimap panel
+   + icon: trade route slot modes (load ship, unload ship)
+   + icon: trade route access buttons
+   + icon: combat stances aggressive, hold ground, none, flee
+   + icon: allow/deny inhabitant upgrade
+   + icon: several build menu and resource icons
+   + voice: french map_creation by seblabel
+   + colors: purple, orange, teal, lemon, bordeaux, gray
+
+* Brush-ups and modifications
+   # icon: all minimap panel icons
+   # icon: all player emblems (also added new ones)
+   # font: update Linux Libertine to version 5
+   # image: more saturation for main menu background
+
+User Interface
+* Additions and new features
+   + random map parameters: island size (max, mean, sd), map size, water ratio
+   + map parameters in UI: AI players, resource density, free trader and pirate
+   + save random map parameters to settings file
+   + display error message when yaml can't be found
+   + build menu now updates when inhabitants upgrade
+   + buoys now also displayed for user interactions like trade routes
+   + show hint when user tries to build something without a settlement
+   + recommended players per map displayed in map selection widget
+   + notification messages about why trade actions were invalid
+
+* Repositioning and modifications
+   # use unicode strings for all ship names
+   # use templates for different boxes in singleplayer menu
+   # removed need for adjust_black_background
+   # slim minimap images, icon positioning in minimap panel
+   # remove the main square overview tab
+   # reposition city_info on low resolutions to not overlap HUD
+   # = key now also increases game speed (was: + only)
+   # pausing the game disables all game interactions
+   # city_info now displays player emblem
+
+* Fixed bugs and usability problems
+   ~ boxes in settings expanded for some languages, buttons were unreachable
+   ~ in-game ui appeared around the main menu under certain conditions
+   ~ trying to save in multiplayer no longer causes a crash
+   ~ recognise the system default language on windows
+   ~ display warning if pyenet is not found and disable multiplayer (was: crash)
+   ~ cancelling a build action issued through 'Build related' opened build menu
+   ~ removed problems with highlight cache (TearingTool cleanup)
+   ~ display needed resources if hovering 'Found settlement' in ship overview
+   ~ disable game speed buttons when min / max is reached or the game is paused
+   ~ disable speed buttons in MP session
+   ~ clearly indicate that increment 3 is the current maximum
+   ~ remove building-specific Destroy Building button. Use Destroy tool (X key)
+   ~ instantly redraw building range (was: delayed for at least 0.1 seconds)
+   ~ immediately update cam after click
+   ~ frigate overview tab fixed
+
+
+Codebase
+* New functionalities
+   + support explicit paths to files for --start-map --load-map --start-scenario
+     and --start-campaign
+   + save and load the rng state
+   + scenario action for spawning ships
+   + dev script to generate a gfx overview website
+   + unified statistics widget
+   + 'noi18n' name for widgets that are not planned to be translated
+   + speech implementation
+   + gzip logfile compression
+   + dev cmdline option --no-preload to never start preloading
+   + tool to generate statistic for MP server using rrdtool
+
+* Modified structures
+   # deselect instances before removal
+   # use %APPDATA%\unknown-horizons as user dir on windows
+   # Settlement now is a StorageHolder for consistency and simplicity
+   # huge improvements to pathfinding speed
+   # use plain text sql statements instead of binary sqlite databases
+   # removed some outdated sql tables
+   # obsolete and misleading FarmerCollector replaced by BuildingCollector
+   # modified size of rect created by Rect.init_from_topleft_and_size
+   # max player value also limits amount of AI players
+   # captain's log now also uses StatsWidget
+   # rename build menu icons to use building ID (was: ambiguous building name)
+   # temporarily remove settler.sql
+   # game data on windows now stored in My Games
+   # multiplayer code refactoring. Includes command whitelisting for safety
+   # DistUtilsExtra no longer is dependency for building i18n files
+   # removed adjust_widget_black_background
+
+* Fixed crashes and inconsistencies
+   ~ most tests crashed on windows (open file handle)
+   ~ scheduler removes callbacks of current tick as well now
+   ~ catch exceptions that happened during 'reset settings to default'
+     this lead to a crash right at start for players with older settings.xml
+   ~ missing import which caused a crash when starting multiplayer
+   ~ several crashes related to removing units and buildings
+   ~ upgrading python to a version not supporting bsddb anymore caused crash
+   ~ loading games could fail on mac due to .DS_Store files in content/
+   ~ two segfaults related to quitting the game
+   ~ collectors now teleport home if they cannot find a way home
+   ~ crashes related to ship removal and AttackCommand
+   ~ animal pathfinding crashes: blocked path while being built on
+   ~ problem with utf-8 in filenames on the windows console
+   ~ no yaml cache if utf8 characters in windows username (bsddb bug in python)
+   ~ crash related to FIFE console evaluations overwriting gettext _
+   ~ crash on compaign startup
+   ~ UnitProduction endless loop fixed
+   ~ Ships sailing on land
+   ~ StorageCollector endless loop fixed
+   ~ resource deposits stay selected after being removed
+   ~ selection not removed after tearing
+   ~ unit health bar is rendered correctly
+   ~
+
+
+User-Contributed Content
+* Translations
+   + new translations: sv
+   + new terminology translations: sv
+   + new tutorial translations: cs, es, pl, pt_BR, sv
+   # updates to translations: bg, ca, cs, de, es, et, fi, fr, hu, it, lt, nb,
+                              nl, pl, pt, pt_BR, ru, sl
+   # updates to tutorial translations: de, fi, fr, it, nl, pt, ru
+
+* Campaigns and scenarios
+   + new scenario 'war_tutorial' by mihaibivol
+
+* Media Content
+
+* New team members with this release, Annotations
+   + Push access was granted to:
+     wentam
+   + We accepted pull requests or patches by:
+     hoffi, abeaumont, orakeldel, mtfk
+   + Translators that joined our teams and contributed several strings:
+     Please refer to the credits!
+
+
+-----------------------------------------------------
+
+2011-07-01: Milestone 2011.2
+changelog date: JUL 01; rev: 5bfb7f58f2c8fd8cb3e16185ff5b510b752fc4ba
 
 Gameplay and Balancing
 * New features
@@ -16,8 +611,12 @@ Gameplay and Balancing
    + scenario chooser interface after winning a scenario
    + improvements to pathfinding speed on sea tiles
    + randomized playlist of background music
+   + first version of production overview widget
+   + display hint to tell players that roads can be dragged when detecting that
+     they build them one-by-one
 * Modifications and changes
    # tavern building costs: 250 coins, 4 boards, 2 bricks (was: 0, 0, 0)
+   # sugar cane field building costs: 150 gold coins (was: 0)
    # storage tent building costs: 350 coins (was 750), 4 boards (was: 10)
    # storage tent additional capacity per slot: 10t (was: 30)
    # storage tent radius: 17 (was: 24). Reduces the covered area by 50%.
@@ -27,10 +626,18 @@ Gameplay and Balancing
      (was: description, technical details)
    # update inventory once a second (was: on every settlement change)
    # apply changes to autosave interval at runtime (was: only after restart)
-   # inhabitant taxes can now be set in steps of 0.1 (was: 0.5)
+   # inhabitant taxes can now be set in 10 steps of 0.1 (was: 3, 0.5)
    # only display scenarios in selected language and English by default
      (was: display all scenarios)
    # tearing tool sticks if shift key is pressed, same as building tool
+   # ships only have a limited amount of slots now (was: unlimited - GUI: four).
+     The overall storage limit can be distributed without further restrictions.
+   # ships of other players now have overview tabs (was: None)
+   # tabs of enemy buildings and units tell the player name of their owner
+   # clay found in deposits now between 750 and 1250 (was: 375, 625)
+   # spawn more animals at game start, probability 10% per tile (was: 2.5%)
+   # search more efficiently for targets when moving ship to unreachable coords
+   # improvements to wild animal health balancing
 * Fixed bugs and problems
    ~ show player's gold immediately after load
    ~ handling of multiple dialogs that pause the game (new pause stack)
@@ -40,6 +647,9 @@ Gameplay and Balancing
    ~ fishers no longer get stuck as easily
    ~ paused game allowed to change game speed
    ~ only allow grouping of units owned by the player
+   ~ remove fisher outline when deselected
+   ~ ask for confirmation before restoring default settings in the settings menu
+   ~ WildAnimal did not reproduce
 
 Media Content
 * New files and features
@@ -48,10 +658,15 @@ Media Content
    + building: half-timbered house
    + icon: up and down arrows, small rect-shaped delete button
    + icon: svg application icon without text for use in small icons
-   + five city names, mostly South-American flavored
+   + icon: grayscale version of speed_* minimap panel buttons
+   + icon: small 16px versions of more resources
+   + unit: lumberjack
+   + simple script that helps adding names to the database
 * Brush-ups and modifications
    # tooltip graphics
    # tab background images
+   # pasture animated with more frames
+   # save icon in game menu
 
 User Interface
 * Additions and new features
@@ -61,20 +676,26 @@ User Interface
    + added tooltips to several buttons and labels
    + display tax rate as label
    + highlight background of currently selected tab
+   + first version of tab 'build related fields' for e.g. farm and lumberjack
 * Repositioning and modifications
    # dynamic positioning on most headlines. Causes intentional glitch
    # made random maps prettier, coastline is now properly drawn
    # default style border size now 0 (was 2)
    # button placement in settings
    # display correct residential names in inhabitant overview tab (was: 'Tent')
+   # added scrollareas to credits
 * Fixed bugs and usability problems
    ~ duplicate string name in help.xml that caused wrong translation
    ~ spacing issues with headline of build preview tab when rotating the preview
    ~ 'Widget containment fumble' warning in buyselltab selection widget
    ~ properly translate tooltips in build menu
+   ~ buy/sell tab no longer displayed at storages, now only available at branch
+     office and main square
 
 Codebase
 * New functionalities
+   + test infrastructure
+   + large amount of tests
    + string preview tool for translators. Start UH with  --string-previewer  to
      enable it.
    + starting random maps with specific seeds from the command line
@@ -90,6 +711,11 @@ Codebase
    + made Callback class hashable for usage in dictionaries
    + cache yaml files unless altered. Faster scenario selection in SP menu.
    + testing gettext plural form support
+   + execute_many available in DbReader
+   + passing seed to RNG for all session types, use constant seed by default
+   + YAML cache system. Yields faster loading times after first game start.
+   + wrapper around pdb's set_trace
+   + BuildingCollectors can have no home building
 * Modified structures
    # removed our center_widget, now use pychan's position_technique="automatic"
      and modified positioning code to use this shortcut for "center:center"
@@ -99,7 +725,14 @@ Codebase
    # try to use installed pyenet version before searching for compiled one
    # rename build menu icons to achieve unified naming convention
    # roads on field layer instead of ground layer (simplifies rendering)
-   # minimap now based on fife.Image (was: Point)
+   # minimap now based on fife.Image (was: Point). Introduces zoom problems
+     which are fixed in the development branch of FIFE, ETA next UH release.
+   # basic styling for all widgets via load_uh_widget
+   # not store hard references to any gui file anymore
+   # new changelog formatting
+   # moved fife path setup into own function, run_tests uses this now
+   # doubled speed of get_random_location by seldomly finding invalid positions
+   # only try random jobs for animals
 * Fixed crashes and inconsistencies
    ~ fixed save/load of scenario variables
    ~ properly destruct the messagewidget
@@ -113,29 +746,44 @@ Codebase
    ~ menu closes correctly on instance removal (delete instance ref)
    ~ move_home checks now if a unit is already at home
    ~ avoid freezes due to too little cpu power if game speed is high
+   ~ fix several problems with build-related-fields tab
+   ~ Mac-specific error when defaultlocale was None. Use 'en' as fallback.
+   ~ several crashes when collectors were deleted
+   ~ crashes when removing hunter and farm
+   ~ minimap forgot about islands when settling there
+   ~ shipnames and citynames tables now use same restriction names
+   ~ wrong state was set when a collector had been canceled
+   ~ collectors calculated paths twice
+   ~ crash when a ship was being built
+   ~ crash when a scenario was won
+   ~ crash when loading a scenario savegame
+   ~ check for blocked paths for ships caused problems
+   ~ RouteConfig and ProductionOverview disappeared due to garbage collection
+   ~ movement now correctly started after loading
 
 User-Contributed Content
 * Translations
    + glossary translations with all important terms (terminology)
    + new translations: bg, cs, fi, hu, lt
-   + new terminology translations: cs, de, es, fr, nl, pl, pt, pt_BR
-   + new tutorial translations: Finnish, Portuguese, Russian
+   + new terminology translations: cs, da, de, es, fi, fr, nl, pl, pt, pt_BR, sl
+   + new tutorial translations: fi, pt, ru
    # updates to translations: ca, de, es, et, fr, it, nb, nl, pl, pt, pt_BR, ru,
                               sl
-   # updates to tutorial translations: de, fr, nl
+   # updates to tutorial translations: de, fr, it, nl
 * Campaigns and scenarios
-   + add campaign 'test' by Court-Jus)
    + add scenario 'sc1' by Court-Jus
    + add scenario 'sc2' by Court-Jus
    + add scenario 'sc3' by Court-Jus
-
+* Media Content
+   + a lot of new city and ship names
+     ( http://forum.unknown-horizons.org/viewtopic.php?t=494 )
 * New team members with this release, Annotations
    + Push access was granted to:
-     Court-Jus, gscai, mihaibivol
+     Court-Jus, gscai, mihaibivol, squiddy
    + We accepted pull requests or patches by:
      hoffi, sids_aquarius
    + Translators that joined our teams and contributed several strings:
-     ---tbd---
+     Please refer to the credits!
    # Special thanks to kurtisevan for holding the weekly challenge More Variety
      at opengameart.org!
 

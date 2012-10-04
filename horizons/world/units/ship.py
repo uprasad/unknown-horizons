@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -22,282 +22,33 @@
 import weakref
 from fife import fife
 
-import horizons.main
+import horizons.globals
 
-from horizons.gui.tabs import ShipInventoryTab, ShipOverviewTab, \
-                              TraderShipOverviewTab, EnemyShipOverviewTab
-from horizons.world.storage import PositiveTotalNumSlotsStorage
-from horizons.world.storageholder import StorageHolder
-from horizons.world.pathfinding.pather import ShipPather, FisherShipPather
-from horizons.world.pathfinding import PathBlockedError
-from horizons.world.units.movingobject import MoveNotPossible
-from horizons.util import Point, NamedObject, Circle, WorldObject
+from horizons.util.pathfinding.pather import ShipPather, FisherShipPather
+from horizons.util.pathfinding import PathBlockedError
 from horizons.world.units.collectors import FisherShipCollector
-from unit import Unit
-from horizons.command.uioptions import TransferResource
-from horizons.constants import LAYERS, STORAGE, GAME_SPEED
+from horizons.world.units.unit import Unit
+from horizons.constants import LAYERS
 from horizons.scheduler import Scheduler
+from horizons.component.namedcomponent import ShipNameComponent, NamedComponent
+from horizons.component.selectablecomponent import SelectableComponent
+from horizons.component.commandablecomponent import CommandableComponent
+from horizons.world.traderoute import TradeRoute
 
-
-class ShipRoute(object):
-	"""
-	waypoints: list of dicts with the keys
-		- branch_office:  a branch office object
-		- resource_list: a {res_id:amount} dict
-			- if amount is negative the ship unloads
-			- if amount is positive the ship loads
-
-	#NOTE new methods need to be added to handle route editing.
-	"""
-	def __init__(self, ship):
-		self.ship = ship
-		self.waypoints = []
-		self.current_waypoint = -1
-		self.enabled = False
-
-	def append(self, branch_office):
-		self.waypoints.append({
-		  'branch_office' : branch_office,
-		  'resource_list' : {}
-		})
-
-	def move_waypoint(self, position, direction):
-		if position == len(self.waypoints) and direction is 'down' or \
-		   position == 0 and direction is 'up':
-			return
-		if direction is 'up':
-			new_pos = position - 1
-		elif direction is 'down':
-			new_pos = position + 1
-		else:
-			return
-		self.waypoints.insert(new_pos, self.waypoints.pop(position))
-
-	def add_to_resource_list(self, position, res_id, amount):
-		self.waypoints[position]['resource_list'][res_id] = amount
-
-	def remove_from_resource_list(self, position, res_id):
-		self.waypoints[position]['resource_list'].pop(res_id)
-
-	def on_route_bo_reached(self):
-		branch_office = self.get_location()['branch_office']
-		resource_list = self.get_location()['resource_list']
-		settlement = branch_office.settlement
-		# if ship and branch office have the same owner, the ship will
-		# load/unload resources without paying anything
-		if settlement.owner == self.ship.owner:
-			for res in resource_list:
-				amount = resource_list[res]
-				if amount > 0:
-					try:
-						amount = max(0, amount - self.ship.inventory._storage[res])
-					except KeyError:
-						pass
-					TransferResource (amount, res, branch_office, self.ship).execute(self.ship.session)
-				else:
-					TransferResource (-amount, res, self.ship, branch_office).execute(self.ship.session)
-		self.move_to_next_route_bo()
-
-	def on_ship_blocked(self):
-		# the ship was blocked while it was already moving so try again
-		self.move_to_next_route_bo(advance_waypoint = False)
-
-	def move_to_next_route_bo(self, advance_waypoint = True):
-		next_destination = self.get_next_destination(advance_waypoint)
-		if next_destination == None:
-			return
-
-		branch_office = next_destination['branch_office']
-		if self.ship.position.distance_to_point(branch_office.position.center()) <= self.ship.radius:
-			self.on_route_bo_reached()
-			return
-
-		try:
-			self.ship.move(Circle(branch_office.position.center(), self.ship.radius), self.on_route_bo_reached,
-				blocked_callback = self.on_ship_blocked)
-		except MoveNotPossible:
-			# retry in 5 seconds
-			Scheduler().add_new_object(self.on_ship_blocked, self, GAME_SPEED.TICKS_PER_SECOND * 5)
-
-	def get_next_destination(self, advance_waypoint):
-		if not self.enabled:
-			return None
-		if len(self.waypoints) < 2:
-			return None
-
-		if advance_waypoint:
-			self.current_waypoint += 1
-			self.current_waypoint %= len(self.waypoints)
-		return self.waypoints[self.current_waypoint]
-
-	def get_location(self):
-		return self.waypoints[self.current_waypoint]
-
-	def enable(self):
-		self.enabled=True
-		self.move_to_next_route_bo()
-
-	def disable(self):
-		self.enabled=False
-		self.ship.stop()
-
-	def clear(self):
-		self.waypoints=[]
-		self.current_waypoint=-1
-
-	def load(self, db):
-		enabled, self.current_waypoint = db("SELECT enabled, current_waypoint FROM ship_route WHERE ship_id = ?", self.ship.worldid)[0]
-
-		query = "SELECT branch_office_id FROM ship_route_waypoint WHERE ship_id = ? ORDER BY waypoint_index"
-		offices_id = db(query, self.ship.worldid)
-
-		for office_id, in offices_id:
-			branch_office = WorldObject.get_object_by_id(office_id)
-			query = "SELECT res, amount FROM ship_route_resources WHERE ship_id = ? and waypoint_index = ?"
-			resource_list = dict(db(query, self.ship.worldid, len(self.waypoints)))
-
-			self.waypoints.append({
-			  'branch_office' : branch_office,
-			  'resource_list' : resource_list
-			})
-
-		if enabled:
-			self.current_waypoint -= 1
-			self.enable()
-
-	def save(self, db):
-		worldid = self.ship.worldid
-		db("INSERT INTO ship_route(ship_id, enabled, current_waypoint) VALUES(?, ?, ?)",
-		   worldid, self.enabled, self.current_waypoint)
-		for entry in self.waypoints:
-			index = self.waypoints.index(entry)
-			db("INSERT INTO ship_route_waypoint(ship_id, branch_office_id, waypoint_index) VALUES(?, ?, ?)",
-			   worldid, entry['branch_office'].worldid, index)
-			for res in entry['resource_list']:
-				db("INSERT INTO ship_route_resources(ship_id, waypoint_index, res, amount) VALUES(?, ?, ?, ?)",
-				   worldid, index, res, entry['resource_list'][res])
-
-class Ship(NamedObject, StorageHolder, Unit):
+class Ship(Unit):
 	"""Class representing a ship
 	@param x: int x position
 	@param y: int y position
 	"""
 	pather_class = ShipPather
-	tabs = (ShipOverviewTab, ShipInventoryTab, )
-	enemy_tabs = (EnemyShipOverviewTab, )
 	health_bar_y = -150
 	is_ship = True
-	is_selectable = True
+
+	in_ship_map = True # (#1023)
 
 	def __init__(self, x, y, **kwargs):
 		super(Ship, self).__init__(x=x, y=y, **kwargs)
-		self.session.world.ships.append(self)
-		self.session.world.ship_map[self.position.to_tuple()] = weakref.ref(self)
-
-	def remove(self):
-		super(Ship, self).remove()
-		self.session.world.ships.remove(self)
-		self.session.view.remove_change_listener()
-		del self.session.world.ship_map[self.position.to_tuple()]
-
-	def create_inventory(self):
-		self.inventory = PositiveTotalNumSlotsStorage(STORAGE.SHIP_TOTAL_STORAGE, STORAGE.SHIP_TOTAL_SLOTS_NUMBER)
-
-	def create_route(self):
-		self.route=ShipRoute(self)
-
-	def _move_tick(self, resume = False):
-		"""Keeps track of the ship's position in the global ship_map"""
-		del self.session.world.ship_map[self.position.to_tuple()]
-
-		try:
-			super(Ship, self)._move_tick(resume)
-		except PathBlockedError:
-			# if we fail to resume movement then the ship should still be on the map but the exception has to be raised again.
-			if resume:
-				self.session.world.ship_map[self.position.to_tuple()] = weakref.ref(self)
-			raise
-
-		# save current and next position for ship, since it will be between them
-		self.session.world.ship_map[self.position.to_tuple()] = weakref.ref(self)
-		self.session.world.ship_map[self._next_target.to_tuple()] = weakref.ref(self)
-
-	def select(self, reset_cam=False):
-		"""Runs necessary steps to select the unit."""
-		self.session.view.renderer['InstanceRenderer'].addOutlined(self._instance, 255, 255, 255, 1)
-		# add a buoy at the ship's target if the player owns the ship
-		if self.is_moving() and self.session.world.player == self.owner:
-			loc = fife.Location(self.session.view.layers[LAYERS.OBJECTS])
-			loc.thisown = 0 # thisown = 0 because the genericrenderernode might delete it
-			move_target = self.get_move_target()
-			coords = fife.ModelCoordinate(move_target.x, move_target.y)
-			coords.thisown = 1 # thisown = 1 because setLayerCoordinates will create a copy
-			loc.setLayerCoordinates(coords)
-			self.session.view.renderer['GenericRenderer'].addAnimation(
-				"buoy_" + str(self.worldid), fife.GenericRendererNode(loc),
-				horizons.main.fife.animationpool.addResourceFromFile("as_buoy0-idle-45")
-			)
-		self.draw_health()
-		if reset_cam:
-			self.session.view.set_location(self.position.to_tuple())
-		self.session.view.add_change_listener(self.draw_health)
-
-	def deselect(self):
-		"""Runs necessary steps to deselect the unit."""
-		self.session.view.renderer['InstanceRenderer'].removeOutlined(self._instance)
-		self.session.view.renderer['GenericRenderer'].removeAll("health_" + str(self.worldid))
-		self.session.view.renderer['GenericRenderer'].removeAll("buoy_" + str(self.worldid))
-		self.session.view.remove_change_listener(self.draw_health)
-
-	def go(self, x, y):
-		"""Moves the ship.
-		This is called when a ship is selected and RMB is pressed outside the ship"""
-		self.stop()
-
-		#disable the trading route
-		if hasattr(self, 'route'):
-			self.route.disable()
-		ship_id = self.worldid # this has to happen here,
-		# cause a reference to self in a temporary function is implemented
-		# as a hard reference, which causes a memory leak
-		def tmp():
-			if self.session.world.player == self.owner:
-				self.session.view.renderer['GenericRenderer'].removeAll("buoy_" + str(ship_id))
-		tmp()
-		move_target = Point(int(round(x)), int(round(y)))
-		try:
-			self.move(move_target, tmp)
-		except MoveNotPossible:
-			# find a near tile to move to
-			target_found = False
-			surrounding = Circle(move_target, radius=0)
-			while not target_found and surrounding.radius < 4:
-				surrounding.radius += 1
-				for move_target in surrounding:
-					try:
-						self.move(move_target, tmp)
-					except MoveNotPossible:
-						continue
-					target_found = True
-					break
-		if self.session.world.player == self.owner:
-			if self.position.x != move_target.x or self.position.y != move_target.y:
-				move_target = self.get_move_target()
-			if move_target is not None:
-				loc = fife.Location(self.session.view.layers[LAYERS.OBJECTS])
-				loc.thisown = 0
-				coords = fife.ModelCoordinate(move_target.x, move_target.y)
-				coords.thisown = 0
-				loc.setLayerCoordinates(coords)
-				self.session.view.renderer['GenericRenderer'].addAnimation(
-					"buoy_" + str(self.worldid), fife.GenericRendererNode(loc),
-					horizons.main.fife.animationpool.addResourceFromFile("as_buoy0-idle-45")
-				)
-
-	def _possible_names(self):
-		names = self.session.db("SELECT name FROM data.shipnames WHERE for_player = 1")
-		# We need unicode strings as the name is displayed on screen.
-		return map(lambda x: unicode(x[0], 'utf-8'), names)
+		self.__init()
 
 	def save(self, db):
 		super(Ship, self).save(db)
@@ -306,43 +57,184 @@ class Ship(NamedObject, StorageHolder, Unit):
 
 	def load(self, db, worldid):
 		super(Ship, self).load(db, worldid)
-
-		# register ship in world
-		self.session.world.ships.append(self)
-		self.session.world.ship_map[self.position.to_tuple()] = weakref.ref(self)
+		self.__init()
 
 		# if ship did not have route configured, do not add attribute
-		if len(db("SELECT * FROM ship_route WHERE ship_id = ?", self.worldid)) is 0:
+		if TradeRoute.has_route(db, worldid):
+			self.create_route()
+			self.route.load(db)
+
+	def __init(self):
+		# register ship in world
+		self.session.world.ships.append(self)
+		if self.in_ship_map:
+			self.session.world.ship_map[self.position.to_tuple()] = weakref.ref(self)
+
+	def set_name(self, name):
+		self.get_component(ShipNameComponent).set_name(name)
+
+	def remove(self):
+		self.session.world.ships.remove(self)
+		if self.session.view.has_change_listener(self.draw_health):
+			self.session.view.remove_change_listener(self.draw_health)
+		if self.in_ship_map:
+			if self.position.to_tuple() in self.session.world.ship_map:
+				del self.session.world.ship_map[self.position.to_tuple()]
+			else:
+				self.log.error("Ship %s had in_ship_map flag set as True "
+				               "but tuple %s was not found in world.ship_map",
+				               self, self.position.to_tuple())
+			if self._next_target.to_tuple() in self.session.world.ship_map:
+				del self.session.world.ship_map[self._next_target.to_tuple()]
+			self.in_ship_map = False
+		super(Ship, self).remove()
+
+	def create_route(self):
+		self.route = TradeRoute(self)
+
+	def _move_tick(self, resume=False):
+		"""Keeps track of the ship's position in the global ship_map"""
+
+		# TODO: Originally, only self.in_ship_map should suffice here,
+		# but KeyError is raised during combat.
+		if self.in_ship_map and self.position.to_tuple() in self.session.world.ship_map:
+			del self.session.world.ship_map[self.position.to_tuple()]
+		elif self.in_ship_map:  # logging purposes only
+			self.log.error("Ship %s had in_ship_map flag set as True but tuple %s was "
+			               "not found in world.ship_map", self, self.position.to_tuple())
+
+		try:
+			super(Ship, self)._move_tick(resume)
+		except PathBlockedError:
+			# if we fail to resume movement then the ship should still be on the map
+			# but the exception has to be raised again.
+			if resume:
+				if self.in_ship_map:
+					self.session.world.ship_map[self.position.to_tuple()] = weakref.ref(self)
+				raise
+
+		if self.in_ship_map:
+			# save current and next position for ship, since it will be between them
+			self.session.world.ship_map[self.position.to_tuple()] = weakref.ref(self)
+			self.session.world.ship_map[self._next_target.to_tuple()] = weakref.ref(self)
+
+	def _movement_finished(self):
+		if self.in_ship_map:
+			# if the movement somehow stops, the position sticks, and the unit isn't at next_target any more
+			if self._next_target is not None:
+				ship = self.session.world.ship_map.get(self._next_target.to_tuple())
+				if ship is not None and ship() is self:
+					del self.session.world.ship_map[self._next_target.to_tuple()]
+		super(Ship, self)._movement_finished()
+
+	def go(self, x, y):
+		#disable the trading route
+		if hasattr(self, 'route'):
+			self.route.disable()
+		if self.get_component(CommandableComponent).go(x, y) is None:
+			self._update_buoy()
+
+	def move(self, *args, **kwargs):
+		super(Ship, self).move(*args, **kwargs)
+		if self.has_component(SelectableComponent) and \
+		   self.get_component(SelectableComponent).selected and \
+		   self.owner.is_local_player: # handle buoy
+			# if move() is called as move_callback, tmp() from above might
+			# be executed after this, so draw the new buoy after move_callbacks have finished.
+			Scheduler().add_new_object(self._update_buoy, self, run_in=0)
+
+	def _update_buoy(self, remove_only=False):
+		"""Draw a buoy at the move target if the ship is moving."""
+		if self.owner is None or not self.owner.is_local_player:
 			return
-		self.create_route()
-		self.route.load(db)
+		move_target = self.get_move_target()
+
+		ship_id = self.worldid
+		session = self.session # this has to happen here,
+		# cause a reference to self in a temporary function is implemented
+		# as a hard reference, which causes a memory leak
+		def tmp():
+			session.view.renderer['GenericRenderer'].removeAll("buoy_" + str(ship_id))
+		tmp() # also remove now
+
+		if remove_only:
+			return
+
+		if move_target != None:
+			# set remove buoy callback
+			self.add_move_callback(tmp)
+
+			loc = fife.Location(self.session.view.layers[LAYERS.OBJECTS])
+			loc.thisown = 0  # thisown = 0 because the genericrenderernode might delete it
+			coords = fife.ModelCoordinate(move_target.x, move_target.y)
+			coords.thisown = 1 # thisown = 1 because setLayerCoordinates will create a copy
+			loc.setLayerCoordinates(coords)
+			self.session.view.renderer['GenericRenderer'].addAnimation(
+				"buoy_" + str(self.worldid), fife.RendererNode(loc),
+				horizons.globals.fife.animationloader.loadResource("as_buoy0+idle+45")
+			)
 
 	def find_nearby_ships(self, radius=15):
 		# TODO: Replace 15 with a distance dependant on the ship type and any
 		# other conditions.
 		ships = self.session.world.get_ships(self.position, radius)
-		ships.remove(self)
+		if self in ships:
+			ships.remove(self)
 		return ships
 
-class PirateShip(Ship):
-	"""Represents a pirate ship."""
-	tabs = ()
-	def _possible_names(self):
-		names = self.session.db("SELECT name FROM data.shipnames WHERE for_pirate = 1")
-		return map(lambda x: x[0], names)
+	def get_tradeable_warehouses(self, position=None):
+		"""Returns warehouses this ship can trade with w.r.t. position, which defaults to the ships ones."""
+		if position is None:
+			position = self.position
+		return self.session.world.get_warehouses(position, self.radius, self.owner, include_tradeable=True)
+
+	def get_location_based_status(self, position):
+		warehouses = self.get_tradeable_warehouses(position)
+		if warehouses:
+			warehouse = warehouses[0] # TODO: don't ignore the other possibilities
+			player_suffix = u''
+			if warehouse.owner is not self.owner:
+				player_suffix = u' ({name})'.format(name=warehouse.owner.name)
+			return u'{name}{suffix}'.format(name=warehouse.settlement.get_component(NamedComponent).name,
+			                                suffix=player_suffix)
+		return None
+
+	def get_status(self):
+		"""Return the current status of the ship."""
+		if hasattr(self, 'route') and self.route.enabled:
+			return self.route.get_ship_status()
+		elif self.is_moving():
+			target = self.get_move_target()
+			location_based_status = self.get_location_based_status(target)
+			if location_based_status is not None:
+				#xgettext:python-format
+				return (_('Going to {location}').format(location=location_based_status), target)
+			#xgettext:python-format
+			return (_('Going to {x}, {y}').format(x=target.x, y=target.y), target)
+		else:
+			location_based_status = self.get_location_based_status(self.position)
+			if location_based_status is not None:
+				#xgettext:python-format
+				return (_('Idle at {location}').format(location=location_based_status), self.position)
+			#xgettext:python-format
+			return (_('Idle at {x}, {y}').format(x=self.position.x, y=self.position.y), self.position)
 
 class TradeShip(Ship):
 	"""Represents a trade ship."""
-	tabs = ()
-	enemy_tabs = (TraderShipOverviewTab, )
 	health_bar_y = -220
 
+	def __init__(self, x, y, **kwargs):
+		super(TradeShip, self).__init__(x, y, **kwargs)
+
 	def _possible_names(self):
-		return [ _('Trader') ]
+		return [ _(u'Trader') ]
 
 class FisherShip(FisherShipCollector, Ship):
 	"""Represents a fisher ship."""
-	tabs = ()
 	pather_class = FisherShipPather
 	health_bar_y = -50
-	is_selectable = False
+
+	in_ship_map = False # (#1023)
+
+	def _update_buoy(self):
+		pass # no buoy for the fisher

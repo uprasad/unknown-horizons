@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -25,67 +25,71 @@ import logging
 
 from fife import fife
 
-import horizons.main
-from horizons.util import ActionSetLoader
+import horizons.globals
+from horizons.util.loaders.actionsetloader import ActionSetLoader
+from horizons.util.python.callback import Callback
+from horizons.world.ingametype import IngameType
 
-class UnitClass(type):
-	def __new__(self, db, id):
-		"""
-		@param id: unit id
-		"""
-		log = logging.getLogger('world.units')
+class UnitClass(IngameType):
 
-		@classmethod
-		def load(cls, session, db, worldid):
-			self = cls.__new__(cls)
-			self.session = session
-			super(cls, self).load(db, worldid)
-			return self
+	log = logging.getLogger('world.units')
+	basepackage = 'horizons.world.units.'
+	classstring = 'Unit['
 
-		attributes = {'load': load}
-		attributes.update(db("SELECT name, value FROM data.unit_property WHERE unit = ?", str(id)))
+	_action_load_callbacks = {}
 
-		self.class_package,  self.class_name = db("SELECT class_package, class_type FROM data.unit WHERE id = ?", id)[0]
-		__import__('horizons.world.units.'+self.class_package)
-
-		return type.__new__(self, 'Unit[' + str(id) + ']',
-			(getattr(globals()[self.class_package], self.class_name),),
-			attributes)
-
-	def __init__(self, db, id, **kwargs):
+	def __init__(self, id, yaml_data):
 		"""
 		@param id: unit id.
 		"""
-		super(UnitClass, self).__init__(self, **kwargs)
-		self.id = id
-		self._object = None
-		self._loadObject(db)
-		self.radius = int(db("SELECT radius FROM data.unit WHERE id=?", id)[0][0])
-		soundfiles = db("SELECT file FROM sounds INNER JOIN object_sounds ON \
-			sounds.rowid = object_sounds.sound AND object_sounds.object = ?", self.id)
-		self.soundfiles = [ i[0] for i in soundfiles ]
+		super(UnitClass, self).__init__(id, yaml_data)
 
-	def _loadObject(cls, db):
+	@classmethod
+	def ensure_action_loaded(cls, action_set_id, action):
+		"""Called when an action is actually needed, makes sure it is loaded then"""
+		try:
+			# load for all instances, don't care for separating again per object
+			for i in cls._action_load_callbacks[action_set_id][action]:
+				i()
+			del cls._action_load_callbacks[action_set_id][action]
+		except KeyError:
+			pass
+
+	def _loadObject(cls):
 		"""Loads the object with all animations.
 		"""
 		cls.log.debug('Loading unit %s', cls.id)
 		try:
-			cls._object = horizons.main.fife.engine.getModel().createObject(str(cls.id), 'unit')
+			cls._real_object = horizons.globals.fife.engine.getModel().createObject(str(cls.id), 'unit')
 		except RuntimeError:
 			cls.log.debug('Already loaded unit %s', cls.id)
-			cls._object = horizons.main.fife.engine.getModel().getObject(str(cls.id), 'unit')
+			cls._real_object = horizons.globals.fife.engine.getModel().getObject(str(cls.id), 'unit')
 			return
-		cls._object.setPather(horizons.main.fife.engine.getModel().getPather('RoutePather'))
-		cls._object.setBlocking(False)
-		cls._object.setStatic(False)
-		action_sets = ActionSetLoader.get_action_sets()
-		for (action_set_id,) in db("SELECT action_set_id FROM data.action_set WHERE object_id=?", cls.id):
-			for action_id in action_sets[action_set_id].iterkeys():
-				action = cls._object.createAction(action_id+"_"+str(action_set_id))
-				fife.ActionVisual.create(action)
-				for rotation in action_sets[action_set_id][action_id].iterkeys():
-					anim_id = horizons.main.fife.animationpool.addResourceFromFile( \
-						str(action_set_id)+"-"+str(action_id)+"-"+ \
-						str(rotation) + ':shift:center+0,bottom+8')
-					action.get2dGfxVisual().addAnimation(int(rotation), anim_id)
-					action.setDuration(horizons.main.fife.animationpool.getAnimation(anim_id).getDuration())
+		cls._real_object.setPather(horizons.globals.fife.engine.getModel().getPather('RoutePather'))
+		cls._real_object.setBlocking(False)
+		cls._real_object.setStatic(False)
+		all_action_sets = ActionSetLoader.get_sets()
+		# create load callbacks to be called when the actions are needed
+		#{ action_set : { action_id : [ load0, load1, ..., loadn ]}}
+		# (loadi are load functions of objects, there can be many per as_id and action)
+		# cls.action_sets looks like this: {tier1: {set1: None, set2: preview2, ..}, ..}
+		for set_dict in cls.action_sets.itervalues():
+			for action_set in set_dict: # set1, set2, ...
+				if not action_set in cls._action_load_callbacks:
+					cls._action_load_callbacks[action_set] = {}
+				for action_id in all_action_sets[action_set]: # idle, move, ...
+					if not action_id in cls._action_load_callbacks[action_set]:
+						cls._action_load_callbacks[action_set][action_id] = []
+					cls._action_load_callbacks[action_set][action_id].append(
+					  Callback(cls._do_load, all_action_sets, action_set, action_id))
+
+	def _do_load(cls, all_action_sets, action_set, action_id):
+		params = {'id': action_set, 'action': action_id}
+		action = cls._real_object.createAction('{action}_{id}'.format(**params))
+		fife.ActionVisual.create(action)
+		for rotation in all_action_sets[action_set][action_id]:
+			params['rot'] = rotation
+			path = '{id}+{action}+{rot}:shift:center+0,bottom+8'.format(**params)
+			anim = horizons.globals.fife.animationloader.loadResource(path)
+			action.get2dGfxVisual().addAnimation(int(rotation), anim)
+			action.setDuration(anim.getDuration())

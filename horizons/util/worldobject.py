@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -22,9 +22,8 @@
 import weakref
 import logging
 
-from changelistener import ChangeListener
-
-from horizons.util.python import decorators
+from horizons.util.changelistener import ChangeListener
+from horizons.messaging import WorldObjectDeleted
 
 class WorldObjectNotFound(KeyError):
 	pass
@@ -44,7 +43,7 @@ class WorldObject(ChangeListener):
 
 	def __init(self, worldid=None):
 		self.worldid = worldid if worldid is not None else WorldObject.__next_id
-		assert self.worldid not in WorldObject.__objects
+		assert self.worldid not in WorldObject.__objects, "WorldObject ID(" + str(worldid) + ") already in use by " + str(self.get_object_by_id(worldid))
 		WorldObject.__objects[self.worldid] = self
 		# Make sure that new WorldIDs are always higher than every other WorldObject
 		WorldObject.__next_id = max(WorldObject.__next_id, self.worldid+1)
@@ -56,7 +55,7 @@ class WorldObject(ChangeListener):
 		"""
 		try:
 			return cls.__objects[id]
-		except KeyError, e:
+		except KeyError as e:
 			raise WorldObjectNotFound(e.args[0])
 
 	@classmethod
@@ -70,11 +69,16 @@ class WorldObject(ChangeListener):
 	def load(self, db, worldid):
 		super(WorldObject, self).load(db, worldid)
 		self.__init(worldid)
-		self.log.debug('loading worldobject %s %s', worldid, self)
+		self.log.debug('Loading worldobject %s %s', worldid, self)
 
 	def remove(self):
+		WorldObjectDeleted.broadcast(self, self, self.worldid)
 		super(WorldObject, self).remove()
-		pass # removing is done implicitly by WeakValueDict
+		self.log.debug("Removing WorldObject %s %s", self.worldid, self)
+		del WorldObject.__objects[self.worldid]
+
+	def __lt__(self, other):
+		return self.worldid < other.worldid
 
 	# for testing:
 	@classmethod

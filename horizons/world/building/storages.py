@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -20,57 +20,72 @@
 # ###################################################
 
 from horizons.world.resourcehandler import StorageResourceHandler
-from horizons.world.building.collectingbuilding import CollectingBuilding
-from horizons.gui.tabs import BranchOfficeOverviewTab, BuySellTab, InventoryTab, \
-		 MarketPlaceOverviewTab, AccountTab, MarketPlaceSettlerTabSettlerTab
-from horizons.util import WorldObject
-from building import BasicBuilding, SelectableBuilding
-from buildable import BuildableSingle, BuildableSingleFromShip
-from horizons.constants import STORAGE
-from horizons.world.production.producer import ProducerBuilding
+from horizons.world.building.buildingresourcehandler import BuildingResourceHandler
+from horizons.world.building.building import BasicBuilding
+from horizons.world.building.buildable import BuildableSingle, BuildableSingleFromShip
+from horizons.component.storagecomponent import StorageComponent
+from horizons.world.building.production import ProductionBuilding
+from horizons.world.building.path import Path
+from horizons.world.status import InventoryFullStatus
+from horizons.component.collectingcomponent import CollectingComponent
 
-class StorageBuilding(SelectableBuilding, BuildableSingle, StorageResourceHandler, \
-                      CollectingBuilding, BasicBuilding):
+class StorageBuilding(StorageResourceHandler,
+                      BuildingResourceHandler, BasicBuilding):
 	"""Building that gets pickups and provides them for anyone.
-	Inherited eg. by branch office, storage tent.
+	Inherited eg. by warehouse, storage tent.
 	These objects don't have a storage themselves, but use the settlement storage.
 	"""
-	tabs = (BranchOfficeOverviewTab, InventoryTab, BuySellTab, AccountTab)
-	has_own_inventory = False # we share island inventory
-	def __init__(self, x, y, owner, instance = None, **kwargs):
-		super(StorageBuilding, self).__init__(x = x, y = y, owner = owner, instance = instance, **kwargs)
-		self.__init()
+	def __init__(self, x, y, owner, instance=None, **kwargs):
+		super(StorageBuilding, self).__init__(x=x, y=y, owner=owner, instance=instance, **kwargs)
 
-	def __init(self):
-		self.inventory.adjust_limit(self.session.db.get_storage_building_capacity(self.id))
-
-	def create_inventory(self):
-		self.inventory = self.settlement.inventory
-		self.inventory.add_change_listener(self._changed)
+	def initialize(self):
+		super(StorageBuilding, self).initialize()
+		self.get_component(StorageComponent).inventory.add_change_listener(self._changed)
+		# add limit, it will be saved so don't set on load()
+		self.get_component(StorageComponent).inventory.adjust_limit(self.session.db.get_storage_building_capacity(self.id))
 
 	def remove(self):
-		# this shouldn't be absolutely necessary since the changelistener uses weak references
-		self.inventory.remove_change_listener(self._changed)
-
-		self.inventory.adjust_limit(-self.session.db.get_storage_building_capacity(self.id))
+		self.get_component(StorageComponent).inventory.remove_change_listener(self._changed)
+		self.get_component(StorageComponent).inventory.adjust_limit(-self.session.db.get_storage_building_capacity(self.id))
 		super(StorageBuilding, self).remove()
 
 	def load(self, db, worldid):
 		super(StorageBuilding, self).load(db, worldid)
-		self.__init()
+		# limit will be save/loaded by the storage, don't do anything here
+		self.get_component(StorageComponent).inventory.add_change_listener(self._changed)
 
-class BranchOffice(StorageBuilding, BuildableSingleFromShip):
+	def get_utilisation_history_length(self):
+		collecting_comp = self.get_component(CollectingComponent)
+		return None if not collecting_comp.get_local_collectors() else collecting_comp.get_local_collectors()[0].get_utilisation_history_length()
+
+	def get_collector_utilisation(self):
+		collectors = self.get_component(CollectingComponent).get_local_collectors()
+		if not collectors:
+			return None
+		return sum(collector.get_utilisation() for collector in collectors) / float(len(collectors))
+
+class StorageTent(StorageBuilding, BuildableSingle):
+	"""Can't inherit from Buildable* in StorageBuilding because of mro issues."""
+	pass
+
+class Warehouse(StorageBuilding, BuildableSingleFromShip):
 	tearable = False
 	def __init__(self, *args, **kwargs):
-		super(BranchOffice, self).__init__(*args, **kwargs)
-		self.settlement.branch_office = self # we never need to unset this since bo's are indestructible
+		super(Warehouse, self).__init__(*args, **kwargs)
+		self.settlement.warehouse = self # we never need to unset this since bo's are indestructible
+		# settlement warehouse setting is done at the settlement for loading
 
-	def load(self, db, worldid):
-		super(BranchOffice, self).load(db, worldid)
-		self.settlement.branch_office = self
+	def get_status_icons(self):
+		banned_classes = (InventoryFullStatus,)
+		return [ i for i in super(Warehouse, self).get_status_icons() if
+		         not i.__class__ in banned_classes ]
 
-class MarketPlace(ProducerBuilding, StorageBuilding):
-	tabs = (MarketPlaceOverviewTab, AccountTab, MarketPlaceSettlerTabSettlerTab)
+class MainSquare(Path, StorageBuilding, ProductionBuilding):
+	walkable = True
+
+	def recalculate_orientation(self):
+		# change gfx according to roads here
+		pass
 
 	def _load_provided_resources(self):
 		"""Storages provide every res.

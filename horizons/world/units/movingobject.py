@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -22,19 +22,22 @@
 import logging
 from fife import fife
 
-import horizons.main
 from horizons.scheduler import Scheduler
 
-from horizons.world.pathfinding import PathBlockedError
-from horizons.util import Point, WeakMethodList, decorators
-from horizons.world.concreteobject import ConcretObject
+from horizons.util.shapes import Point
+from horizons.util.pathfinding import PathBlockedError
+from horizons.util.python import decorators
+from horizons.util.python.weakmethodlist import WeakMethodList
+from horizons.world.concreteobject import ConcreteObject
 from horizons.constants import GAME_SPEED
+from horizons.component.componentholder import ComponentHolder
+from horizons.world.units import UnitClass
 
 class MoveNotPossible(Exception):
 	"""Gets thrown when the unit should move some where, but there is no possible path"""
 	pass
 
-class MovingObject(ConcretObject):
+class MovingObject(ComponentHolder, ConcreteObject):
 	"""This class provides moving functionality and is to be inherited by Unit.
 	Its purpose is to provide a cleaner division of the code.
 
@@ -46,7 +49,6 @@ class MovingObject(ConcretObject):
 	*moving methods:
 	- move
 	- stop
-	- move_back
 	- add_move_callback
 
 	*getters/checkers:
@@ -77,6 +79,9 @@ class MovingObject(ConcretObject):
 
 		self.path = self.pather_class(self, session=self.session)
 
+		self._exact_model_coords = fife.ExactModelCoordinate() # save instance since construction is expensive (no other purpose)
+		self._fife_location = None
+
 	def check_move(self, destination):
 		"""Tries to find a path to destination
 		@param destination: destination supported by pathfinding
@@ -88,7 +93,7 @@ class MovingObject(ConcretObject):
 		"""Returns whether unit is currently moving"""
 		return self.__is_moving
 
-	def stop(self, callback = None):
+	def stop(self, callback=None):
 		"""Stops a unit with currently no possibility to continue the movement.
 		The unit actually stops moving when current move (to the next coord) is finished.
 		@param callback: a parameter supported by WeakMethodList. is executed immediately if unit isn't moving
@@ -109,27 +114,25 @@ class MovingObject(ConcretObject):
 		# this case shouldn't happen, but no other action might be available (e.g. ships)
 		self._move_action = 'idle'
 
-	def move(self, destination, callback = None, destination_in_building = False, action='move', \
-	         _path_calculated = False, blocked_callback = None, path = None):
+	def move(self, destination, callback=None, destination_in_building=False, action='move',
+	         blocked_callback=None, path=None):
 		"""Moves unit to destination
 		@param destination: Point or Rect
 		@param callback: a parameter supported by WeakMethodList. Gets called when unit arrives.
 		@param action: action as string to use for movement
-		@param _path_calculated: only for internal use
 		@param blocked_callback: a parameter supported by WeakMethodList. Gets called when unit gets blocked.
 		@param path: a precalculated path (return value of FindPath()())
 		"""
-		if not _path_calculated and not path:
+		if not path:
 			# calculate the path
 			move_possible = self.path.calc_path(destination, destination_in_building)
 
-			self.log.debug("%s: move to %s; possible: %s; is_moving: %s", self, \
+			self.log.debug("%s: move to %s; possible: %s; is_moving: %s", self,
 			               destination, move_possible, self.is_moving())
 
 			if not move_possible:
 				raise MoveNotPossible
-
-		if path:
+		else:
 			self.path.move_on_path(path, destination_in_building=destination_in_building)
 
 		self.move_callbacks = WeakMethodList(callback)
@@ -145,16 +148,6 @@ class MovingObject(ConcretObject):
 			# assumed e.g. in the collector code
 			Scheduler().add_new_object(self._move_tick, self)
 
-	def move_back(self, callback = None, destination_in_building = False, action='move', blocked_callback = None):
-		"""Return to the place where last movement started. Same path is used, but in reverse order.
-		@param callback: same as callback in move()
-		@param destination_in_building: bool, whether target is in a building
-		@param blocked_callback: same as blocked_callback in move()
-		"""
-		self.log.debug("%s: Moving back to %s", self, self.get_move_target())
-		self.path.revert_path(destination_in_building)
-		self.move(None, callback, destination_in_building, action, _path_calculated = True, blocked_callback = blocked_callback)
-
 	def _movement_finished(self):
 		self.log.debug("%s: movement finished. calling callbacks %s", self, self.move_callbacks)
 		self._next_target = self.position
@@ -162,13 +155,14 @@ class MovingObject(ConcretObject):
 		self.move_callbacks.execute()
 
 	@decorators.make_constants()
-	def _move_tick(self, resume = False):
+	def _move_tick(self, resume=False):
 		"""Called by the scheduler, moves the unit one step for this tick.
 		"""
 		assert self._next_target is not None
 
-		# this data structure is needed multiple times, only create once
-		fife_location = fife.Location(self._instance.getLocationRef().getLayer())
+		if self._fife_location is None:
+			# this data structure is needed multiple times, only create once
+			self._fife_location = fife.Location(self._instance.getLocationRef().getLayer())
 
 		if resume:
 			self.__is_moving = True
@@ -176,9 +170,10 @@ class MovingObject(ConcretObject):
 			#self.log.debug("%s move tick from %s to %s", self, self.last_position, self._next_target)
 			self.last_position = self.position
 			self.position = self._next_target
-			fife_location.setExactLayerCoordinates(fife.ExactModelCoordinate(self.position.x, self.position.y, 0))
+			self._exact_model_coords.set(self.position.x, self.position.y, 0)
+			self._fife_location.setExactLayerCoordinates(self._exact_model_coords)
 			# it's safe to use location here (thisown is 0, set by swig, and setLocation uses reference)
-			self._instance.setLocation(fife_location)
+			self._instance.setLocation(self._fife_location)
 			self._changed()
 
 		# try to get next step, handle a blocked path
@@ -195,15 +190,26 @@ class MovingObject(ConcretObject):
 				self.__is_moving = False
 				self._next_target = self.position
 				if self.blocked_callbacks:
-					self.log.warning('PATH FOR UNIT %s is blocked. Calling blocked_callback', self)
+					self.log.debug('PATH FOR UNIT %s is blocked. Calling blocked_callback', self)
 					self.blocked_callbacks.execute()
+					"""
+					# TODO: This is supposed to delegate control over the behaviour of the unit to the owner.
+					#       It is currently not used in a meaningful manner and possibly will be removed,
+					#       as blocked_callback solves this problem more elegantly.
+					#       Also, this sometimes triggers for collectors, who are supposed to use the
+					#       generic solution. Only uncomment this code if this problem is fixed, else
+					#       collectors will get stuck.
 				elif self.owner is not None and hasattr(self.owner, "notify_unit_path_blocked"):
-					self.log.warning('PATH FOR UNIT %s is blocked. Delegating to owner %s', self, self.owner)
+					self.log.debug('PATH FOR UNIT %s is blocked. Delegating to owner %s', self, self.owner)
 					self.owner.notify_unit_path_blocked(self)
+					"""
 				else:
 					# generic solution: retry in 2 secs
-					self.log.warning('PATH FOR UNIT %s is blocked. Retry in 2 secs', self)
-					Scheduler().add_new_object(self._move_tick, self, \
+					self.log.debug('PATH FOR UNIT %s is blocked. Retry in 2 secs', self)
+					# technically, the ship doesn't move, but it is in the process of moving,
+					# as it will continue soon in general. Needed in border cases for add_move_callback
+					self.__is_moving = True
+					Scheduler().add_new_object(self._move_tick, self,
 					                           GAME_SPEED.TICKS_PER_SECOND * 2)
 				self.log.debug("Unit %s: path is blocked, no way around", self)
 				return
@@ -220,10 +226,13 @@ class MovingObject(ConcretObject):
 		move_time = self.get_unit_velocity()
 
 		#location = fife.Location(self._instance.getLocation().getLayer())
-		fife_location.setExactLayerCoordinates(fife.ExactModelCoordinate(self._next_target.x, self._next_target.y, 0))
+		self._exact_model_coords.set(self._next_target.x, self._next_target.y, 0)
+		self._fife_location.setExactLayerCoordinates(self._exact_model_coords)
+
+		UnitClass.ensure_action_loaded(self._action_set_id, self._move_action) # lazy load move action
 
 		# it's safe to use location here (thisown is 0, set by swig, and setLocation uses reference)
-		self._instance.move(self._move_action+"_"+str(self._action_set_id), fife_location, \
+		self._instance.move(self._move_action+"_"+str(self._action_set_id), self._fife_location,
 												float(self.session.timer.get_ticks(1)) / move_time[0])
 		# coords per sec
 
@@ -237,6 +246,14 @@ class MovingObject(ConcretObject):
 				# start callback when this function is done
 				Scheduler().add_new_object(self._conditional_callbacks[cond], self)
 				del self._conditional_callbacks[cond]
+
+	def teleport(self, destination, callback=None, destination_in_building=False):
+		"""Like move, but nearly instantaneous"""
+		if hasattr(destination, "position"):
+			destination_coord = destination.position.center.to_tuple()
+		else:
+			destination_coord = destination
+		self.move(destination, callback=callback, destination_in_building=destination_in_building, path=[destination_coord])
 
 	def add_move_callback(self, callback):
 		"""Registers callback to be executed when movement of unit finishes.
@@ -256,8 +273,9 @@ class MovingObject(ConcretObject):
 		self._conditional_callbacks[condition] = callback
 
 	def get_unit_velocity(self):
-		"""Returns number of ticks that it takes to do a straight (i.e. vertical or horizontal) movement
-		@return: int
+		"""Returns the number of ticks that it takes to do a straight (i.e. vertical or horizontal)
+		or diagonal movement as a tuple in this order.
+		@return: (int, int)
 		"""
 		tile = self.session.world.get_tile(self.position)
 		if self.id in tile.velocity:
@@ -281,6 +299,6 @@ class MovingObject(ConcretObject):
 		if path_loaded:
 			self.__is_moving = True
 			self._setup_move()
-			Scheduler().add_new_object(self._move_tick, self, 1)
+			Scheduler().add_new_object(self._move_tick, self, run_in=0)
 
 decorators.bind_all(MovingObject)

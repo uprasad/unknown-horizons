@@ -1,17 +1,21 @@
 <?xml version="1.0"?>
-<Container name="change_name_dialog_window" size="374,230" position="325,235">
-<Icon image="content/gui/images/background/notice.png" />
+<Container name="change_name_dialog_window" size="374,230" position="325,235"
+	background_image="content/gui/images/background/notice230.png">
 
 <VBox position="50,30" padding="10">
 	<Label name="headline_change_name" text="Change name" />
 	<Icon image="content/gui/images/background/hr.png" />
+	<HBox padding="10">
+		<Label name="old_name_label" text="Old name:" />
+		<Label name="old_name" text="" />
+	</HBox>
 	<Label name="enter_new_name_lbl" text="Enter new name:"
 		wrap_text="1" max_size="150,40" />
 	<TextField name="new_name" max_size="150,20" min_size="150,20" />
 
 	<HBox>
 		<CancelButton />
-		<OkButton tooltip="Apply the new name" />
+		<OkButton helptext="Apply the new name" />
 	</HBox>
 </VBox>
 

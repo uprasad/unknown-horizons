@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -23,10 +23,10 @@
 import logging
 
 from fife import fife
-
-import horizons.main
+import horizons.globals
 
 from horizons.constants import LAYERS, GROUND
+from horizons.util.loaders.tilesetloader import TileSetLoader
 
 class SurfaceTile(object):
 	is_water = False
@@ -43,14 +43,38 @@ class SurfaceTile(object):
 		self.settlement = None
 		self.blocked = False
 		self.object = None
+		self.session = session
 
-		self._instance = session.view.layers[self.layer].createInstance(self._object, \
-		                    fife.ModelCoordinate(int(x), int(y), 0), "")
+		layer = session.view.layers[self.layer]
+		self._instance = layer.createInstance(self._object,
+		                                      fife.ModelCoordinate(int(x), int(y), 0),
+		                                      "")
 		fife.InstanceVisual.create(self._instance)
 
 	def __str__(self):
-		return "SurfaceTile(x=%s, y=%s, water=%s, obj=%s)" % \
-		       (self.x, self.y, self.is_water, self.object)
+		return "SurfaceTile(id=%s, x=%s, y=%s, water=%s, obj=%s)" % \
+		       (self.id, self.x, self.y, self.is_water, self.object)
+
+	def act(self, action, rotation):
+		self._instance.setRotation(rotation)
+
+		facing_loc = fife.Location(self.session.view.layers[self.layer])
+		x = self.x
+		y = self.y
+		layer_coords = list((x, y, 0))
+
+		if rotation == 45:
+			layer_coords[0] = x+3
+		elif rotation == 135:
+			layer_coords[1] = y-3
+		elif rotation == 225:
+			layer_coords[0] = x-3
+		elif rotation == 315:
+			layer_coords[1] = y+3
+		facing_loc.setLayerCoordinates(fife.ModelCoordinate(*layer_coords))
+
+		self._instance.act(str('%s_%s' % (action, self._tile_set_id)), facing_loc, True)
+
 
 class Ground(SurfaceTile):
 	"""Default land surface"""
@@ -60,6 +84,16 @@ class Water(SurfaceTile):
 	"""Default water surface"""
 	is_water = True
 	layer = LAYERS.WATER
+
+class WaterDummy(Water):
+	def __init__(self, session, x, y):
+		# no super call, we don't have an instance
+		self.x = x
+		self.y = y
+
+		self.settlement = None
+		self.blocked = False
+		self.object = None
 
 
 class GroundClass(type):
@@ -76,54 +110,45 @@ class GroundClass(type):
 		self.id = id
 		self._object = None
 		self.velocity = {}
-		for unit, straight, diagonal in db("SELECT unit, time_move_straight, time_move_diagonal FROM data.unit_velocity WHERE ground = ?", self.id):
-			self.velocity[unit] = (straight, diagonal)
 		self.classes = ['ground[' + str(id) + ']']
-		for (name,) in db("SELECT class FROM data.ground_class WHERE ground = ?", id):
+		for (name,) in db("SELECT class FROM ground_class WHERE ground = ?", id):
 			self.classes.append(name)
-		self._loadObject(db)
+		if id != -1	:
+			self._tile_set_id = db.get_random_tile_set(id)
+			self._loadObject(db)
 
 	def __new__(self, db, id):
 		"""
 		@param id: ground id.
 		"""
-		if id == GROUND.WATER:
+		if id == GROUND.WATER[0]:
 			return type.__new__(self, 'Ground[' + str(id) + ']', (Water,), {})
+		elif id == -1:
+			return type.__new__(self, 'Ground[' + str(id) + ']', (WaterDummy,), {})
 		else:
 			return type.__new__(self, 'Ground[' + str(id) + ']', (Ground,), {})
 
-	def _loadObject(self, db):
+	def _loadObject(cls, db):
 		""" Loads the ground object from the db (animations, etc)
 		"""
-		self.log.debug('Loading ground %s', self.id)
+		cls.log.debug('Loading ground %s', cls.id)
 		try:
-			self._object = horizons.main.fife.engine.getModel().createObject(str(self.id), 'ground')
+			cls._object = horizons.globals.fife.engine.getModel().createObject(str(cls.id), 'ground')
 		except RuntimeError:
-			self.log.debug('Already loaded ground %s', self.id)
-			self._object = horizons.main.fife.engine.getModel().getObject(str(self.id), 'ground')
+			cls.log.debug('Already loaded ground %s', cls.id)
+			cls._object = horizons.globals.fife.engine.getModel().getObject(str(cls.id), 'ground')
 			return
-		fife.ObjectVisual.create(self._object)
-		visual = self._object.get2dGfxVisual()
 
-		#tile_sets = TileSetLoader.get_sets()
-		#for (tile_set_id,) in db("SELECT tile_set_name FROM data.tile_set WHERE ground_id=?", cls.id):
-		#	for action_id in tile_sets[tile_set_id].iterkeys():
-		#		action = cls._object.createAction(action_id+"_"+str(tile_set_id))
-		#		fife.ActionVisual.create(action)
-		#		for rotation in action_sets[tile_set_id][action_id].iterkeys():
-		#			anim_id = horizons.main.fife.animationpool.addResourceFromFile( \
-		#				str(action_set_id)+"-"+str(action_id)+"-"+ \
-		#				str(rotation) + ':shift:center+0,bottom+8')
-		#			action.get2dGfxVisual().addAnimation(int(rotation), anim_id)
-		#			action.setDuration(horizons.main.fife.animationpool.getAnimation(anim_id).getDuration())
+		fife.ObjectVisual.create(cls._object)
 
-		animation_45, animation_135, animation_225, animation_315 = \
-		     db("SELECT \
-		     (SELECT file FROM data.animation WHERE animation_id = animation_45 LIMIT 1), \
-		     (SELECT file FROM data.animation WHERE animation_id = animation_135 LIMIT 1), \
-		     (SELECT file FROM data.animation WHERE animation_id = animation_225 LIMIT 1), \
-		     (SELECT file FROM data.animation WHERE animation_id = animation_315 LIMIT 1) \
-		     FROM data.ground WHERE id = ?", self.id)[0]
-		for rotation, file in [(45, animation_45), (135, animation_135), (225, animation_225), (315, animation_315)]:
-			img = horizons.main.fife.imagepool.addResourceFromFile(file)
-			visual.addStaticImage(int(rotation), img)
+		tile_sets = TileSetLoader.get_sets()
+		for (tile_set_id,) in db("SELECT set_id FROM tile_set WHERE ground_id=?", cls.id):
+			for action_id in tile_sets[tile_set_id].iterkeys():
+				action = cls._object.createAction(action_id+"_"+str(tile_set_id))
+				fife.ActionVisual.create(action)
+				for rotation in tile_sets[tile_set_id][action_id].iterkeys():
+					anim = horizons.globals.fife.animationloader.loadResource(
+						str(tile_set_id)+"+"+str(action_id)+"+"+
+						str(rotation) + ':shift:center+0,bottom+8')
+					action.get2dGfxVisual().addAnimation(int(rotation), anim)
+					action.setDuration(anim.getDuration())

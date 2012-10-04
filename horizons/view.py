@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -23,22 +23,22 @@ import math
 import time
 from fife import fife
 
-import horizons.main
+import horizons.globals
 
-from horizons.util import ChangeListener, Rect
+from horizons.util.changelistener import ChangeListener
+from horizons.util.shapes import Rect
 from horizons.constants import LAYERS, VIEW, GAME_SPEED
 
 class View(ChangeListener):
 	"""Class that takes care of all the camera and rendering stuff."""
 
-	def __init__(self, session, center = (0, 0)):
+	def __init__(self, session):
 		"""
 		@param session: Session instance
-		@param center: center position for the main camera
 		"""
 		super(View, self).__init__()
 		self.session = session
-		self.model = horizons.main.fife.engine.getModel()
+		self.model = horizons.globals.fife.engine.getModel()
 		self.map = self.model.createMap("map")
 
 		cellgrid = self.model.getCellGrid('square')
@@ -52,22 +52,28 @@ class View(ChangeListener):
 		self.layers = []
 		for i in xrange(0, LAYERS.NUM):
 			self.layers.append(self.map.createLayer(str(i), cellgrid))
-			self.layers[i].setPathingStrategy(fife.CELL_EDGES_ONLY)
+			self.layers[i].setPathingStrategy(fife.CELL_EDGES_AND_DIAGONALS)
+			if hasattr(self.layers[i], 'setWalkable'):
+				self.layers[i].setWalkable(True)
 
-		self.cam = self.map.addCamera("main", self.layers[len(self.layers) - 1], \
-		                               fife.Rect(0, 0, \
-		                                         horizons.main.fife.engine_settings.getScreenWidth(), \
-		                                         horizons.main.fife.engine_settings.getScreenHeight()) \
+		if hasattr(self.map, 'initializeCellCaches'):
+			self.map.initializeCellCaches()
+			self.map.finalizeCellCaches()
+
+		self.cam = self.map.addCamera("main", self.layers[-1],
+		                               fife.Rect(0, 0,
+		                                         horizons.globals.fife.engine_settings.getScreenWidth(),
+		                                         horizons.globals.fife.engine_settings.getScreenHeight())
 		                               )
 		self.cam.setCellImageDimensions(*VIEW.CELL_IMAGE_DIMENSIONS)
 		self.cam.setRotation(VIEW.ROTATION)
 		self.cam.setTilt(VIEW.TILT)
-		self.cam.setZoom(VIEW.ZOOM)
+		self.cam.setZoom(VIEW.ZOOM_DEFAULT)
 
 		self.cam.resetRenderers()
 		self.renderer = {}
-		for r in ('InstanceRenderer', 'GridRenderer', \
-		          'CellSelectionRenderer', 'BlockingInfoRenderer', 'FloatingTextRenderer', \
+		for r in ('InstanceRenderer', 'GridRenderer',
+		          'CellSelectionRenderer', 'BlockingInfoRenderer', 'FloatingTextRenderer',
 		          'QuadTreeRenderer', 'CoordinateRenderer', 'GenericRenderer'):
 			self.renderer[r] = getattr(fife, r).getInstance(self.cam) if hasattr(fife, r) else self.cam.getRenderer(r)
 			self.renderer[r].clearActiveLayers()
@@ -77,13 +83,13 @@ class View(ChangeListener):
 		self.renderer['GridRenderer'].addActiveLayer(self.layers[LAYERS.GROUND])
 
 		#Setup autoscroll
-		horizons.main.fife.pump.append(self.do_autoscroll)
+		horizons.globals.fife.pump.append(self.do_autoscroll)
 		self.time_last_autoscroll = time.time()
 		self._autoscroll = [0, 0]
 		self._autoscroll_keys = [0, 0]
 
 	def end(self):
-		horizons.main.fife.pump.remove(self.do_autoscroll)
+		horizons.globals.fife.pump.remove(self.do_autoscroll)
 		self.model.deleteMaps()
 		super(View, self).end()
 
@@ -96,22 +102,17 @@ class View(ChangeListener):
 		pos.x = x
 		pos.y = y
 		self.cam.setLocation(loc)
+		self.cam.refresh()
 		self._changed()
 
 	def autoscroll(self, x, y):
-		"""
-		@param x:
-		@param y:
-		"""
-		if horizons.main.fife.get_uh_setting('EdgeScrolling'):
+		"""Scrolling via mouse (reaching edge of screen)"""
+		if horizons.globals.fife.get_uh_setting('EdgeScrolling'):
 			self._autoscroll[0] = x
 			self._autoscroll[1] = y
 
 	def autoscroll_keys(self, x, y):
-		"""
-		@param x:
-		@param y:
-		"""
+		"""Scrolling via keyboard keys"""
 		self._autoscroll_keys[0] = x
 		self._autoscroll_keys[1] = y
 
@@ -123,8 +124,8 @@ class View(ChangeListener):
 			self.time_last_autoscroll = time.time()
 			return
 		t = time.time()
-		self.scroll( \
-		  (self._autoscroll[0]+self._autoscroll_keys[0]) * GAME_SPEED.TICKS_PER_SECOND * (t - self.time_last_autoscroll), \
+		self.scroll(
+		  (self._autoscroll[0]+self._autoscroll_keys[0]) * GAME_SPEED.TICKS_PER_SECOND * (t - self.time_last_autoscroll),
 		  (self._autoscroll[1]+self._autoscroll_keys[1]) * GAME_SPEED.TICKS_PER_SECOND * (t - self.time_last_autoscroll))
 		self.time_last_autoscroll = t
 		self._changed()
@@ -136,6 +137,7 @@ class View(ChangeListener):
 		"""
 		loc = self.cam.getLocation()
 		pos = loc.getExactLayerCoordinatesRef()
+
 		if x != 0:
 			pos.x += x * math.cos(math.pi * self.cam.getRotation() / 180.0) / self.cam.getZoom() / 32.0
 			pos.y += x * math.sin(math.pi * self.cam.getRotation() / 180.0) / self.cam.getZoom() / 32.0
@@ -154,41 +156,67 @@ class View(ChangeListener):
 			pos.y = self.session.world.min_y
 
 		self.cam.setLocation(loc)
-		horizons.main.fife.soundmanager.setListenerPosition(pos.x, pos.y, 1)
+		for i in ['speech', 'effects']:
+			emitter = horizons.globals.fife.sound.emitter[i]
+			if emitter is not None:
+				emitter.setPosition(pos.x, pos.y, 1)
+		if horizons.globals.fife.get_fife_setting("PlaySounds"):
+			horizons.globals.fife.sound.soundmanager.setListenerPosition(pos.x, pos.y, 1)
 		self._changed()
 
-	def set_location(self, location):
-		loc = self.cam.getLocation()
-		pos = loc.getExactLayerCoordinatesRef()
-		pos.x, pos.y = location[0], location[1]
-		self.cam.setLocation(loc)
-		self.cam.refresh()
-		self._changed()
 
-	def zoom_out(self):
+	def _prepare_zoom_to_cursor(self, zoom):
+		"""Change the camera's position to accommodation zooming to the specified setting."""
+		def middle(click_coord, scale, length):
+			mid = length / 2.0
+			return int(round(mid - (click_coord - mid) * (scale - 1)))
+
+		scale = self.cam.getZoom() / zoom
+		x, y = horizons.globals.fife.cursor.getPosition()
+		new_x = middle(x, scale, horizons.globals.fife.engine_settings.getScreenWidth())
+		new_y = middle(y, scale, horizons.globals.fife.engine_settings.getScreenHeight())
+		screen_point = fife.ScreenPoint(new_x, new_y)
+		map_point = self.session.view.cam.toMapCoordinates(screen_point, False)
+		self.session.view.center(map_point.x, map_point.y)
+
+	def zoom_out(self, track_cursor=False):
 		zoom = self.cam.getZoom() * VIEW.ZOOM_LEVELS_FACTOR
-		if(zoom < VIEW.ZOOM_MIN):
+		if zoom < VIEW.ZOOM_MIN:
 			zoom = VIEW.ZOOM_MIN
+		if track_cursor:
+			self._prepare_zoom_to_cursor(zoom)
 		self.set_zoom(zoom)
 
-	def zoom_in(self):
+	def zoom_in(self, track_cursor=False):
 		zoom = self.cam.getZoom() / VIEW.ZOOM_LEVELS_FACTOR
-		if(zoom > VIEW.ZOOM_MAX):
+		if zoom > VIEW.ZOOM_MAX:
 			zoom = VIEW.ZOOM_MAX
+		if track_cursor:
+			self._prepare_zoom_to_cursor(zoom)
 		self.set_zoom(zoom)
 
 	def get_zoom(self):
 		return self.cam.getZoom()
 
 	def set_zoom(self, zoom):
+		in_icon = self.session.ingame_gui.widgets['minimap'].findChild(name='zoomIn')
+		out_icon = self.session.ingame_gui.widgets['minimap'].findChild(name='zoomOut')
 		self.cam.setZoom(zoom)
+		if zoom == VIEW.ZOOM_MIN:
+			out_icon.set_inactive()
+		else:
+			out_icon.set_active()
+		if zoom == VIEW.ZOOM_MAX:
+			in_icon.set_inactive()
+		else:
+			in_icon.set_active()
 		self._changed()
 
 	def rotate_right(self):
-		self.cam.setRotation((self.cam.getRotation() + 90) % 360)
+		self.cam.setRotation((self.cam.getRotation() - 90) % 360)
 
 	def rotate_left(self):
-		self.cam.setRotation((self.cam.getRotation() - 90) % 360)
+		self.cam.setRotation((self.cam.getRotation() + 90) % 360)
 
 	def set_rotation(self, rotation):
 		self.cam.setRotation(rotation)
@@ -198,10 +226,12 @@ class View(ChangeListener):
 		"""Returns the coords of what is displayed on the screen as Rect"""
 		coords = self.cam.getLocationRef().getLayerCoordinates()
 		cell_dim = self.cam.getCellImageDimensions()
-		screen_width_as_coords = (horizons.main.fife.engine_settings.getScreenWidth()/cell_dim.x, \
-		                          horizons.main.fife.engine_settings.getScreenHeight()/cell_dim.y)
-		return Rect.init_from_topleft_and_size(coords.x - (screen_width_as_coords[0]/2), \
-		                                       coords.y - (screen_width_as_coords[1]/2),
+		width_x = horizons.globals.fife.engine_settings.getScreenWidth() // cell_dim.x + 1
+		width_y = horizons.globals.fife.engine_settings.getScreenHeight() // cell_dim.y + 1
+		zoom = self.get_zoom()
+		screen_width_as_coords = (width_x // zoom, width_y // zoom)
+		return Rect.init_from_topleft_and_size(coords.x - (width_x // 2),
+		                                       coords.y - (width_y // 2),
 		                                       *screen_width_as_coords)
 
 	def save(self, db):
@@ -212,10 +242,10 @@ class View(ChangeListener):
 	def load(self, db):
 		# NOTE: this is no class function, since view is initiated before loading
 		res = db("SELECT zoom, rotation, location_x, location_y FROM view")
-		if len(res) == 0 :
+		if not res:
 			# no view info
 			return
 		zoom, rotation, loc_x, loc_y = res[0]
 		self.set_zoom(zoom)
 		self.set_rotation(rotation)
-		self.set_location((loc_x, loc_y))
+		self.center(loc_x, loc_y)

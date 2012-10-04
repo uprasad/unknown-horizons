@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -19,10 +19,23 @@
 # Free Software Foundation, Inc.,
 # 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 # ###################################################
+
+###############################################################################
+#
+# == I18N DEV USE CASES: CHEATSHEET ==
+#
+# ** Refer to  development/copy_pofiles.sh  for help with building or updating
+#    the translation files for Unknown Horizons.
+#
+###############################################################################
+#
+# THIS SCRIPT IS A HELPER SCRIPT. DO NOT INVOKE MANUALLY!
+#
+###############################################################################
 
 
 header = '''# ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -42,17 +55,26 @@ header = '''# ###################################################
 # 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 # ###################################################
 
-# ###################################################
-# WARNING: This file is generated automagically. If
-#          you need to update it follow the procedure
-#          outlined below.
+###############################################################################
 #
-# * Generate a bare version using
-#     python development/extract_strings_from_xml.py \\
-#       horizons/i18n/guitranslations.py
-# * Do the manual postprocessing needed, a diff between
-#   the versions help figuring out what is needed.
-# ###################################################
+# == I18N DEV USE CASES: CHEATSHEET ==
+#
+# ** Refer to  development/copy_pofiles.sh  for help with building or updating
+#    the translation files for Unknown Horizons.
+#
+###############################################################################
+#
+# WARNING: This file is generated automagically.
+#          You need to update it to see changes to strings in-game.
+#          DO NOT MANUALLY UPDATE THIS FILE (by editing strings).
+#          The script to generate .pot templates calls the following:
+# ./development/extract_strings_from_xml.py  horizons/i18n/guitranslations.py
+#
+# NOTE: In string-freeze mode (shortly before releases, usually
+#       announced in a meeting), updates to this file must not happen
+#       without permission of the responsible translation admin!
+#
+###############################################################################
 
 from horizons.constants import VERSION
 
@@ -63,47 +85,49 @@ def set_translations():
 \ttext_translations = {
 '''
 
-footer = '''\n\t}\n'''
+FOOTER = '''\n\t}\n'''
+ROWINDENT = '\n\t\t'
 
-files_to_skip = {
+files_to_skip = [
 	'call_for_support.xml',
 	'credits0.xml',
 	'credits1.xml',
 	'credits2.xml',
 	'credits3.xml',
-	}
+	'credits4.xml',
+	'stringpreviewwidget.xml',
+	'startup_error_popup.xml',
+	]
 
-import glob
 import xml.dom.minidom
 import os
 import sys
 
 def print_n_no_name(n, text):
 	print '\tWarning: ',
-	print '%s without name found, please consider adding an unique name, text=("%s")' % (n, text)
-
-print_label_no_name = lambda x: print_n_no_name('Label', x)
-print_window_no_name = lambda x: print_n_no_name('Window', x)
+	print '%s without name. Add unique name if desired: text="%s"' % (n, text)
 
 def list_all_files():
 	result = []
 	walker = os.walk('content/gui/xml')
 	for entry in walker:
 		for filename in entry[2]:
-			if filename.endswith('.xml') and filename not in files_to_skip:
-				result.append('%s/%s' % (entry[0], filename))
+			if filename.endswith('.xml'):
+				result.append(('%s/%s' % (entry[0], filename), filename not in files_to_skip))
 	return sorted(result)
 
-def content_from_element(element_name, parse_tree, text_name='text'):
+def content_from_element(element_name, parse_tree, text_name):
 
 	def _set_default_name(element, default_name):
 		element.setAttribute('name', default_name)
 
 	defaults = {'OkButton' : 'okButton',
 	            'CancelButton' : 'cancelButton',
-	            'DeleteButton' : 'deleteButton'}
-
+	            'DeleteButton' : 'deleteButton',
+	           }
+	element_strings = []
 	element_list = parse_tree.getElementsByTagName(element_name)
+
 	for element in element_list:
 		if not len(element.getAttribute('name')):
 			if defaults.has_key(element_name):
@@ -111,49 +135,57 @@ def content_from_element(element_name, parse_tree, text_name='text'):
 			else:
 				print_n_no_name(element_name, element.getAttribute(text_name))
 
-	element_strings = []
-	for element in element_list:
-		if len(element.getAttribute(text_name)) and len(element.getAttribute('name')):
-			name = element.getAttribute('name')
-			value = element.getAttribute(text_name)
+		name = element.getAttribute('name')
+		text = element.getAttribute(text_name)
+		i18n = element.getAttribute('comment') # translator comment about widget context
+		if len(text) and len(name) and i18n != 'noi18n':
+			#comment='noi18n' in widgets where translation is not desired
 			if name == 'version_label':
-				value = 'VERSION.string()'
+				text = 'VERSION.string()'
 			else:
-				value = '_("%s")' % value
-			element_strings.append('%s: %s' % (('"%s"' % name).ljust(30), value))
+				text = '_("%s")' % text
+			comment = '(%s of widget: %s)' % (text_name, name) + (' %s' % (i18n) if i18n else '')
+			element_strings.append('# %s' %comment + ROWINDENT + '(%-30s, %-10s): %s' % (('"%s"' % name), ('"%s"') % text_name, text))
 
 	return sorted(element_strings)
 
-def content_from_file(filename):
+def content_from_file(filename, parse=True):
+	"""Set parse=False if you want to list the widget in guitranslations,
+	but not the strings. Usually because those strings are not reasonable
+	to translate (credits) or change too frequently (how to contribute).
+	"""
 	print '@ %s' % filename
 	parsed = xml.dom.minidom.parse(filename)
 
-	strings = content_from_element('Label', parsed) + \
-		content_from_element('Button', parsed) + \
-		content_from_element('CheckBox', parsed) + \
-		content_from_element('RadioButton', parsed) + \
-		content_from_element('Window', parsed, 'title') + \
-		content_from_element('OkButton', parsed, 'tooltip') + \
-		content_from_element('CancelButton', parsed, 'tooltip') + \
-		content_from_element('DeleteButton', parsed, 'tooltip') + \
-		content_from_element('TooltipButton', parsed, 'tooltip') + \
-		content_from_element('TooltipIcon', parsed, 'tooltip') + \
-		content_from_element('TooltipLabel', parsed, 'tooltip') + \
-		content_from_element('TooltipProgressBar', parsed, 'tooltip') + \
-		content_from_element('ToggleImageButton', parsed, 'tooltip')
+	strings = \
+		content_from_element('Button', parsed, 'text') + \
+		content_from_element('CheckBox', parsed, 'text') + \
+		content_from_element('Label', parsed, 'text') + \
+		content_from_element('RadioButton', parsed, 'text') + \
+\
+		content_from_element('CancelButton', parsed, 'helptext') + \
+		content_from_element('DeleteButton', parsed, 'helptext') + \
+		content_from_element('OkButton', parsed, 'helptext') + \
+\
+		content_from_element('Button', parsed, 'helptext') + \
+		content_from_element('Icon', parsed, 'helptext') + \
+		content_from_element('ImageButton', parsed, 'helptext') + \
+		content_from_element('Label', parsed, 'helptext') + \
+		content_from_element('ProgressBar', parsed, 'helptext') + \
+		content_from_element('ToggleImageButton', parsed, 'helptext')
 
-	if len(strings):
-		printname = filename.rsplit("/",1)[1]
+	printname = filename.rsplit("/",1)[1]
+	if len(strings) and parse:
 		#HACK! we strip the string until no "/" occurs and then use the remaining part
 		# this is necessary because of our dynamic widget loading (by unique file names)
-		return '\t\t"%s" : {\n\t\t\t%s},' % (printname, ',\n\t\t\t'.join(strings))
+		return ('\n\t"%s" : {' % printname) + (ROWINDENT + '%s,' % (','+ROWINDENT).join(strings)) + ROWINDENT + '},'
 	else:
-		return ''
+		return ('\n\t"%s" : {' % printname) + ROWINDENT + '},'
 
-filesnippets = (content_from_file(filename) for filename in list_all_files())
+filesnippets = (content_from_file(filename, parse) for (filename, parse) in list_all_files())
 filesnippets = (content for content in filesnippets if content != '')
 
-output = '%s%s%s' % (header, '\n'.join(filesnippets), footer)
+output = '%s%s%s' % (header, '\n'.join(filesnippets), FOOTER)
 
 if len(sys.argv) > 1:
 	file(sys.argv[1], 'w').write(output)

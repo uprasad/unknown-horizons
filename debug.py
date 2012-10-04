@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -41,7 +41,7 @@ if __name__ == '__main__':
 	setup_fife(sys.argv)
 
 	args = sys.argv[1:]
-	print 'Executing with proper fife path: \"%s\" with args %s' % (sys.argv[1], args)
+	print 'Executing with proper fife path: "%s" with args %s' % (sys.argv[1], args)
 	os.execvp(sys.argv[1], args)
 else:
 	import inspect
@@ -95,12 +95,7 @@ else:
 			print (deep * ' ') + str(name) + ': ',
 			printTree(obj.__dict__[name], deep)
 
-	from game.command import *
-	def cmd(name, *pargs, **kargs):
-		game.main.session.manager.execute(eval(name)(*pargs, **kargs))
-
 	print 'Debugging tools usage:'
 	print 'import debug (already done): load the tools'
 	print 'debug.printTree(<object>):   print a tree of an object (the properties, recursive)'
-	print "debug.cmd('name', *args):    create a command and execute it through the manager ex: debug.cmd('unit.Move', game.main.session.selected_instance, x, y)"
 	print ''

@@ -1,0 +1,22 @@
+baseclass: ship.Ship
+id: 1000016
+name: Fisher
+radius: 5
+velocity: 12.0
+components:
+- SelectableComponent:
+    type: ship
+    tabs: [ShipOverviewTab,]
+    enemy_tabs: [EnemyShipOverviewTab,]
+- AmbientSoundComponent
+- StorageComponent:
+      PositiveTotalNumSlotsStorage:
+         limit: 120
+         slotnum: 4
+- ShipNameComponent
+- HealthComponent:
+   maxhealth: 80
+- CommandableComponent
+actionsets:
+  TIER.SAILORS:
+   as_fisher0:

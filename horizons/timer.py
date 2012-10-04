@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -20,26 +20,24 @@
 # ###################################################
 
 import time
-import horizons.main
+import horizons.globals
 
 from horizons.util.living import LivingObject
 from horizons.constants import GAME_SPEED
+from horizons.scheduler import Scheduler
 
 class Timer(LivingObject):
 	"""
 	The Timer class manages game-ticks, every tick executes a set of functions in its call lists,
 	this is especially important for multiplayer, to allow synchronous play.
 	"""
-	TEST_PASS, TEST_SKIP, TEST_RETRY_RESET_NEXT_TICK_TIME, TEST_RETRY_KEEP_NEXT_TICK_TIME = xrange(0, 4)
-
-	possible_ticks_per_second = GAME_SPEED.TICK_RATES
-	default_ticks_per_second = GAME_SPEED.TICKS_PER_SECOND
+	TEST_PASS, TEST_SKIP = xrange(0, 2)
 
 	ACCEPTABLE_TICK_DELAY = 0.2 # sec
 	DEFER_TICK_ON_DELAY_BY = 0.4 # sec
 
 
-	def __init__(self, tick_next_id = 0, freeze_protection=False):
+	def __init__(self, tick_next_id=Scheduler.FIRST_TICK_ID, freeze_protection=False):
 		"""
 		NOTE: timer will not start until activate() is called
 		@param tick_next_id: int next tick id
@@ -54,12 +52,12 @@ class Timer(LivingObject):
 		self.tick_func_call = []
 
 	def activate(self):
-		"""Acctually starts the timer"""
-		horizons.main.fife.pump.append(self.check_tick)
+		"""Actually starts the timer"""
+		horizons.globals.fife.pump.append(self.check_tick)
 
 	def end(self):
-		if self.check_tick in horizons.main.fife.pump:
-			horizons.main.fife.pump.remove(self.check_tick)
+		if self.check_tick in horizons.globals.fife.pump:
+			horizons.globals.fife.pump.remove(self.check_tick)
 		super(Timer, self).end()
 
 	def add_test(self, call):
@@ -104,11 +102,7 @@ class Timer(LivingObject):
 					# If a callback changed the speed to zero, we have to exit
 					if self.ticks_per_second != 0:
 						self.tick_next_time = (self.tick_next_time or time.time()) + 1.0 / self.ticks_per_second
-				elif r == self.TEST_RETRY_RESET_NEXT_TICK_TIME:
-					self.tick_next_time = None
-				elif r != self.TEST_RETRY_KEEP_NEXT_TICK_TIME:
-					continue
-				return
+					return
 			if self._freeze_protection and self.tick_next_time:
 				# stretch time if we're too slow
 				diff = time.time() - self.tick_next_time
@@ -116,8 +110,8 @@ class Timer(LivingObject):
 					self.tick_next_time += self.DEFER_TICK_ON_DELAY_BY
 			for f in self.tick_func_call:
 				f(self.tick_next_id)
+			self.tick_next_id += 1
 			if self.ticks_per_second == 0:
 				# If a callback changed the speed to zero, we have to exit
 				return
 			self.tick_next_time = (self.tick_next_time or time.time()) + 1.0 / self.ticks_per_second
-			self.tick_next_id += 1

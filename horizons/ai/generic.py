@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -19,27 +19,29 @@
 # 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 # ###################################################
 
+import weakref
+
 from horizons.world.player import Player
 from horizons.scheduler import Scheduler
 from horizons.ext.enum import Enum
 from horizons.world.units.movingobject import MoveNotPossible
-from horizons.util import Callback
+from horizons.util.python.callback import Callback
 from horizons.constants import GAME_SPEED
 
-class AIPlayer(Player):
+class GenericAI(Player):
 	"""Class for AI players implementing generic stuff."""
 
 	shipStates = Enum('idle', 'moving_random')
 
 	def __init__(self, *args, **kwargs):
-		super(AIPlayer, self).__init__(*args, **kwargs)
+		super(GenericAI, self).__init__(*args, **kwargs)
 		self.__init()
 
 	def __init(self):
-		self.ships = {} # {ship : state}. used as list of ships and structure to know their state
+		self.ships = weakref.WeakValueDictionary() # {ship : state}. used as list of ships and structure to know their state
 
 	def _load(self, db, worldid):
-		super(AIPlayer, self)._load(db, worldid)
+		super(GenericAI, self)._load(db, worldid)
 		self.__init()
 
 	def send_ship(self, ship):
@@ -69,5 +71,9 @@ class AIPlayer(Player):
 	def notify_unit_path_blocked(self, unit):
 		self.log.warning("%s %s: ship blocked", self.__class__.__name__, self.worldid)
 		# retry moving ship in 2 secs
-		Scheduler().add_new_object(Callback(self.ship_idle, unit), self, \
+		Scheduler().add_new_object(Callback(self.ship_idle, unit), self,
 		                           GAME_SPEED.TICKS_PER_SECOND * 2)
+
+	def end(self):
+		self.ships = None
+		super(GenericAI, self).end()

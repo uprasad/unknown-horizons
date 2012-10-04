@@ -1,0 +1,104 @@
+id: 20
+name: _ Farm
+baseclass: production.Farm
+radius: 3
+cost: 10
+cost_inactive: 0
+size_x: 3
+size_y: 3
+inhabitants: 2
+tooltip_text: _ Grows field crops and raises livestock.
+settler_level: TIER.PIONEERS
+buildingcosts: {RES.GOLD: 500, RES.BOARDS: 4, RES.TOOLS: 2}
+components:
+- SelectableComponent:
+    type: building
+    tabs: [SmallProductionOverviewTab,]
+    enemy_tabs: [EnemyBuildingOverviewTab,]
+- HealthComponent: {maxhealth: 1000}
+- ProducerComponent:
+    utilisation:
+      FieldUtilisation
+    productionlines:
+      WOOL:
+        produces:
+        - [RES.WOOL, 1]
+        consumes:
+        - [RES.LAMB_WOOL, -1]
+      TOBACCO_LEAVES:
+        produces:
+        - [RES.TOBACCO_LEAVES, 1]
+        consumes:
+        - [RES.TOBACCO_PLANTS, -1]
+      CATTLE_SLAUGHTER:
+        produces:
+        - [RES.CATTLE_SLAUGHTER, 1]
+        consumes:
+        - [RES.CATTLE, -1]
+      PIGS_SLAUGHTER:
+        produces:
+        - [RES.PIGS_SLAUGHTER, 1]
+        consumes:
+        - [RES.PIGS, -1]
+      POTATOES:
+        produces:
+        - [RES.FOOD, 1]
+        consumes:
+        - [RES.POTATOES, -2]
+      SUGAR:
+        produces:
+        - [RES.SUGAR, 1]
+        consumes:
+        - [RES.RAW_SUGAR, -1]
+      MEDICAL_HERBS:
+        produces:
+        - [RES.MEDICAL_HERBS, 1]
+        consumes:
+        - [RES.HERBS, -1]
+      CORN:
+        produces:
+        - [RES.CORN, 1]
+        consumes:
+        - [RES.GRAIN, -1]
+      SPICES:
+        produces:
+        - [RES.SPICES, 1]
+        consumes:
+        - [RES.SPICE_PLANTS, -1]
+      COCOA:
+        produces:
+        - [RES.COCOA, 1]
+        consumes:
+        - [RES.COCOA_BEANS, -1]
+      GRAPES:
+        produces:
+        - [RES.GRAPES, 1]
+        consumes:
+        - [RES.VINES, -1]
+      HONEYCOMBS:
+        produces:
+        - [RES.HONEYCOMBS, 1]
+        consumes:
+        - [RES.ALVEARIES, -1]
+- StorageComponent:
+      SlotsStorage:
+        slot_sizes: {
+            RES.LAMB_WOOL: 6, RES.WOOL: 6,
+            RES.POTATOES: 6, RES.FOOD: 6,
+            RES.RAW_SUGAR: 6, RES.SUGAR: 6,
+            RES.TOBACCO_PLANTS: 6, RES.TOBACCO_LEAVES: 6,
+            RES.CATTLE: 6, RES.CATTLE_SLAUGHTER: 6,
+            RES.PIGS: 6, RES.PIGS_SLAUGHTER: 6,
+            RES.HERBS: 6, RES.MEDICAL_HERBS: 6,
+            RES.GRAIN: 6, RES.CORN: 6,
+            RES.SPICE_PLANTS: 6, RES.SPICES: 6,
+            RES.COCOA_BEANS: 6, RES.COCOA: 6,
+            RES.VINES: 6, RES.GRAPES: 6,
+            RES.ALVEARIES: 6, RES.HONEYCOMBS: 6,
+            }
+- CollectingComponent:
+    collectors:
+      UNITS.FIELD_COLLECTOR: 2
+actionsets:
+  TIER.PIONEERS:
+    as_farm0:

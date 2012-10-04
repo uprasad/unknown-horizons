@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -27,7 +27,7 @@ if [ ! `which dialog 2>/dev/null` ] ; then
 fi
 
 clear
-dialog --title "Info" --yesno "This script will download and Compile fife and Unknown Horizons. Do you want to proceed?" 8 40
+dialog --title "Info" --yesno "This script will download and compile fife and Unknown Horizons. Do you want to proceed?" 8 40
 
 if [ "$?" = 1 ]; then
 	exit 0

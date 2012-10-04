@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -20,18 +20,17 @@
 # ###################################################
 
 
-from building import BasicBuilding, SelectableBuilding
-from buildable import BuildableSingleOnCoast
-from horizons.gui.tabs import BoatbuilderTab, BoatbuilderFisherTab, BoatbuilderTradeTab, \
-			     BoatbuilderWar1Tab, BoatbuilderWar2Tab, BoatbuilderConfirmTab
-from horizons.world.production.producer import UnitProducerBuilding
-from collectingbuilding import CollectingBuilding
+from building import BasicBuilding
+from buildable import BuildableSingleOnOcean
+from horizons.world.building.buildingresourcehandler import BuildingResourceHandler
+from horizons.component.storagecomponent import StorageComponent
 
-class BoatBuilder(SelectableBuilding, UnitProducerBuilding, CollectingBuilding, BuildableSingleOnCoast, BasicBuilding):
-	tabs = (BoatbuilderTab, BoatbuilderFisherTab)
-# , BoatbuilderTradeTab, BoatbuilderWar1Tab, BoatbuilderWar2Tab, BoatbuilderConfirmTab)
-# not visible in release 2010.1
+class BoatBuilder(BuildingResourceHandler, BuildableSingleOnOcean, BasicBuilding):
 
 	def __init__(self, **kwargs):
 		super(BoatBuilder, self).__init__(**kwargs)
-		self.inventory.limit = 10
+
+	def initialize(self, **kwargs):
+		super(BoatBuilder, self).initialize( ** kwargs)
+		self.get_component(StorageComponent).inventory.limit = 10
+

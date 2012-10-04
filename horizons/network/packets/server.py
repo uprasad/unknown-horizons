@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -21,26 +21,32 @@
 
 from horizons.network.packets import *
 
-import copy
+class cmd_session(packet):
+	def __init__(self, sid, capabilities):
+		self.sid = sid
+		self.capabilities = capabilities
+
+SafeUnpickler.add('server', cmd_session)
+
+#-------------------------------------------------------------------------------
 
 class data_gameslist(packet):
 	def __init__(self):
 		self.games = []
 
 	def addgame(self, game):
-		newgame = copy.copy(game)
-		newgame.players = []
+		newgame = game.make_public_copy()
 		self.games.append(newgame)
 
-packetlist.append(data_gameslist)
+SafeUnpickler.add('server', data_gameslist)
 
 #-------------------------------------------------------------------------------
 
 class data_gamestate(packet):
 	def __init__(self, game):
-		self.game = game;
+		self.game = game
 
-packetlist.append(data_gamestate)
+SafeUnpickler.add('server', data_gamestate)
 
 #-------------------------------------------------------------------------------
 
@@ -49,15 +55,15 @@ class cmd_chatmsg(packet):
 		self.playername = playername
 		self.chatmsg    = msg
 
-packetlist.append(cmd_chatmsg)
+SafeUnpickler.add('server', cmd_chatmsg)
 
 #-------------------------------------------------------------------------------
 
-class cmd_holepunching(packet):
+class cmd_preparegame(packet):
 	def __init__(self):
-		"""start hole punching"""
+		"""prepare game packet"""
 
-packetlist.append(cmd_holepunching)
+SafeUnpickler.add('server', cmd_preparegame)
 
 #-------------------------------------------------------------------------------
 
@@ -65,5 +71,12 @@ class cmd_startgame(packet):
 	def __init__(self):
 		"""start game packet"""
 
-packetlist.append(cmd_startgame)
+SafeUnpickler.add('server', cmd_startgame)
 
+#-------------------------------------------------------------------------------
+
+class cmd_kickplayer(packet):
+	def __init__(self, player):
+		self.player = player
+
+SafeUnpickler.add('server', cmd_kickplayer)

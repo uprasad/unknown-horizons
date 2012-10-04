@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -20,6 +20,28 @@
 # ###################################################
 
 import logging
+import fnmatch
+import os
+
+from horizons.util.python.callback import Callback
+from horizons.util.yamlcache import YamlCache
+
+class _EntitiesLazyDict(dict):
+	def __init__(self):
+		self._future_entries = {}
+
+	def create_on_access(self, key, construction_function):
+		self._future_entries[key] = construction_function
+
+	def __getitem__(self, key):
+		try:
+			return super(_EntitiesLazyDict, self).__getitem__(key)
+		except KeyError:
+			fun = self._future_entries.pop(key)
+			elem = fun()
+			self[key] = elem
+			return elem
+
 
 class Entities(object):
 	"""Class that stores all the special classes for buildings, grounds etc.
@@ -30,47 +52,69 @@ class Entities(object):
 	log = logging.getLogger('entities')
 
 	@classmethod
-	def load(cls, db):
+	def load(cls, db, load_now=False):
 		if cls.loaded:
 			return
 
-		cls.load_grounds(db)
-		cls.load_buildings(db)
-		cls.load_units(db)
+		cls.load_grounds(db, load_now)
+		cls.load_buildings(db, load_now)
+		cls.load_units(load_now)
 		cls.loaded = True
 
 	@classmethod
-	def load_grounds(cls, db):
+	def load_grounds(cls, db, load_now=False):
 		cls.log.debug("Entities: loading grounds")
 		if hasattr(cls, "grounds"):
 			cls.log.debug("Entities: grounds already loaded")
 			return
 		from world.ground import GroundClass
-		cls.grounds = {}
-		for (ground_id,) in db("SELECT id FROM data.ground"):
-			assert ground_id not in cls.grounds
-			cls.grounds[ground_id] = GroundClass(db, ground_id)
+		cls.grounds = _EntitiesLazyDict()
+		for (ground_id,) in db("SELECT ground_id FROM tile_set"):
+			cls.grounds.create_on_access(ground_id, Callback(GroundClass, db, ground_id))
+			if load_now:
+				cls.grounds[ground_id]
+		cls.grounds[-1] = GroundClass(db, -1)
 
 	@classmethod
-	def load_buildings(cls, db):
+	def load_buildings(cls, db, load_now=False):
 		cls.log.debug("Entities: loading buildings")
 		if hasattr(cls, 'buildings'):
 			cls.log.debug("Entities: buildings already loaded")
 			return
-		cls.buildings = {}
+		cls.buildings = _EntitiesLazyDict()
 		from world.building import BuildingClass
-		for (building_id,) in db("SELECT id FROM data.building"):
-			assert building_id not in cls.buildings
-			cls.buildings[building_id] = BuildingClass(db, building_id)
+		for root, dirnames, filenames in os.walk('content/objects/buildings'):
+			for filename in fnmatch.filter(filenames, '*.yaml'):
+				cls.log.debug("Loading: " + filename)
+				# This is needed for dict lookups! Do not convert to os.join!
+				full_file = root + "/" + filename
+				result = YamlCache.get_file(full_file, game_data=True)
+				if result is None: # discard empty yaml files
+					print "Empty yaml file {file} found, not loading!".format(file=full_file)
+					continue
+
+				result['yaml_file'] = full_file
+
+				building_id = int(result['id'])
+				cls.buildings.create_on_access(building_id, Callback(BuildingClass, db=db, id=building_id, yaml_data=result))
+				# NOTE: The current system now requires all building data to be loaded
+				if load_now or True:
+					cls.buildings[building_id]
 
 	@classmethod
-	def load_units(cls, db):
+	def load_units(cls, load_now=False):
 		cls.log.debug("Entities: loading units")
 		if hasattr(cls, 'units'):
 			cls.log.debug("Entities: units already loaded")
 			return
-		cls.units = {}
+		cls.units = _EntitiesLazyDict()
+
 		from world.units import UnitClass
-		for (unit_id,) in db("SELECT id FROM data.unit"):
-			assert unit_id not in cls.units
-			cls.units[unit_id] = UnitClass(db, unit_id)
+		for root, dirnames, filenames in os.walk('content/objects/units'):
+			for filename in fnmatch.filter(filenames, '*.yaml'):
+				full_file = os.path.join(root, filename)
+				result = YamlCache.get_file(full_file, game_data=True)
+				unit_id = int(result['id'])
+				cls.units.create_on_access(unit_id, Callback(UnitClass, id=unit_id, yaml_data=result))
+				if load_now:
+					cls.units[unit_id]

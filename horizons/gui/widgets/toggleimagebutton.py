@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -19,11 +19,11 @@
 # 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 # ###################################################
 
-from fife.extensions import pychan
-import tooltip
-from fife.extensions.pychan.widgets.common import Attr, UnicodeAttr
+from fife.extensions.pychan.widgets import ImageButton
+from fife.extensions.pychan.widgets.common import Attr
 
-class ToggleImageButton(tooltip.TooltipButton):
+
+class ToggleImageButton(ImageButton):
 	"""The ToggleImageButton is an extended ImageButton (Think decorator pattern).
 	It adds one extra attribute inactive_image. You can then set the button active
 	or inactive (only in code for now). Setting the ToggleImageButton to inactive
@@ -33,13 +33,13 @@ class ToggleImageButton(tooltip.TooltipButton):
 	@param inactive_image The image that is to be used as inactive image.
 	"""
 
-	ATTRIBUTES = pychan.widgets.ImageButton.ATTRIBUTES + [Attr('inactive_image')] + [UnicodeAttr('tooltip')]
+	ATTRIBUTES = ImageButton.ATTRIBUTES + [Attr('inactive_image')]
 
 	# These two constants are used to describe the state of the widget.
 	ACTIVE = 0
 	INACTIVE = 1
 
-	def __init__(self, inactive_image = "", **kwargs):
+	def __init__(self, inactive_image="", **kwargs):
 		self.state = None
 		super(ToggleImageButton, self).__init__(**kwargs)
 		self.state = self.ACTIVE

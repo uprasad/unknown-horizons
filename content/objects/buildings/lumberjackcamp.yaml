@@ -1,0 +1,46 @@
+# TUTORIAL:
+# First, we define general properties, which are read by standard python code.
+# Below, there's then the list of components, which are fully specified here (no extra database needed)
+# The lumberjack has a HealthComponent in order to be destructible,
+# and a ProducerComponent to produce boards out of the raw trees the lumberjack unit collects.
+# The storage component has space for both raw trees and boards.
+# The actionsets define how the building looks like in the different settler levels.
+id: 8
+name:
+  TIER.SAILORS: _ Lumberjack Tent
+  TIER.PIONEERS: _ Lumberjack Hut
+baseclass: production.ProductionBuilding
+radius: 3
+cost: 5
+cost_inactive: 0
+size_x: 2
+size_y: 2
+inhabitants: 1
+tooltip_text: _ Chops down trees and turns them into boards.
+settler_level: TIER.SAILORS
+buildingcosts: {RES.GOLD: 250, RES.TOOLS: 2}
+components:
+- SelectableComponent:
+    type: building
+    tabs: [ProductionOverviewTab]
+    enemy_tabs: [EnemyBuildingOverviewTab,]
+- HealthComponent: {maxhealth: 1000}
+- ProducerComponent:
+    productionlines:
+      BOARDS:
+        produces:
+        - [RES.BOARDS, 1]
+        consumes:
+        - [RES.TREES, -2]
+        time: 15
+- StorageComponent:
+      SlotsStorage:
+        slot_sizes: {RES.TREES: 10, RES.BOARDS: 10}
+- CollectingComponent:
+    collectors:
+      UNITS.LUMBERJACK_COLLECTOR: 1
+actionsets:
+  TIER.SAILORS:
+    as_lumberjack0:
+  TIER.PIONEERS:
+    as_lumberjack_barrack0:

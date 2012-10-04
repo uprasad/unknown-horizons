@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -21,41 +21,60 @@
 
 from horizons.world.building.building import BasicBuilding
 from horizons.world.building.buildable import BuildableRect, BuildableSingleEverywhere
-from horizons.world.building.collectingbuilding import CollectingBuilding
-from horizons.world.production.producer import ProducerBuilding
+from horizons.world.building.buildingresourcehandler import BuildingResourceHandler
 from horizons.entities import Entities
-from horizons.constants import LAYERS
-from horizons.world.storageholder import StorageHolder
-from horizons.gui.tabs import ResourceDepositOverviewTab
-from horizons.world.building.building import SelectableBuilding
+from horizons.scheduler import Scheduler
+from horizons.constants import LAYERS, BUILDINGS
+from horizons.world.production.producer import Producer
 
 class NatureBuilding(BuildableRect, BasicBuilding):
 	"""Class for objects that are part of the environment, the nature"""
 	walkable = True
 	layer = LAYERS.OBJECTS
 
-	def __init__(self, **kwargs):
-		super(NatureBuilding, self).__init__(**kwargs)
-
-class ProducerNatureBuilding(ProducerBuilding, NatureBuilding):
+class NatureBuildingResourceHandler(BuildingResourceHandler, NatureBuilding):
+	# sorry, but this class is to be removed soon anyway
 	pass
 
-class Field(ProducerNatureBuilding):
+class Field(NatureBuildingResourceHandler):
 	walkable = False
 	layer = LAYERS.FIELDS
 
-class AnimalField(CollectingBuilding, Field):
+	def initialize(self, **kwargs):
+		super(Field, self).initialize( ** kwargs)
+
+		if self.owner.is_local_player:
+			# make sure to have a farm nearby when we can reasonably assume that the crops are fully grown
+			prod_comp = self.get_component(Producer)
+			productions = prod_comp.get_productions()
+			if not productions:
+				print "Warning: Field is assumed to always produce, but doesn't.", self
+			else:
+				run_in = Scheduler().get_ticks(productions[0].get_production_time())
+				Scheduler().add_new_object(self._check_covered_by_farm, self, run_in=run_in)
+
+	def _check_covered_by_farm(self):
+		"""Warn in case there is no farm nearby to cultivate the field"""
+		farm_in_range = any( (farm.position.distance( self.position ) <= farm.radius) for farm in
+		                     self.settlement.buildings_by_id[ BUILDINGS.FARM ] )
+		if not farm_in_range and self.owner.is_local_player:
+			pos = self.position.origin
+			self.session.ingame_gui.message_widget.add(point=pos, string_id="FIELD_NEEDS_FARM",
+			                                           check_duplicate=True)
+
+class AnimalField(Field):
 	walkable = False
 	def create_collector(self):
 		self.animals = []
-		for (animal, number) in self.session.db("SELECT unit_id, count FROM balance.animals \
+		for (animal, number) in self.session.db("SELECT unit_id, count FROM animals \
 		                                    WHERE building_id = ?", self.id):
 			for i in xrange(0, number):
-				Entities.units[animal](self, session=self.session)
+				unit = Entities.units[animal](self, session=self.session)
+				unit.initialize()
 		super(AnimalField, self).create_collector()
 
 	def remove(self):
-		while len(self.animals) > 0:
+		while self.animals:
 			self.animals[0].cancel(continue_action=lambda : 42) # don't continue
 			self.animals[0].remove()
 		super(AnimalField, self).remove()
@@ -70,31 +89,21 @@ class AnimalField(CollectingBuilding, Field):
 		self.animals = []
 		# units are loaded separatly
 
-class Tree(ProducerNatureBuilding):
+class Tree(NatureBuildingResourceHandler):
 	buildable_upon = True
 	layer = LAYERS.OBJECTS
 
-class ResourceDeposit(SelectableBuilding, StorageHolder, NatureBuilding):
+class ResourceDeposit(NatureBuilding):
 	"""Class for stuff like clay deposits."""
 	tearable = False
 	layer = LAYERS.OBJECTS
-	tabs = (ResourceDepositOverviewTab,)
-	enemy_tabs = (ResourceDepositOverviewTab,)
 	walkable = False
 
-	def __init__(self, inventory=None, *args, **kwargs):
-		super(ResourceDeposit, self).__init__(*args, **kwargs)
-		if inventory is None: # a new deposit
-			for resource, min_amount, max_amount in \
-			    self.session.db("SELECT resource, min_amount, max_amount FROM deposit_resources WHERE id = ?", \
-			                    self.id):
-				self.inventory.alter(resource, self.session.random.randint(min_amount, max_amount))
-		else: # deposit was removed for mine, now build back
-			for res, amount in inventory.iteritems():
-				self.inventory.alter(res, amount)
+class Fish(BuildableSingleEverywhere, BuildingResourceHandler, BasicBuilding):
 
-class Fish(BuildableSingleEverywhere, ProducerBuilding, BasicBuilding):
-	pass
+	def __init__(self, *args, **kwargs):
+		super(Fish, self).__init__(*args, **kwargs)
 
-
-
+		# Make the fish run at different speeds
+		multiplier = 0.7 + self.session.random.random() * 0.6
+		self._instance.setTimeMultiplier(multiplier)

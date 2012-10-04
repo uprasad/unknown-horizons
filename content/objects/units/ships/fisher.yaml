@@ -1,0 +1,15 @@
+baseclass: ship.FisherShip
+id: 1000004
+name: Fisher
+radius: 5
+velocity: 12.0
+components:
+- AmbientSoundComponent
+- StorageComponent:
+      PositiveTotalNumSlotsStorage:
+         limit: 120
+         slotnum: 4
+- ShipNameComponent
+actionsets:
+  TIER.SAILORS:
+   as_fisher0:

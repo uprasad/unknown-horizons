@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2011 The Unknown Horizons Team
+# Copyright (C) 2012 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -19,17 +19,12 @@
 # 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 # ###################################################
 
-import os
-import shutil
-import tempfile
 import unittest
 
+import horizons.globals
 import horizons.main
-from horizons.util.uhdbaccessor import UhDbAccessor
-
 
 db = None
-temp_dir = None
 
 def setup_package():
 	"""
@@ -37,35 +32,21 @@ def setup_package():
 	so we can avoid to create a database for each test. Using TestCase, we can
 	be sure that each test runs on an unmodified database.
 	"""
-	global db, temp_dir
+	global db
 
-	temp_dir = tempfile.mkdtemp()
-
-	# Copy databases, we don't want to modify the existing ones.
-	shutil.copy('content/game.sqlite', temp_dir)
-	shutil.copy('content/settler.sqlite', temp_dir)
-	shutil.copy('content/balance.sqlite', temp_dir)
-
-	db = UhDbAccessor(':memory:')
-	db('ATTACH ? AS data', os.path.join(temp_dir, 'game.sqlite'))
-	db('ATTACH ? AS settler', os.path.join(temp_dir, 'settler.sqlite'))
-	db('ATTACH ? AS balance', os.path.join(temp_dir, 'balance.sqlite'))
+	db = horizons.main._create_main_db()
 
 	# Truncate all tables. We don't want to rely on existing data.
-	for database in ('data', 'settler', 'balance'):
-		for (table_name, ) in db("SELECT name FROM %s.sqlite_master WHERE type = 'table'" % database):
-			db('DELETE FROM %s' % table_name)
-
-	# Some code is still accessing the global database reference.
-	horizons.main.db = db
+	for (table_name, ) in db("SELECT name FROM sqlite_master WHERE type = 'table'"):
+		db('DELETE FROM %s' % table_name)
 
 
 def teardown_package():
 	"""
-	Close database and remove the temporary directory.
+	Close database.
 	"""
-	db.close()
-	shutil.rmtree(temp_dir)
+	# TODO temporarily disabled, ProductionLine test breaks when using multiprocess
+	#db.close()
 
 
 class TestCase(unittest.TestCase):
@@ -74,8 +55,14 @@ class TestCase(unittest.TestCase):
 	way, the database will remain unmodified for each new test.
 	"""
 	def setUp(self):
+		# Some code is still accessing the global database reference.
+		horizons.globals.db = db
+
 		self.db = db
 		self.db('BEGIN TRANSACTION')
 
 	def tearDown(self):
 		self.db('ROLLBACK TRANSACTION')
+
+
+_multiprocess_can_split_ = True
