@@ -85,8 +85,8 @@ class View(ChangeListener):
 		self.renderer['GenericRenderer'].addActiveLayer(self.layers[LAYERS.OBJECTS])
 		self.renderer['GridRenderer'].addActiveLayer(self.layers[LAYERS.GROUND])
 		cellrenderer = self.renderer['CellRenderer']
-		cellrenderer.setMaskImage(horizons.main.fife.imagemanager.load(VIEW.MASK_IMAGE))
-		cellrenderer.setConcealImage(horizons.main.fife.imagemanager.load(VIEW.CONCEAL_IMAGE))
+		cellrenderer.setMaskImage(horizons.globals.fife.imagemanager.load(VIEW.MASK_IMAGE))
+		cellrenderer.setConcealImage(horizons.globals.fife.imagemanager.load(VIEW.CONCEAL_IMAGE))
 		cellrenderer.activateAllLayers(self.map)
 		cellrenderer.setFogOfWarLayer(self.layers[LAYERS.FOG_OF_WAR])
 		cellrenderer.setEnabledFogOfWar(True)
