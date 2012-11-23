@@ -171,6 +171,8 @@ class BUILDINGS:
 	PASTRY_SHOP      = 63
 
 	VINTNER          = 65
+	
+	AMBIENT          = 67
 
 
 	TRANSPARENCY_VALUE = 180
