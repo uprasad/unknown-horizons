@@ -107,3 +107,8 @@ class Fish(BuildableSingleEverywhere, BuildingResourceHandler, BasicBuilding):
 		# Make the fish run at different speeds
 		multiplier = 0.7 + self.session.random.random() * 0.6
 		self._instance.setTimeMultiplier(multiplier)
+		
+class Ambient(NatureBuilding):
+	"""Class for ambient graphics such as rocks and flowers."""
+	buildable_upon = True
+	layer = LAYERS.OBJECTS
