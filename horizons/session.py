@@ -53,10 +53,10 @@ from horizons.component.selectablecomponent import SelectableComponent, Selectab
 from horizons.savegamemanager import SavegameManager
 from horizons.scenario import ScenarioEventHandler
 from horizons.component.ambientsoundcomponent import AmbientSoundComponent
-from horizons.constants import GAME_SPEED, PATHS, LAYERS
+from horizons.constants import GAME_SPEED, LAYERS
 from horizons.world.managers.productionfinishediconmanager import ProductionFinishedIconManager
 from horizons.world.managers.statusiconmanager import StatusIconManager
-from horizons.messaging import MessageBus
+from horizons.messaging import AutosaveIntervalChanged, MessageBus
 
 class Session(LivingObject):
 	"""The Session class represents the game's main ingame view and controls cameras and map loading.
@@ -117,7 +117,6 @@ class Session(LivingObject):
 		self.view = View(self)
 		Entities.load(self.db)
 		self.scenario_eventhandler = ScenarioEventHandler(self) # dummy handler with no events
-		self.campaign = {}
 
 		#GUI
 		self.gui.session = self
@@ -141,6 +140,9 @@ class Session(LivingObject):
 
 		self._old_autosave_interval = None
 
+	def in_editor_mode(self):
+		return False
+
 	def create_production_finished_icon_manager(self):
 		""" Checks the settings if we should display resrouce icons.
 		If True: Create the ProductionFinishedIconManager
@@ -159,6 +161,7 @@ class Session(LivingObject):
 		"""Actually starts the game."""
 		self.timer.activate()
 		self.reset_autosave()
+		AutosaveIntervalChanged.subscribe(self._on_autosave_interval_changed)
 
 	def reset_autosave(self):
 		"""(Re-)Set up autosave. Called if autosave interval has been changed."""
@@ -170,6 +173,9 @@ class Session(LivingObject):
 			if interval != 0: #autosave
 				self.log.debug("Initing autosave every %s minutes", interval)
 				ExtScheduler().add_new_object(self.autosave, self, interval * 60, -1)
+
+	def _on_autosave_interval_changed(self, message):
+		self.reset_autosave()
 
 	def create_manager(self):
 		"""Returns instance of command manager (currently MPManager or SPManager)"""
@@ -245,8 +251,11 @@ class Session(LivingObject):
 		horizons.main._modules.session = None
 		self._clear_caches()
 
-		# subscriptions shouldn't survive listeners
+		# subscriptions shouldn't survive listeners (except the main Gui)
+		self.gui.unsubscribe()
+		AutosaveIntervalChanged.unsubscribe(self._on_autosave_interval_changed)
 		MessageBus().reset()
+		self.gui.subscribe()
 
 	def toggle_cursor(self, which, *args, **kwargs):
 		"""Alternate between the cursor which and default.
@@ -270,7 +279,7 @@ class Session(LivingObject):
 			'attacking'      : AttackingTool,
 			'building'       : BuildingTool,
 			'tile_layer'     : TileLayingTool
-			
+
 		}[which]
 		self.cursor = klass(self, *args, **kwargs)
 
@@ -302,27 +311,27 @@ class Session(LivingObject):
 			if not os.path.exists(options.game_identifier):
 				options.game_identifier = os.path.join(SavegameManager.maps_dir, map_filename)
 			options.is_map = True
-		self.campaign = {} if not options.campaign else options.campaign
-		
+
 		self.log.debug("Session: Loading from %s", options.game_identifier)
-		savegame_db = SavegameAccessor(options.game_identifier, options.is_map) # Initialize new dbreader
+		savegame_db = SavegameAccessor(options.game_identifier, options.is_map, options) # Initialize new dbreader
 		savegame_data = SavegameManager.get_metadata(savegame_db.db_path)
+		self.view.resize_layers(savegame_db)
 
 		# load how often the game has been saved (used to know the difference between
 		# a loaded and a new game)
 		self.savecounter = savegame_data.get('savecounter', 0)
 
 		if savegame_data.get('rng_state', None):
-			rng_state_list = json.loads( savegame_data['rng_state'] )
+			rng_state_list = json.loads(savegame_data['rng_state'])
 			# json treats tuples as lists, but we need tuples here, so convert back
 			def rec_list_to_tuple(x):
 				if isinstance(x, list):
-					return tuple( rec_list_to_tuple(i) for i in x )
+					return tuple(rec_list_to_tuple(i) for i in x)
 				else:
 					return x
 			rng_state_tuple = rec_list_to_tuple(rng_state_list)
 			# changing the rng is safe for mp, as all players have to have the same map
-			self.random.setstate( rng_state_tuple )
+			self.random.setstate(rng_state_tuple)
 
 		self.world = World(self) # Load horizons.world module (check horizons/world/__init__.py)
 		self.world._init(savegame_db, options.force_player_id, disasters_enabled=options.disasters_enabled)
@@ -498,12 +507,6 @@ class Session(LivingObject):
 			else:
 				self.log.error('Unable to remove unknown object %s', instance)
 
-	def save_map(self, prefix):
-		maps_folder = os.path.join(PATHS.USER_DIR, 'maps')
-		if not os.path.exists(maps_folder):
-			os.makedirs(maps_folder)
-		self.world.save_map(maps_folder, prefix)
-
 	def _do_save(self, savegame):
 		"""Actual save code.
 		@param savegame: absolute path"""
@@ -546,7 +549,7 @@ class Session(LivingObject):
 				for instance in self.selection_groups[group]:
 					db("INSERT INTO selected(`group`, id) VALUES(?, ?)", group, instance.worldid)
 
-			rng_state = json.dumps( self.random.getstate() )
+			rng_state = json.dumps(self.random.getstate())
 			SavegameManager.write_metadata(db, self.savecounter, rng_state)
 			# make sure everything gets written now
 			db("COMMIT")

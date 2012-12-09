@@ -30,8 +30,7 @@ from horizons.util.shapes import Point, Circle
 from horizons.util.worldobject import WorldObject
 from horizons.command.unit import CreateUnit
 from horizons.scenario import CONDITIONS
-from horizons.savegamemanager import SavegameManager
-from horizons.constants import MESSAGES, AUTO_CONTINUE_CAMPAIGN
+from horizons.constants import MESSAGES
 from horizons.command.game import PauseCommand, UnPauseCommand
 from horizons.messaging import SettlerUpdate
 from horizons.component.storagecomponent import StorageComponent
@@ -59,7 +58,7 @@ def show_message(session, type=None, *messages):
 	"""Shows a message with custom text in the messagewidget.
 	If you pass more than one message, they are shown simultaneously."""
 	visible_ticks = Scheduler().get_ticks(MESSAGES.CUSTOM_MSG_VISIBLE_FOR)
-	
+
 	return [session.ingame_gui.message_widget.add_custom(point=None, messagetext=msg, msg_type=type, visible_for=visible_ticks)
 	        for msg in messages]
 
@@ -88,34 +87,25 @@ def show_logbook_entry_delayed(session, *parameters):
 
 @register(name='win')
 def do_win(session):
-	"""The player wins the current scenario. If part of a campaign, offers to start the next scenario."""
+	"""The player wins the current scenario."""
 	PauseCommand().execute(session)
 	show_db_message(session, 'YOU_HAVE_WON')
 	horizons.globals.fife.play_sound('effects', "content/audio/sounds/events/scenario/win.ogg")
 
-	continue_playing = False
-	if not session.campaign or not AUTO_CONTINUE_CAMPAIGN:
-		continue_playing = session.gui.show_popup(_("You have won!"),
-		                                          _("You have completed this scenario.") + u" " +
-		                                          _("Do you want to continue playing?"),
-		                                          show_cancel_button=True)
+	continue_playing = session.gui.show_popup(_("You have won!"),
+	                                          _("You have completed this scenario.") + u" " +
+	                                          _("Do you want to continue playing?"),
+	                                          show_cancel_button=True)
 	if not continue_playing:
-		if session.campaign:
-			SavegameManager.mark_scenario_as_won(session.campaign)
-			session.ingame_gui.scenario_chooser.show()
-		else:
-			Scheduler().add_new_object(Callback(session.gui.quit_session, force=True), session, run_in=0)
+		Scheduler().add_new_object(Callback(session.gui.quit_session, force=True), session, run_in=0)
 	else:
 		UnPauseCommand().execute(session)
 
 @register(name='goal_reached')
 def goal_reached(session, goal_number):
 	"""The player reaches a certain goal in the current scenario."""
-	# TODO : if we want, we could make this work in "scenario" mode
-	#        to allow the player to reach goals in scenarios even if
-	#        no campaign was has been loaded.
-	if session.campaign:
-		SavegameManager.mark_goal_reached(session.campaign, goal_number)
+	# This method is kept to make some tests happy.
+	pass
 
 @register(name='lose')
 def do_lose(session):

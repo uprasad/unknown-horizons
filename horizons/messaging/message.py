@@ -154,6 +154,9 @@ class WorldObjectDeleted(Message):
 	"""
 	arguments = ('worldobject', 'worldid', )
 
+class ShipDestroyed(Message):
+	"""Sent just when a ship is destroyed."""
+	pass
 
 class NewPlayerSettlementHovered(Message):
 	"""Sent when the mouse hovers over a different settlement than before,
@@ -190,3 +193,23 @@ class GuiAction(Message):
 class ResourceProduced(Message):
 	"""Sent when a production building finished the production of a resource """
 	arguments = ('caller', 'produced_resources', )
+
+class SettlementInventoryUpdated(Message):
+	"""Message sent whenever a settlement's inventory is updated"""
+	pass
+
+class PlayerInventoryUpdated(Message):
+	"""Message sent whenever a player's inventory is updated"""
+	pass
+
+class AutosaveIntervalChanged(Message):
+	"""Sent when the autosave interval is changed."""
+	pass
+
+class MinimapRotationSettingChanged(Message):
+	"""Sent when the setting that enables/disables rotating the minimap with the map is changed."""
+	pass
+
+class LanguageChanged(Message):
+	"""Sent when the language has changed."""
+	pass

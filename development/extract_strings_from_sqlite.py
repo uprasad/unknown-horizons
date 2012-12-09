@@ -91,7 +91,7 @@ class SettlerLevel(Base):
 #
 
 class MSGID_collect:
-	msgids = dict()
+	msgids = {}
 
 	def __init__(self):
 		pass
@@ -105,7 +105,7 @@ class MSGID_collect:
 	def __str__(self):
 		s = []
 		for text, locations in self.msgids.items():
-			comment = '#. This is a database entry: %s.\n#: sql database files\n' % ','.join(locations)
+			comment = '#. This is a database entry: %s.\n#: sql-database-files\n' % ','.join(locations)
 			if "{" in text and "}" in text:
 				comment += '#, python-format\n'
 			s += [comment + build_msgid(text)]
@@ -124,11 +124,10 @@ def collect_all():
 		collector.add_to_collection(resource.name, 'the name of a resource')
 
 	for settler_level in db_session.query(SettlerLevel):
-		collector.add_to_collection(settler_level.name, 'the name of an inhabitant increment (tier / level)')
+		collector.add_to_collection(settler_level.name, 'the name of an inhabitant tier (level)')
 
 	return collector
 
 
 print collect_all()
 os.unlink(filename)
-

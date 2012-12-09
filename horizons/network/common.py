@@ -21,8 +21,8 @@
 
 import uuid
 from gettext import NullTranslations
-from horizons.network import packets, find_enet_module
-enet = find_enet_module()
+
+from horizons.network import packets, enet
 
 __all__ = [
   'Address',

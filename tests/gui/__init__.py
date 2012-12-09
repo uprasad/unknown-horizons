@@ -212,7 +212,7 @@ def gui_test(use_dev_map=False, use_fixture=None, ai_players=0, timeout=15 * 60,
 	"""Magic nose integration.
 
 	use_dev_map		-	starts the game with --start-dev-map
-	use_fixture		-	starts the game with --load-map=fixture_name
+	use_fixture		-	starts the game with --load-game=fixture_name
 	use_scenario    -   starts the game with --start-scenario=scenario_name
 	ai_players		-	starts the game with --ai_players=<number>
 	timeout			-	test will be stopped after X seconds passed (0 = disabled)
@@ -237,7 +237,7 @@ def gui_test(use_dev_map=False, use_fixture=None, ai_players=0, timeout=15 * 60,
 				path = os.path.join(TEST_FIXTURES_DIR, use_fixture + '.sqlite')
 				if not os.path.exists(path):
 					raise Exception('Savegame %s not found' % path)
-				args.extend(['--load-map', path])
+				args.extend(['--load-game', path])
 			elif use_dev_map:
 				args.append('--start-dev-map')
 			elif use_scenario:
@@ -285,18 +285,17 @@ def gui_test(use_dev_map=False, use_fixture=None, ai_players=0, timeout=15 * 60,
 			timelimit.start(timeout)
 
 			stdout, stderr = proc.communicate()
+			if cleanup_userdir:
+				recreate_userdir()
+
 			if proc.returncode != 0:
 				if nose_captured:
 					if stdout:
 						print stdout
-					if cleanup_userdir:
-						recreate_userdir()
 					if not 'Traceback' in stderr:
 						stderr += '\nNo usable error output received, possibly a segfault.'
 					raise TestFailed('\n\n' + stderr)
 				else:
-					if cleanup_userdir:
-						recreate_userdir()
 					raise TestFailed()
 
 		# we need to store the original function, otherwise the new process will execute

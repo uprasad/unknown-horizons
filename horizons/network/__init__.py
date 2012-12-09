@@ -19,11 +19,20 @@
 # 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 # ###################################################
 
-
 import platform
 import os
+import sys
 
-def find_enet_module(client=True):
+
+def find_enet_module():
+	"""Return the enet module or None.
+
+	We do not raise any errors here, because we still allow clients to play the
+	singleplayer.
+	If code requires the enet module, it should check if horizons.network.enet is
+	not None.
+	"""
+
 	# Try to find installed version first
 	try:
 		import enet
@@ -31,6 +40,9 @@ def find_enet_module(client=True):
 	except ImportError:
 		pass
 
+	# If not installed, we try to find a suitable library in libs/
+
+	lib_path = os.path.join(os.path.dirname(__file__), "libs")
 
 	type = platform.system().lower()
 
@@ -41,26 +53,37 @@ def find_enet_module(client=True):
 		arch = '64'
 	else:
 		assert False, "Failed to detect system architecture!"
-	version = platform.python_version_tuple()
-	dir = "%s-x%s" % (type, arch)
 
-	dirpy = "%s-%s%s" % (dir, version[0], version[1])
-	if os.path.exists(os.path.join(os.path.dirname(__file__), dirpy)):
-		dir = dirpy
+	# Generic identifier, e.g. linux-64
+	directory = "%s-x%s" % (type, arch)
+
+	# Python version-specific, e.g. linux-64-27. If this is not found, we fall
+	# back to the more generic version.
+	version = platform.python_version_tuple()
+	directory_pyversion = "%s-%s%s" % (directory, version[0], version[1])
+
+	if os.path.exists(os.path.join(lib_path, directory_pyversion)):
+		path = os.path.join(lib_path, directory_pyversion)
+	else:
+		path = os.path.join(lib_path, directory)
+
+	sys.path.append(path)
 
 	try:
-		arch_module = __import__(dir, globals(), locals(), fromlist=["enet"])
-		return arch_module.enet
+		import enet
+		return enet
 	except ImportError:
-		# ternary operator doesn't work
-		if client:
-			pass
-		else:
-			raise
+		pass
 
-	# we can't raise an ImportError here, because the game should work even when
-	# there's no enet.
 	return None
+
+
+enet = find_enet_module()
+
+# during pyenets move to cpython they renamed a few constants...
+if not hasattr(enet, 'PEER_STATE_DISCONNECTED') and hasattr(enet, 'PEER_STATE_DISCONNECT'):
+	enet.PEER_STATE_DISCONNECTED = enet.PEER_STATE_DISCONNECT
+
 
 class NetworkException(Exception):
 	pass

@@ -29,6 +29,7 @@ from horizons.util.python.decorators import bind_all
 from horizons.util.shapes import Circle, Point, Rect
 from horizons.command.unit import Act
 from horizons.component.namedcomponent import NamedComponent
+from horizons.messaging import MinimapRotationSettingChanged
 
 import math
 from math import sin, cos
@@ -127,11 +128,17 @@ class Minimap(object):
 		#import random
 		#ExtScheduler().add_new_object(lambda : self.highlight( (50+random.randint(-50,50), random.randint(-50,50) + 50 )), self, 2, loops=-1)
 
+		self._rotation_setting = horizons.globals.fife.get_uh_setting("MinimapRotation")
+		if self.use_rotation:
+			MinimapRotationSettingChanged.subscribe(self._on_rotation_setting_change)
+
 	def end(self):
 		self.disable()
 		self.world = None
 		self.session = None
 		self.renderer = None
+		if self.use_rotation:
+			MinimapRotationSettingChanged.unsubscribe(self._on_rotation_setting_change)
 
 	def disable(self):
 		"""Due to the way the minimap works, there isn't really a show/hide,
@@ -281,36 +288,36 @@ class Minimap(object):
 		"""
 		if self.preview:
 			return # we don't do anything in this mode
-		map_coord = event.map_coord
+		map_coords = event.map_coords
 		moveable_selecteds = [ i for i in self.session.selected_instances if i.movable ]
 		if moveable_selecteds and event.getButton() == fife.MouseEvent.RIGHT:
 			if drag:
 				return
 			for i in moveable_selecteds:
-				Act(i, *map_coord).execute(self.session)
+				Act(i, *map_coords).execute(self.session)
 		elif event.getButton() == fife.MouseEvent.LEFT:
 			if self.view is None:
 				print "Warning: Can't handle minimap clicks since we have no view object"
 			else:
-				self.view.center(*map_coord)
+				self.view.center(*map_coords)
 
 	def _on_click(self, event):
 		if self.world is not None: # supply world coords if there is a world
-			event.map_coord = self._get_event_coord(event)
-			if event.map_coord:
+			event.map_coords = self._get_event_coords(event)
+			if event.map_coords:
 				self.on_click(event, drag=False)
 		else:
 			self.on_click(event, drag=True)
 
 	def _on_drag(self, event):
 		if self.world is not None: # supply world coords if there is a world
-			event.map_coord = self._get_event_coord(event)
-			if event.map_coord:
+			event.map_coords = self._get_event_coords(event)
+			if event.map_coords:
 				self.on_click(event, drag=True)
 		else:
 			self.on_click(event, drag=True)
 
-	def _get_event_coord(self, event):
+	def _get_event_coords(self, event):
 		"""Returns position of event as uh map coordinate tuple or None"""
 		mouse_position = Point(event.getX(), event.getY())
 		if not hasattr(self, "icon"):
@@ -324,7 +331,7 @@ class Minimap(object):
 			abs_mouse_position = mouse_position.to_tuple()
 		if self._get_rotation_setting():
 			abs_mouse_position = self._get_from_rotated_coords(abs_mouse_position)
-		return self._minimap_coord_to_world_coord(abs_mouse_position)
+		return self._minimap_coords_to_world_coords(abs_mouse_position)
 
 	def _mouse_entered(self, event):
 		self._show_tooltip(event)
@@ -338,12 +345,12 @@ class Minimap(object):
 
 	def _show_tooltip(self, event):
 		if hasattr(self, "icon"): # only supported for icon mode atm
-			if self.fixed_tooltip != None:
+			if self.fixed_tooltip is not None:
 				self.icon.helptext = self.fixed_tooltip
 				self.icon.position_tooltip(event)
 				#self.icon.show_tooltip()
 			else:
-				coords = self._get_event_coord(event)
+				coords = self._get_event_coords(event)
 				if not coords: # no valid/relevant event location
 					self.icon.hide_tooltip()
 					return
@@ -360,7 +367,7 @@ class Minimap(object):
 					# mouse not over relevant part of the minimap
 					self.icon.hide_tooltip()
 
-	def highlight(self, tup, factor=1.0, speed=1.0, finish_callback=None, color=(0,0,0)):
+	def highlight(self, tup, factor=1.0, speed=1.0, finish_callback=None, color=(0, 0, 0)):
 		"""Try to get the users attention on a certain point of the minimap.
 		@param tuple: world coords
 		@param factor: float indicating importance of event
@@ -472,7 +479,6 @@ class Minimap(object):
 		pixel_per_coord_x_half_as_int = int(pixel_per_coord_x/2)
 		pixel_per_coord_y_half_as_int = int(pixel_per_coord_y/2)
 
-		real_map_point = Point(0, 0)
 		world_min_x = self.world.min_x
 		world_min_y = self.world.min_y
 		island_col = self.COLORS["island"]
@@ -484,7 +490,7 @@ class Minimap(object):
 			drawPoint = lambda name, fife_point, r, g, b : data.append( (fife_point.x, fife_point.y, r, g, b) )
 		else:
 			drawPoint = rt.addPoint
-		fife_point = fife.Point(0,0)
+		fife_point = fife.Point(0, 0)
 
 		use_rotation = self._get_rotation_setting()
 		full_map = self.world.full_map
@@ -504,16 +510,14 @@ class Minimap(object):
 				real_map_point = covered_area.center
 				"""
 				# use center of the rect that the pixel covers
-				real_map_point.x = int(x*pixel_per_coord_x)+world_min_x + \
-											pixel_per_coord_x_half_as_int
-				real_map_point.y = int(y*pixel_per_coord_y)+world_min_y + \
-											pixel_per_coord_y_half_as_int
-				real_map_point_tuple = (real_map_point.x, real_map_point.y)
+				real_map_x = int(x * pixel_per_coord_x) + world_min_x + pixel_per_coord_x_half_as_int
+				real_map_y = int(y * pixel_per_coord_y) + world_min_y + pixel_per_coord_y_half_as_int
+				real_map_coords = (real_map_x, real_map_y)
 
 				# check what's at the covered_area
-				if real_map_point_tuple in full_map:
+				if real_map_coords in full_map:
 					# this pixel is an island
-					tile = full_map[real_map_point]
+					tile = full_map[real_map_coords]
 					settlement = tile.settlement
 					if settlement is None:
 						# island without settlement
@@ -650,25 +654,26 @@ class Minimap(object):
 			self.draw()
 
 	## CALC UTILITY
-	def _world_to_minimap(self, coord, use_rotation):
+	def _world_to_minimap(self, coords, use_rotation):
 		"""Complete coord transformation, batteries included.
 		The methods below are for more specialised purposes."""
-		coord = self._world_coord_to_minimap_coord( coord )
+		coords = self._world_coords_to_minimap_coords(coords)
 
 		if use_rotation:
-			coord = self._get_rotated_coords(coord)
-		# transform from screen coord to minimap coord
-		coord = (
-		  coord[0] - self.location.left,
-		  coord[1] - self.location.top
-		  )
-
-		return coord
+			coords = self._get_rotated_coords(coords)
+		# transform from screen coords to minimap coords
+		coords = (coords[0] - self.location.left,
+		          coords[1] - self.location.top)
+		return coords
 
 	def _get_rotation_setting(self):
 		if not self.use_rotation:
 			return False
-		return horizons.globals.fife.get_uh_setting("MinimapRotation")
+		return self._rotation_setting
+
+	def _on_rotation_setting_change(self, message):
+		self._rotation_setting = horizons.globals.fife.get_uh_setting("MinimapRotation")
+		self.draw()
 
 	_rotations = { 0 : 0,
 				         1 : 3 * math.pi / 2,
@@ -724,7 +729,7 @@ class Minimap(object):
 		pixel_per_coord_y = float(world_height) / minimap_height
 		self._world_to_minimap_ratio = (pixel_per_coord_x, pixel_per_coord_y)
 
-	def _world_coord_to_minimap_coord(self, tup):
+	def _world_coords_to_minimap_coords(self, tup):
 		"""Calculates which pixel in the minimap contains a coord in the real map.
 		@param tup: (x, y) as ints
 		@return tuple"""
@@ -734,8 +739,8 @@ class Minimap(object):
 			int(round(float(tup[1] - self.world.min_y)/pixel_per_coord_y))+self.location.top
 		)
 
-	def _minimap_coord_to_world_coord(self, tup):
-		"""Inverse to _world_coord_to_minimap_coord"""
+	def _minimap_coords_to_world_coords(self, tup):
+		"""Inverse to _world_coords_to_minimap_coords"""
 		pixel_per_coord_x, pixel_per_coord_y = self._world_to_minimap_ratio
 		return (
 			int(round( (tup[0] - self.location.left) * pixel_per_coord_x))+self.world.min_x,
@@ -764,7 +769,7 @@ class _MinimapImage(object):
 		self.rendertarget.removeAll()
 		size = self.minimap.get_size()
 		self.rendertarget.addQuad( self.minimap._get_render_name("background"),
-		                           fife.Point(0,0),
+		                           fife.Point(0, 0),
 		                           fife.Point(0, size[1]),
 		                           fife.Point(size[0], size[1]),
 		                           fife.Point(size[0], 0),

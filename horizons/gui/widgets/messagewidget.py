@@ -36,6 +36,7 @@ from horizons.gui.util import load_uh_widget
 from horizons.component.ambientsoundcomponent import AmbientSoundComponent
 from horizons.i18n.voice import get_speech_file
 
+
 class MessageWidget(LivingObject):
 	"""Class that organizes the messages. Displayed on left screen edge.
 	It uses _IngameMessage instances to store messages and manages the archive.
@@ -46,7 +47,7 @@ class MessageWidget(LivingObject):
 	LINE_HEIGHT = 17
 	ICON_TEMPLATE = 'messagewidget_icon.xml'
 	MSG_TEMPLATE = 'messagewidget_message.xml'
-	CHARS_PER_LINE = 34 # character count after which we start new line. no wrap
+	CHARS_PER_LINE = 31 # character count after which we start new line. no wrap
 	SHOW_NEW_MESSAGE_TEXT = 7 # seconds
 	MAX_MESSAGES = 5
 
@@ -54,8 +55,8 @@ class MessageWidget(LivingObject):
 	_DUPLICATE_SPACE_THRESHOLD = 8 # distance
 
 	OVERVIEW_WIDGET = 'messagewidget_overview.xml'
-	
-	log = logging.getLogger('gui.widgets.messagewidget')	
+
+	log = logging.getLogger('gui.widgets.messagewidget')
 
 	def __init__(self, session):
 		super(MessageWidget, self).__init__()
@@ -140,9 +141,9 @@ class MessageWidget(LivingObject):
 		self.draw_widget()
 		self.show_text(0)
 		ExtScheduler().add_new_object(self.hide_text, self, self.SHOW_NEW_MESSAGE_TEXT)
-		
+
 		self.session.ingame_gui.logbook.display_message_history() # update message history on new message
-		
+
 		return message.created
 
 	def draw_widget(self):
@@ -153,38 +154,40 @@ class MessageWidget(LivingObject):
 		button_space = self.widget.findChild(name="button_space")
 		button_space.removeAllChildren() # Remove old buttons
 		for index, message in enumerate(self.active_messages):
-			if (self.item + index) < len(self.active_messages):
-				button = ImageButton()
-				button.name = str(index)
-				button.up_image = message.up_image
-				button.hover_image = message.hover_image
-				button.down_image = message.down_image
-				button.is_focusable = False
-				# show text on hover
-				events = {
-					button.name + "/mouseEntered": Callback(self.show_text, index),
-					button.name + "/mouseExited": self.hide_text
-				}
-				# init callback to something callable to improve robustness
-				callback = Callback(lambda: None)
-				if message.x is not None and message.y is not None:
-					# move camera to source of event on click, if there is a source
-					callback = Callback.ChainedCallbacks(
-					        callback, # this makes it so the order of callback assignment doesn't matter
-					        Callback(self.session.view.center, message.x, message.y),
-					        Callback(self.session.ingame_gui.minimap.highlight, (message.x, message.y) )
-				        )
-				if message.type == "logbook":
-					# open logbook to relevant page
-					callback = Callback.ChainedCallbacks(
-					        callback, # this makes it so the order of callback assignment doesn't matter
-					        Callback(self.session.ingame_gui.logbook.show, message.created)
-					)
-				if callback:
-					events[button.name] = callback
-				
-				button.mapEvents(events)
-				button_space.addChild(button)
+			if (self.item + index) >= len(self.active_messages):
+				# Only display most recent notifications
+				continue
+			button = ImageButton()
+			button.name = str(index)
+			button.up_image = message.up_image
+			button.hover_image = message.hover_image
+			button.down_image = message.down_image
+			button.is_focusable = False
+			# show text on hover
+			events = {
+				button.name + "/mouseEntered": Callback(self.show_text, index),
+				button.name + "/mouseExited": self.hide_text,
+			}
+			# init callback to something callable to improve robustness
+			callback = Callback(lambda: None)
+			if message.x is not None and message.y is not None:
+				# move camera to source of event on click, if there is a source
+				callback = Callback.ChainedCallbacks(
+					   callback, # this makes it so the order of callback assignment doesn't matter
+					   Callback(self.session.view.center, message.x, message.y),
+					   Callback(self.session.ingame_gui.minimap.highlight, (message.x, message.y) )
+				   )
+			if message.type == "logbook":
+				# open logbook to relevant page
+				callback = Callback.ChainedCallbacks(
+					   callback, # this makes it so the order of callback assignment doesn't matter
+					   Callback(self.session.ingame_gui.logbook.show, message.created)
+				)
+			if callback:
+				events[button.name] = callback
+
+			button.mapEvents(events)
+			button_space.addChild(button)
 		button_space.resizeToContent()
 		self.widget.size = button_space.size
 

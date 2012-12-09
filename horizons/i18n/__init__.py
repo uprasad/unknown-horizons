@@ -41,8 +41,9 @@ import weakref
 import horizons.globals
 
 from horizons.constants import LANGUAGENAMES
-from horizons.i18n import objecttranslations, guitranslations
+from horizons.i18n import objecttranslations, guitranslations, quotes
 from horizons.i18n.utils import get_fontdef_for_locale, find_available_languages
+from horizons.messaging import LanguageChanged
 
 log = logging.getLogger("i18n")
 
@@ -74,10 +75,10 @@ def translate_widget(untranslated, filename):
 
 def update_all_translations():
 	"""Update the translations in every active widget"""
-	from horizons.gui.gui import build_help_strings
 	global translated_widgets
 	guitranslations.set_translations()
 	objecttranslations.set_translations()
+	quotes.set_translations()
 	for (filename, widget) in translated_widgets.iteritems():
 		widget = widget() # resolve weakref
 		if not widget:
@@ -86,8 +87,6 @@ def update_all_translations():
 		for (element_name, attribute), translation in all_widgets.iteritems():
 			element = widget.findChild(name=element_name)
 			replace_attribute(element, attribute, translation)
-		if filename == 'help.xml':
-			build_help_strings(widget)
 		widget.adaptLayout()
 
 
@@ -95,7 +94,7 @@ def replace_attribute(widget, attribute, text):
 	if hasattr(widget, attribute):
 		setattr(widget, attribute, text)
 	else:
-		log.debug("Could not replace attribute %s in widget %s", attribute, widget)
+		log.warning("Could not replace attribute %s in widget %s", attribute, widget)
 
 
 def change_language(language=None):
@@ -111,17 +110,16 @@ def change_language(language=None):
 			# selected we use NullTranslations to get English output.
 			fallback = (language == 'en')
 			trans = gettext.translation('unknown-horizons', find_available_languages()[language],
-										languages=[language], fallback=fallback)
+			                            languages=[language], fallback=fallback)
 			trans.install(unicode=True, names=['ngettext',])
 		except IOError:
-			#xgettext:python-format
-			print "Configured language {lang} could not be loaded.".format(lang=language)
+			log.debug("Configured language %s could not be loaded.", language)
 			horizons.globals.fife.set_uh_setting('Language', LANGUAGENAMES[''])
 			return change_language() # recurse
 	else:
 		# default locale
 		if platform.system() == "Windows": # win doesn't set the language variable by default
-			os.environ[ 'LANGUAGE' ] = locale.getdefaultlocale()[0]
+			os.environ['LANGUAGE'] = locale.getdefaultlocale()[0]
 		gettext.install('unknown-horizons', 'content/lang', unicode=True, names=['ngettext',])
 
 	# expose the plural-aware translate function as builtin N_ (gettext does the same to _)
@@ -129,8 +127,10 @@ def change_language(language=None):
 	__builtin__.__dict__['N_'] = __builtin__.__dict__['ngettext']
 
 	# update fonts
-	fontdef = get_fontdef_for_locale(language or horizons.globals.fife.get_locale())
+	new_locale = language or horizons.globals.fife.get_locale()
+	fontdef = get_fontdef_for_locale(new_locale)
 	horizons.globals.fife.pychan.loadFonts(fontdef)
 
 	# dynamically reset all translations of active widgets
 	update_all_translations()
+	LanguageChanged.broadcast(None)

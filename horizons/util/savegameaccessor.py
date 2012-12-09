@@ -26,7 +26,7 @@ import tempfile
 
 from collections import defaultdict, deque
 
-from horizons.constants import PATHS
+from horizons.constants import MAP, PATHS
 from horizons.savegamemanager import SavegameManager
 from horizons.util.dbreader import DbReader
 from horizons.util.python import decorators
@@ -40,7 +40,7 @@ class SavegameAccessor(DbReader):
 	Frequent select queries are preloaded for faster access.
 	"""
 
-	def __init__(self, game_identifier, is_map):
+	def __init__(self, game_identifier, is_map, options=None):
 		is_random_map = False
 		if is_map:
 			self.upgrader = None
@@ -67,7 +67,9 @@ class SavegameAccessor(DbReader):
 				random_island_sequence = self('SELECT value FROM metadata WHERE name = ?', 'random_island_sequence')[0][0].split(' ')
 			else:
 				map_name = map_name_data[0][0]
-				if os.path.isabs(map_name):
+				if map_name.startswith('USER_MAPS_DIR:'):
+					self._map_path = PATHS.USER_MAPS_DIR + map_name[len('USER_MAPS_DIR:'):]
+				elif os.path.isabs(map_name):
 					self._map_path = map_name
 				else:
 					self._map_path = SavegameManager.get_filename_from_map_name(map_name)
@@ -86,6 +88,10 @@ class SavegameAccessor(DbReader):
 			self('INSERT INTO metadata VALUES(?, ?)', 'random_island_sequence',
 				' '.join(random_island_sequence))
 
+		if options is not None:
+			if options.map_padding is not None:
+				self("INSERT INTO map_properties VALUES(?, ?)", 'padding', options.map_padding)
+
 		self('ATTACH ? AS map_file', self._map_path)
 		if is_random_map:
 			self.map_name = random_island_sequence
@@ -93,6 +99,9 @@ class SavegameAccessor(DbReader):
 			self.map_name = self._map_path
 		else:
 			self.map_name = SavegameManager.get_savegamename_from_filename(self._map_path)
+
+		map_padding = self("SELECT value FROM map_properties WHERE name = 'padding'")
+		self.map_padding = int(map_padding[0][0]) if map_padding else MAP.PADDING
 
 		self._load_building()
 		self._load_settlement()
@@ -106,6 +115,7 @@ class SavegameAccessor(DbReader):
 		self._load_unit_path()
 		self._load_storage_global_limit()
 		self._load_health()
+		self._load_fish_data()
 		self._hash = None
 
 	def close(self):
@@ -283,6 +293,15 @@ class SavegameAccessor(DbReader):
 
 	def get_health(self, owner):
 		return self._health[owner]
+
+
+	def _load_fish_data(self):
+		self._fish_data = {}
+		for row in self("SELECT rowid, last_usage_tick FROM fish_data"):
+			self._fish_data[int(row[0])] = int(row[1])
+
+	def get_last_fish_usage_tick(self, worldid):
+		return self._fish_data[worldid]
 
 	# Random savegamefile related utility that i didn't know where to put
 

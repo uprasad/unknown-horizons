@@ -19,17 +19,19 @@
 # 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 # ###################################################
 
+import gettext
 import logging
 import uuid
-import gettext
 
-from horizons.network.common import *
 from horizons import network
-from horizons.network import packets, find_enet_module
-from horizons.network import NetworkException, SoftNetworkException, PacketTooLarge
 from horizons.i18n.utils import find_available_languages
+from horizons.network import packets, enet
+from horizons.network.common import Player, Game, ErrorType
 
-enet = find_enet_module(client = False)
+
+if not enet:
+	raise Exception("Could not find enet module.")
+
 
 MAX_PEERS = 4095
 CONNECTION_TIMEOUT = 500
@@ -40,7 +42,7 @@ logging.basicConfig(format = '[%(asctime)-15s] [%(levelname)s] %(message)s',
 
 class Server(object):
 	def __init__(self, hostname, port, statistic_file=None):
-		packets.SafeUnpickler.set_mode(client = False)
+		packets.SafeUnpickler.set_mode(client=False)
 		self.host     = None
 		self.hostname = hostname
 		self.port     = port
@@ -110,6 +112,7 @@ class Server(object):
 	# __(...)             ... noop for extracting the strings
 	def gettext(self, player, message):
 		return player.gettext.ugettext(message)
+
 	def ngettext(self, player, msgid1, msgid2, n):
 		return player.gettext.ungettext(msgid1, msgid2, n)
 
@@ -149,7 +152,7 @@ class Server(object):
 		ret = True
 		for callback in self.callbacks[type]:
 			tmp = callback(*args)
-			if tmp == None:
+			if tmp is None:
 				tmp = True
 			ret &= tmp
 		return ret
@@ -188,13 +191,15 @@ class Server(object):
 	def send(self, peer, packet, channelid=0):
 		if self.host is None:
 			raise network.NotConnected("Server is not running")
-		packet.send(peer, None, channelid)
-		self.host.flush()
+
+		self.sendraw(peer, packet.serialize(), channelid)
 
 	def sendraw(self, peer, data, channelid=0):
 		if self.host is None:
 			raise network.NotConnected("Server is not running")
-		packets.packet.sendraw(peer, data, channelid)
+
+		packet = enet.Packet(data, enet.PACKET_FLAG_RELIABLE)
+		peer.send(channelid, packet)
 		self.host.flush()
 
 
@@ -273,8 +278,9 @@ class Server(object):
 		# check packet size
 		if len(event.packet.data) > self.capabilities['maxpacketsize']:
 			logging.warning("[RECEIVE] Global packet size exceeded from %s: size=%d" % (peer.address, len(event.packet.data)))
-			self.fatalerror(player, __("You've exceeded the global packet size. This should never happen."
-				" Please contact us and/or file a bug report"))
+			self.fatalerror(player, __("You've exceeded the global packet size.") + " " +
+			                        __("This should never happen. "
+			                           "Please contact us or file a bug report."))
 			return
 
 		# shortpath if game is running
@@ -285,13 +291,15 @@ class Server(object):
 		packet = None
 		try:
 			packet = packets.unserialize(event.packet.data, True, player.protocol)
-		except SoftNetworkException as e:
+		except network.SoftNetworkException as e:
 			self.error(player, e.message)
 			return
-		except PacketTooLarge as e:
+		except network.PacketTooLarge as e:
 			logging.warning("[RECEIVE] Per packet size exceeded from %s: %s" % (player, e))
-			self.fatalerror(player, __("You've exceeded the per packet size. This should never happen."
-				" Please contact us and/or file a bug report: %s" % (e)))
+			self.fatalerror(player, __("You've exceeded the per packet size.") + " " +
+			                        __("This should never happen. "
+			                           "Please contact us or file a bug report.") +
+			                        " " + str(e))
 			return
 		except Exception as e:
 			logging.warning("[RECEIVE] Unknown or malformed packet from %s: %s!" % (player, e))
@@ -332,9 +340,9 @@ class Server(object):
 
 	def oncreategame(self, player, packet):
 		if packet.maxplayers < self.capabilities['minplayers']:
-			raise SoftNetworkException("You can't run a game with less than %d players" % (self.capabilities['minplayers']))
+			raise network.SoftNetworkException("You can't run a game with less than %d players" % (self.capabilities['minplayers']))
 		if packet.maxplayers > self.capabilities['maxplayers']:
-			raise SoftNetworkException("You can't run a game with more than %d players" % (self.capabilities['maxplayers']))
+			raise network.SoftNetworkException("You can't run a game with more than %d players" % (self.capabilities['maxplayers']))
 		game = Game(packet, player)
 		logging.debug("[CREATE] [%s] %s created %s" % (game.uuid, player, game))
 		self.games.append(game)
@@ -408,13 +416,16 @@ class Server(object):
 		# make sure player names, colors and clientids are unique
 		for _player in game.players:
 			if _player.name == packet.playername:
-				self.error(player, __("There's already a player with your name inside this game. Change your name"))
+				self.error(player, __("There's already a player with your name inside this game.") + " " +
+				                   __("Please change your name."))
 				return
 			if _player.color == packet.playercolor:
-				self.error(player, __("There's already a player with your color inside this game. Change your color"))
+				self.error(player, __("There's already a player with your color inside this game.") + " " +
+				                   __("Please change your color."))
 				return
 			if _player.clientid == packet.clientid:
-				self.error(player, __("There's already a player with your unique player ID inside this game. This should never occur."))
+				self.error(player, __("There's already a player with your unique player ID inside this game. "
+				                      "This should never occur."))
 				return
 
 		logging.debug("[JOIN] [%s] %s joined %s" % (game.uuid, player, game))
@@ -513,7 +524,8 @@ class Server(object):
 		# make sure player names are unique
 		for _player in game.players:
 			if _player.name == packet.playername:
-				self.error(player, __("There's already a player with your name inside this game. Unable to change your name"))
+				self.error(player, __("There's already a player with your name inside this game.") + " " +
+				                   __("Unable to change your name."))
 				return
 
 		# ACK the change
@@ -540,7 +552,8 @@ class Server(object):
 		# make sure player colors are unique
 		for _player in game.players:
 			if _player.color == packet.playercolor:
-				self.error(player, __("There's already a player with your color inside this game. Unable to change your color"))
+				self.error(player, __("There's already a player with your color inside this game.") + " " +
+				                   __("Unable to change your color."))
 				return
 
 		# ACK the change

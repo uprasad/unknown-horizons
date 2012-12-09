@@ -23,33 +23,36 @@ import hashlib
 import logging
 import textwrap
 
-from fife.extensions.pychan.widgets import HBox, Icon, Label
+from fife.extensions.pychan.widgets import Button, HBox, Icon, Label
 
 from horizons.gui.modules import PlayerDataSelection
 from horizons.gui.widgets.imagebutton import OkButton, CancelButton
 from horizons.savegamemanager import SavegameManager
-from horizons.network.networkinterface import MPGame
 from horizons.constants import MULTIPLAYER
 from horizons.network.networkinterface import NetworkInterface
-from horizons.network import find_enet_module
+from horizons.network import enet
 from horizons.component.ambientsoundcomponent import AmbientSoundComponent
 from horizons.util.color import Color
 from horizons.util.python.callback import Callback
 from horizons.util.savegameaccessor import SavegameAccessor
 
-enet = find_enet_module()
 
 class MultiplayerMenu(object):
 	log = logging.getLogger("networkinterface")
 
+	def __init__(self, mainmenu):
+		self.mainmenu = mainmenu
+		self.widgets = mainmenu.widgets
+		self.current = None
+
 	def show_multi(self):
 		"""Shows main multiplayer menu"""
-		if enet == None:
+		if enet is None:
 			headline = _(u"Unable to find pyenet")
 			descr = _(u'The multiplayer feature requires the library "pyenet", '
 			          u"which could not be found on your system.")
 			advice = _(u"Linux users: Try to install pyenet through your package manager.")
-			self.show_error_popup(headline, descr, advice)
+			self.mainmenu.show_error_popup(headline, descr, advice)
 			return
 
 		if NetworkInterface() is None:
@@ -59,15 +62,15 @@ class MultiplayerMenu(object):
 				headline = _(u"Failed to initialize networking.")
 				descr = _("Network features could not be initialized with the current configuration.")
 				advice = _("Check the settings you specified in the network section.")
-				self.show_error_popup(headline, descr, advice, unicode(e))
+				self.mainmenu.show_error_popup(headline, descr, advice, unicode(e))
 				return
 
-		if not NetworkInterface().isconnected():
+		if not NetworkInterface().is_connected:
 			connected = self.__connect_to_server()
 			if not connected:
 				return
 
-		if NetworkInterface().isjoined():
+		if NetworkInterface().is_joined:
 			if not NetworkInterface().leavegame():
 				return
 
@@ -83,11 +86,12 @@ class MultiplayerMenu(object):
 		self.__apply_new_color()
 		# reload because changing modes (not yet implemented) will need it
 		self.widgets.reload('multiplayermenu')
-		self._switch_current_widget('multiplayermenu', center=True, event_map=event_map, hide_old=True)
+		self.mainmenu._switch_current_widget('multiplayermenu', center=True, event_map=event_map, hide_old=True)
+		self.current = self.mainmenu.current
 
 		refresh_worked = self.__refresh()
 		if not refresh_worked:
-			self.show_main()
+			self.mainmenu.show_main()
 			return
 		self.current.findChild(name='gamelist').capture(self.__update_game_details)
 		self.current.findChild(name='showonlyownversion').capture(self.__show_only_own_version_toggle)
@@ -95,7 +99,7 @@ class MultiplayerMenu(object):
 
 		self.current.show()
 
-		self.on_escape = event_map['cancel']
+		self.mainmenu.on_escape = event_map['cancel']
 
 	def create_default_mp_game(self):
 		"""For debugging; creates a valid game. Call right after show_multi"""
@@ -111,21 +115,19 @@ class MultiplayerMenu(object):
 		self.__toggle_ready()
 
 	def __connect_to_server(self):
-		NetworkInterface().register_chat_callback(self.__receive_chat_message)
-		NetworkInterface().register_game_prepare_callback(self.__prepare_game)
-		NetworkInterface().register_game_starts_callback(self.__start_game)
-		NetworkInterface().register_error_callback(self._on_error)
+		NetworkInterface().subscribe("game_prepare", self.__prepare_game)
+		NetworkInterface().subscribe("game_starts", self.__start_game)
+		NetworkInterface().subscribe("game_details_changed", self.__update_game_details)
+		NetworkInterface().subscribe("error", self._on_error)
 
-		NetworkInterface().register_game_terminated_callback(self.__game_terminated)
-		NetworkInterface().register_game_details_changed_callback(self.__update_game_details)
-		NetworkInterface().register_player_joined_callback(self.__player_joined)
-		NetworkInterface().register_player_left_callback(self.__player_left)
-		NetworkInterface().register_player_changed_name_callback(self.__player_changed_name)
-		NetworkInterface().register_player_changed_color_callback(self.__player_changed_color)
-		NetworkInterface().register_player_toggle_ready_callback(self.__player_toggled_ready)
-		NetworkInterface().register_kick_callback(self.__player_kicked)
-
-		NetworkInterface().register_player_fetch_game_callback(self.__fetch_game) #TODO
+		NetworkInterface().subscribe("lobbygame_chat", self.__receive_chat_message)
+		NetworkInterface().subscribe("lobbygame_terminate", self.__game_terminated)
+		NetworkInterface().subscribe("lobbygame_join", self.__player_joined)
+		NetworkInterface().subscribe("lobbygame_leave", self.__player_left)
+		NetworkInterface().subscribe("lobbygame_changename", self.__player_changed_name)
+		NetworkInterface().subscribe("lobbygame_changecolor", self.__player_changed_color)
+		NetworkInterface().subscribe("lobbygame_toggleready", self.__player_toggled_ready)
+		NetworkInterface().subscribe("lobbygame_kick", self.__player_kicked)
 
 		try:
 			NetworkInterface().connect()
@@ -134,53 +136,53 @@ class MultiplayerMenu(object):
 			descr = _(u"Could not connect to master server.")
 			advice = _(u"Please check your Internet connection. If it is fine, "
 			           u"it means our master server is temporarily down.")
-			self.show_error_popup(headline, descr, advice, unicode(err))
+			self.mainmenu.show_error_popup(headline, descr, advice, unicode(err))
 			return False
 		return True
 
 	def _on_error(self, exception, fatal=True):
 		"""Error callback"""
-		if fatal and self.session is not None:
-			self.session.timer.ticks_per_second = 0
-		if self.dialog_executed:
+		if fatal and self.mainmenu.session is not None:
+			self.mainmenu.session.timer.ticks_per_second = 0
+		if self.mainmenu.dialog_executed:
 			# another message dialog is being executed, and we were called by that action.
 			# if we now trigger another message dialog, we will probably loop.
 			return
 		if not fatal:
-			self.show_popup(_("Error"), unicode(exception))
+			self.mainmenu.show_popup(_("Error"), unicode(exception))
 		else:
-			self.show_popup(_("Fatal Network Error"),
-		                 _("Something went wrong with the network:") + u'\n' +
-		                 unicode(exception) )
-			self.quit_session(force=True)
+			self.mainmenu.show_popup(_("Fatal Network Error"),
+		                             _("Something went wrong with the network:") + u'\n' +
+		                             unicode(exception) )
+			self.mainmenu.quit_session(force=True)
 
 	def __cancel(self):
-		if NetworkInterface().isconnected():
+		if NetworkInterface().is_connected:
 			NetworkInterface().disconnect()
 		self.__apply_new_nickname()
 		self.__apply_new_color()
-		self.show_main()
+		self.mainmenu.show_main()
 
 	def __player_kicked(self, game, player, myself):
 		if myself:
-			self.show_popup(_("Kicked"), _("You have been kicked from the game by creator"))
+			self.mainmenu.show_popup(_("Kicked"), _("You have been kicked from the game by creator"))
 			self.show_multi()
 		else:
 			self.__print_event_message(_("{player} got kicked by creator").format(player=player.name))
 
 	def __game_terminated(self, game, errorstr):
-		self.show_popup(_("Terminated"), errorstr)
+		self.mainmenu.show_popup(_("Terminated"), errorstr)
 		self.show_multi()
 
 	def _display_game_name(self, game):
-		same_version = game.get_version() == NetworkInterface().get_clientversion()
+		same_version = game.version == NetworkInterface().get_clientversion()
 		template = u"{password}{gamename}: {name} ({players}, {limit}){version}"
 		return template.format(
-			password="(Password!) " if game.has_password() else "",
-			name=game.get_map_name(),
-			gamename=game.get_name(),
-			players=game.get_player_count(),
-			limit=game.get_player_limit(),
+			password="(Password!) " if game.has_password else "",
+			name=game.map_name,
+			gamename=game.name,
+			players=game.player_count,
+			limit=game.player_limit,
 			version=u" " + _("Version differs!") if not same_version else u"")
 
 	def __refresh(self, play_sound=False):
@@ -203,7 +205,7 @@ class MultiplayerMenu(object):
 
 	def __get_selected_game(self):
 		try:
-			if NetworkInterface().isjoined():
+			if NetworkInterface().is_joined:
 				return NetworkInterface().get_game()
 			else:
 				index = self.current.collectData('gamelist')
@@ -221,19 +223,19 @@ class MultiplayerMenu(object):
 			if game is None:
 				return
 		#xgettext:python-format
-		self.current.findChild(name="game_map").text = _("Map: {map_name}").format(map_name=game.get_map_name())
-		self.current.findChild(name="game_name").text = _("Name: {game_name}").format(game_name=game.get_name())
-		self.current.findChild(name="game_creator").text = _("Creator: {game_creator}").format(game_creator=game.get_creator())
+		self.current.findChild(name="game_map").text = _("Map: {map_name}").format(map_name=game.map_name)
+		self.current.findChild(name="game_name").text = _("Name: {game_name}").format(game_name=game.name)
+		self.current.findChild(name="game_creator").text = _("Creator: {game_creator}").format(game_creator=game.creator)
 		#xgettext:python-format
 		self.current.findChild(name="game_playersnum").text = _("Players: {player_amount}/{player_limit}").format(
-		                           player_amount=game.get_player_count(),
-		                           player_limit=game.get_player_limit())
+		                           player_amount=game.player_count,
+		                           player_limit=game.player_limit)
 		vbox_inner = self.current.findChild(name="game_info")
-		if game.is_savegame(): # work around limitations of current systems via messages
-			path = SavegameManager.get_multiplayersave_map(game.mapname)
+		if game.is_savegame: # work around limitations of current systems via messages
+			path = SavegameManager.get_multiplayersave_map(game.map_name)
 			btn_name = "save_missing_help_button"
 			btn = vbox_inner.findChild(name=btn_name)
-			if SavegameAccessor.get_hash(path) != game.get_map_hash():
+			if SavegameAccessor.get_hash(path) != game.map_hash:
 				text = ""
 				if btn is None:
 					btn = Button(name=btn_name)
@@ -247,7 +249,7 @@ class MultiplayerMenu(object):
 				btn_text += _(u"The file will be downloaded when the game starts.")
 				btn.btn_text = btn_text
 				def show():
-					self.show_popup(_("Help"), btn_text, size=1)
+					self.mainmenu.show_popup(_("Help"), btn_text, size=1)
 				btn.capture(show)
 
 			else:
@@ -276,29 +278,32 @@ class MultiplayerMenu(object):
 		self.__apply_new_color()
 
 		fetch = False
-		if game.is_savegame() and SavegameAccessor.get_hash(SavegameManager.get_multiplayersave_map(game.mapname)) != game.get_map_hash():
+		if game.is_savegame and SavegameAccessor.get_hash(SavegameManager.get_multiplayersave_map(game.map_name)) != game.map_hash:
 			fetch = True
 
-		if not NetworkInterface().joingame(game.get_uuid(), password, fetch):
+		if not NetworkInterface().joingame(game.uuid, password, fetch):
 			return False
 		self.__show_gamelobby()
 		return True
 
 	def __join_game(self, game=None):
 		"""Joins a multiplayer game. Displays lobby for that specific game"""
-		if game == None:
-			game = self.__get_selected_game()
 		if game is None:
-			return
-		if game.get_uuid() == -1: # -1 signals no game
+			game = self.__get_selected_game()
+			if game is None:
+				return
+		if game.uuid == -1: # -1 signals no game
 			AmbientSoundComponent.play_special('error')
 			return
-		if game.get_version() != NetworkInterface().get_clientversion():
-			self.show_popup(_("Wrong version"),
-			                   #xgettext:python-format
-			                _("The game's version differs from your version. Every player in a multiplayer game must use the same version. This can be fixed by every player updating to the latest version. Game version: {game_version} Your version: {own_version}").format(
-			                  game_version=game.get_version(),
-			                  own_version=NetworkInterface().get_clientversion()))
+		if game.version != NetworkInterface().get_clientversion():
+			self.mainmenu.show_popup(_("Wrong version"),
+			                         #xgettext:python-format
+			                         _("The game's version differs from your version. "
+			                           "Every player in a multiplayer game must use the same version. "
+			                           "This can be fixed by every player updating to the latest version. "
+			                           "Game version: {game_version} Your version: {own_version}").format(
+			                           game_version=game.version,
+			                           own_version=NetworkInterface().get_clientversion()))
 			return
 
 		# actual join
@@ -324,7 +329,7 @@ class MultiplayerMenu(object):
 			OkButton.DEFAULT_NAME: _enter_password,
 			CancelButton.DEFAULT_NAME: _cancel
 		}
-		self.on_escape = _cancel
+		self.mainmenu.on_escape = _cancel
 
 		password = set_password_dialog.findChild(name='password')
 		password.text = u""
@@ -333,7 +338,8 @@ class MultiplayerMenu(object):
 		password.capture(_enter_password)
 
 	def __prepare_game(self, game):
-		self._switch_current_widget('loadingscreen', center=True, show=True)
+		self.mainmenu._switch_current_widget('loadingscreen', center=True, show=True)
+		self.current = self.mainmenu.current
 		# send map data
 		# NetworkClient().sendmapdata(...)
 		import horizons.main
@@ -355,7 +361,8 @@ class MultiplayerMenu(object):
 			'ready_btn' : self.__toggle_ready,
 		}
 		self.widgets.reload('multiplayer_gamelobby') # remove old chat messages, etc
-		self._switch_current_widget('multiplayer_gamelobby', center=True, event_map=event_map, hide_old=True)
+		self.mainmenu._switch_current_widget('multiplayer_gamelobby', center=True, event_map=event_map, hide_old=True)
+		self.current = self.mainmenu.current
 
 		self.__update_game_details(game)
 
@@ -364,7 +371,7 @@ class MultiplayerMenu(object):
 		textfield.capture(self.__chatfield_onfocus, 'mouseReleased', 'default')
 		self.current.show()
 
-		self.on_escape = event_map['cancel']
+		self.mainmenu.on_escape = event_map['cancel']
 
 	def __apply_new_nickname(self):
 		if hasattr(self.current, 'playerdata'):
@@ -408,9 +415,11 @@ class MultiplayerMenu(object):
 		chatbox.selected = len(chatbox.items) - 1
 
 	def __player_joined(self, game, player):
+		#xgettext:python-format
 		self.__print_event_message(_("{player} has joined the game").format(player=player.name))
 
 	def __player_left(self, game, player):
+		#xgettext:python-format
 		self.__print_event_message(_("{player} has left the game").format(player=player.name))
 
 	def __player_toggled_ready(self, game, plold, plnew, myself):
@@ -422,21 +431,26 @@ class MultiplayerMenu(object):
 				self.__print_event_message(_("You are not ready anymore"))
 		else:
 			if plnew.ready:
+				#xgettext:python-format
 				self.__print_event_message(_("{player} is now ready").format(player=plnew.name))
 			else:
+				#xgettext:python-format
 				self.__print_event_message(_("{player} not ready anymore").format(player=plnew.name))
 
 	def __player_changed_name(self, game, plold, plnew, myself):
 		if myself:
+			#xgettext:python-format
 			self.__print_event_message(_("You are now known as {new_name}").format(new_name=plnew.name))
 		else:
+			#xgettext:python-format
 			self.__print_event_message(_("{player} is now known as {new_name}").format(player=plold.name, new_name=plnew.name))
 
 	def __player_changed_color(self, game, plold, plnew, myself):
 		if myself:
 			self.__print_event_message(_("You changed your color"))
 		else:
-			self.__print_event_message(_("{player} changed its color").format(player=plnew.name))
+			#xgettext:python-format
+			self.__print_event_message(_("{player} changed their color").format(player=plnew.name))
 
 	def __fetch_game(self, game):
 		self.__print_event_message(_("You fetched the savegame data"))
@@ -450,7 +464,8 @@ class MultiplayerMenu(object):
 		}
 		self.__apply_new_nickname()
 		self.__apply_new_color()
-		self._switch_current_widget('multiplayer_creategame', center=True, event_map=event_map, hide_old=True)
+		self.mainmenu._switch_current_widget('multiplayer_creategame', center=True, event_map=event_map, hide_old=True)
+		self.current = self.mainmenu.current
 
 		self.current.files, self.maps_display = SavegameManager.get_maps()
 		self.current.distributeInitialData({
@@ -481,10 +496,10 @@ class MultiplayerMenu(object):
 
 		self.current.show()
 
-		self.on_escape = event_map['cancel']
+		self.mainmenu.on_escape = event_map['cancel']
 
 	def __show_load_game(self):
-		ret = self.show_select_savegame(mode='mp_load')
+		ret = self.mainmenu.show_select_savegame(mode='mp_load')
 		if ret is None: # user aborted
 			return
 		path, gamename, gamepassword = ret
@@ -580,8 +595,9 @@ class MultiplayerMenu(object):
 			hbox.addChild(pcolor)
 			hbox.addChild(pstatus)
 
-			if NetworkInterface().get_client_name() == game.get_creator() and player['name'] != game.get_creator():
-				pkick = CancelButton(name="pkick_%s" % player['name'], helptext=_("Kick {player}").format(player=player['name']))
+			if NetworkInterface().get_client_name() == game.creator and player['name'] != game.creator:
+				pkick = CancelButton(name="pkick_%s" % player['name'])
+				pkick.helptext = _("Kick {player}").format(player=player['name'])
 				pkick.capture(Callback(NetworkInterface().kick, player['sid']))
 				pkick.up_image = "content/gui/images/buttons/delete_small.png"
 				pkick.down_image = "content/gui/images/buttons/delete_small.png"
@@ -602,8 +618,8 @@ class MultiplayerMenu(object):
 
 		def _get_unused_colors():
 			"""Returns unused colors list in a game """
-
-			assigned = [p["color"] for p in NetworkInterface().get_game().get_player_list()  if p["name"] != NetworkInterface().get_client_name() ]
+			assigned = [p["color"] for p in NetworkInterface().get_game().get_player_list()
+			                       if p["name"] != NetworkInterface().get_client_name()]
 			available = set(Color) - set(assigned)
 			return available
 
@@ -611,7 +627,8 @@ class MultiplayerMenu(object):
 		#remove all children of color and name pop-up and then show them
 		set_player_details_dialog.findChild(name="playerdataselectioncontainer").removeAllChildren()
 		#assign playerdata to self.current.playerdata to use self.__apply_new_color() and __apply_new_nickname()
-		self.current.playerdata = PlayerDataSelection(set_player_details_dialog, self.widgets, color_palette=_get_unused_colors())
+		self.current.playerdata = PlayerDataSelection(set_player_details_dialog, self.widgets,
+		                                              color_palette=_get_unused_colors())
 		self.current.playerdata.set_player_name(NetworkInterface().get_client_name())
 		self.current.playerdata.set_color(NetworkInterface().get_client_color())
 
@@ -628,7 +645,7 @@ class MultiplayerMenu(object):
 			OkButton.DEFAULT_NAME: _change_playerdata,
 			CancelButton.DEFAULT_NAME: _cancel
 		}
-		self.on_escape = _cancel
+		self.mainmenu.on_escape = _cancel
 
 		set_player_details_dialog.mapEvents(events)
 		set_player_details_dialog.show()

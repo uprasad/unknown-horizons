@@ -26,7 +26,6 @@ from itertools import groupby
 from fife.extensions.pychan.widgets import HBox, Icon, Label
 
 from horizons.util.python.callback import Callback
-from horizons.util.changelistener import metaChangeListenerDecorator
 from horizons.component.ambientsoundcomponent import AmbientSoundComponent
 from horizons.command.game import UnPauseCommand
 from horizons.command.misc import Chat
@@ -34,8 +33,7 @@ from horizons.gui.widgets.pickbeltwidget import PickBeltWidget
 from horizons.gui.widgets.imagebutton import OkButton
 from horizons.scenario.actions import show_message
 
-@metaChangeListenerDecorator("pause_request")
-@metaChangeListenerDecorator("unpause_request")
+
 class LogBook(PickBeltWidget):
 	"""Implementation of the logbook as described here:
 	http://wiki.unknown-horizons.org/w/Message_System
@@ -60,6 +58,7 @@ class LogBook(PickBeltWidget):
 		self._parameters = [] # list of lists of all parameters added to a logbook page
 		self._message_log = [] # list of all messages that have been displayed
 		self._messages_to_display = [] # list messages to display on page close
+		self._displayed_messages = [] # list of messages that were already displayed
 		self._cur_entry = None # remember current location; 0 to len(messages)-1
 		self._hiding_widget = False # True if and only if the widget is currently in the process of being hidden
 		self.stats_visible = None
@@ -130,6 +129,7 @@ class LogBook(PickBeltWidget):
 			self._message_log.append(msg[0]) # each line of the table is one tuple
 		# wipe self._messages_to_display on load, otherwise all previous messages get displayed
 		self._messages_to_display = []
+		self._displayed_messages = []
 
 		value = db('SELECT value FROM metadata WHERE name = "logbook_cur_entry"')
 		if (value and value[0] and value[0][0]):
@@ -156,9 +156,12 @@ class LogBook(PickBeltWidget):
 			self._hiding_widget = False
 
 			for message in self._messages_to_display:
-				# show all messages and map them to the current logbook page
+				# show all messages (except those already displayed) and map them to the current logbook page
+				if message in self._displayed_messages:
+					continue
 				for msg_id in show_message(self.session, "logbook", message):
 					self._page_ids[msg_id] = self._cur_entry
+					self._displayed_messages.append(message)
 
 			self._message_log.extend(self._messages_to_display)
 			self._messages_to_display = []
@@ -273,6 +276,7 @@ class LogBook(PickBeltWidget):
 			"""
 			return [list(l[1]) for l in groupby(parameters, lambda x: x != ['Pagebreak']) if l[0]]
 
+		self._displayed_messages = [] # Reset displayed messages
 		for parameter_list in _split_on_pagebreaks(parameters):
 			self._parameters.append(parameter_list)
 			for parameter_definition in parameter_list:
@@ -344,7 +348,7 @@ class LogBook(PickBeltWidget):
 		Otherwise, switch to displaying the new widget instead of hiding.
 		@param widget: 'players' or 'settlements' or 'ships'
 		"""
-		if self.stats_visible is not None and self.stats_visible == widget :
+		if self.stats_visible is not None and self.stats_visible == widget:
 			self.hide()
 		else:
 			self.show()

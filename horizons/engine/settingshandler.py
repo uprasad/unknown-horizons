@@ -27,7 +27,7 @@ from fife.extensions.fife_settings import FIFE_MODULE
 
 import horizons.main
 
-from horizons.gui.quotes import QUOTES_SETTINGS
+from horizons.i18n.quotes import QUOTES_SETTINGS
 from horizons.i18n import change_language, find_available_languages
 from horizons.util.python import parse_port
 from horizons.util.python.callback import Callback
@@ -35,6 +35,7 @@ from horizons.extscheduler import ExtScheduler
 from horizons.constants import LANGUAGENAMES, PATHS
 from horizons.network.networkinterface import NetworkInterface
 from horizons.engine import UH_MODULE
+from horizons.messaging import AutosaveIntervalChanged, MinimapRotationSettingChanged
 
 class SettingsHandler(object):
 	"""Handles settings-related boilerplate code as well as gui."""
@@ -47,25 +48,21 @@ class SettingsHandler(object):
 		return self.engine._setting
 
 	def add_settings(self):
-
-		# TODO: find a way to apply changing to a running game in a clean fashion
-		#       possibility: use signaling via changelistener
 		def update_minimap(*args):
-			try: horizons.main._modules.session.ingame_gui.minimap.draw()
-			except AttributeError: pass # session or gui not yet initialised
+			MinimapRotationSettingChanged.broadcast(None)
 
 		def update_autosave_interval(*args):
-			try: horizons.main._modules.session.reset_autosave()
-			except AttributeError: pass # session or gui not yet initialised
-
+			AutosaveIntervalChanged.broadcast(None)
 
 		#self.createAndAddEntry(self, module, name, widgetname, applyfunction=None, initialdata=None, requiresrestart=False)
 		self._setting.createAndAddEntry(UH_MODULE, "AutosaveInterval", "autosaveinterval",
-				                        applyfunction=update_autosave_interval)
+		                                applyfunction=update_autosave_interval)
 		self._setting.createAndAddEntry(UH_MODULE, "AutosaveMaxCount", "autosavemaxcount")
 		self._setting.createAndAddEntry(UH_MODULE, "QuicksaveMaxCount", "quicksavemaxcount")
 		self._setting.createAndAddEntry(UH_MODULE, "EdgeScrolling", "edgescrolling")
 		self._setting.createAndAddEntry(UH_MODULE, "CursorCenteredZoom", "cursor_centered_zoom")
+		self._setting.createAndAddEntry(UH_MODULE, "ScrollSpeed", "scrollspeed")
+		self._setting.createAndAddEntry(UH_MODULE, "MiddleMousePan", "middle_mouse_pan")
 		self._setting.createAndAddEntry(UH_MODULE, "UninterruptedBuilding", "uninterrupted_building")
 		self._setting.createAndAddEntry(UH_MODULE, "AutoUnload", "auto_unload")
 		self._setting.createAndAddEntry(UH_MODULE, "MinimapRotation", "minimaprotation",
@@ -77,7 +74,7 @@ class SettingsHandler(object):
 		self._setting.createAndAddEntry(UH_MODULE, "ShowResourceIcons", "show_resource_icons")
 
 		self._setting.createAndAddEntry(FIFE_MODULE, "BitsPerPixel", "screen_bpp",
-				                        initialdata=[0, 16, 32], requiresrestart=True)
+				                        initialdata={0: _("Default"), 16: _("16 bit"), 32: _("32 bit")}, requiresrestart=True)
 
 		languages = find_available_languages().keys()
 
@@ -127,13 +124,15 @@ class SettingsHandler(object):
 		self.settings_dialog.position_technique = "automatic" # "center:center"
 		slider_dict = {'AutosaveInterval' : 'autosaveinterval',
 				       'AutosaveMaxCount' : 'autosavemaxcount',
-				       'QuicksaveMaxCount' : 'quicksavemaxcount'}
+				       'QuicksaveMaxCount' : 'quicksavemaxcount',
+				       'ScrollSpeed' : 'scrollspeed'}
 
 		for x in slider_dict.keys():
 			slider_initial_data[slider_dict[x]+'_value'] = unicode(int(self._setting.get(UH_MODULE, x)))
 		slider_initial_data['volume_music_value'] = unicode(int(self._setting.get(UH_MODULE, "VolumeMusic") * 500)) + '%'
 		slider_initial_data['volume_effects_value'] = unicode(int(self._setting.get(UH_MODULE, "VolumeEffects") * 200)) + '%'
 		slider_initial_data['mousesensitivity_value'] = unicode("%.1f" % float(self._setting.get(FIFE_MODULE, "MouseSensitivity") * 100)) + '%'
+		slider_initial_data['scrollspeed_value'] = unicode("%.1f" % float(self._setting.get(UH_MODULE, "ScrollSpeed")))
 
 		self.settings_dialog.distributeInitialData(slider_initial_data)
 
@@ -166,7 +165,7 @@ class SettingsHandler(object):
 		factor - value will be multiplied by factor
 		unit - this string will be added to the end
 		"""
-		if slider == "mousesensitivity":
+		if slider == "mousesensitivity" or slider == "scrollspeed":
 			#for floating wanted
 			self.settings_dialog.findChild(name=slider + '_value').text = \
 				u"%.2f%s" % (float(self.settings_dialog.findChild(name=slider).value * factor), unit)
@@ -247,7 +246,7 @@ class SettingsHandler(object):
 			try:
 				if NetworkInterface() is None:
 					NetworkInterface.create_instance()
-				NetworkInterface().network_data_changed(connect=False)
+				NetworkInterface().network_data_changed()
 			except Exception as e:
 				headline = _(u"Failed to apply new network settings.")
 				descr = _("Network features could not be initialized with the current configuration.")
@@ -278,7 +277,7 @@ class SettingsHandler(object):
 		if data: # enable logging
 			if options.debug:
 				# log file is already set up, just make sure everything is logged
-				logging.getLogger().setLevel( logging.DEBUG )
+				logging.getLogger().setLevel(logging.DEBUG)
 			else: # set up all anew
 				class Data(object):
 					debug = False
@@ -296,13 +295,13 @@ class SettingsHandler(object):
 				horizons.main._modules.gui.show_popup(headline, msg)
 
 		else: #disable logging
-			logging.getLogger().setLevel( logging.WARNING )
+			logging.getLogger().setLevel(logging.WARNING)
 			# keep debug flag in options so to not reenable it fully twice
 			# on reenable, onyl the level will be reset
 
 # misc utility
 
-def get_screen_resolutions():
+def get_screen_resolutions(selected_default):
 	"""Create an instance of fife.DeviceCaps and compile a list of possible resolutions.
 
 			NOTE:
@@ -324,6 +323,9 @@ def get_screen_resolutions():
 		res = str(x) + 'x' + str(y)
 		if res not in possible_resolutions:
 			possible_resolutions.append(res)
+
+	if selected_default not in possible_resolutions:
+		possible_resolutions.append(selected_default)
 
 	possible_resolutions.sort(key=lambda res: int(res.split('x')[0]))
 

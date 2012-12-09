@@ -27,14 +27,14 @@ from horizons.constants import PLAYER
 from horizons.world.playerstats import PlayerStats
 from horizons.util.color import Color
 from horizons.util.difficultysettings import DifficultySettings
+from horizons.util.inventorychecker import InventoryChecker
 from horizons.util.python import decorators
-from horizons.util.python.callback import Callback
 from horizons.util.worldobject import WorldObject
 from horizons.scenario import CONDITIONS
 from horizons.scheduler import Scheduler
 from horizons.component.componentholder import ComponentHolder
 from horizons.component.storagecomponent import StorageComponent
-from horizons.messaging import SettlerUpdate, NewDisaster
+from horizons.messaging import SettlerUpdate, NewDisaster, PlayerInventoryUpdated
 from horizons.component.tradepostcomponent import TradePostComponent
 
 class Player(ComponentHolder, WorldObject):
@@ -81,23 +81,21 @@ class Player(ComponentHolder, WorldObject):
 		self.difficulty = DifficultySettings.get_settings(difficulty_level)
 		self.max_tier_notification = max_tier_notification
 		self.settler_level = settlerlevel
-		self.stats = None
+		self._stats = None
 		assert self.color.is_default_color, "Player color has to be a default color"
 
-		SettlerUpdate.subscribe(self.notify_settler_reached_level)
-		NewDisaster.subscribe(self.notify_new_disaster, sender=self)
+		if self.regular_player:
+			SettlerUpdate.subscribe(self.notify_settler_reached_level)
+			NewDisaster.subscribe(self.notify_new_disaster, sender=self)
 
 	@property
 	def is_local_player(self):
 		return self is self.session.world.player
 
-	def update_stats(self):
-		# will only be enabled on demand since it takes a while to calculate
-		Scheduler().add_new_object(Callback(self.update_stats), self, run_in=PLAYER.STATS_UPDATE_FREQUENCY)
-		self.stats = PlayerStats(self)
-
 	def get_latest_stats(self):
-		return self.stats
+		if self._stats is None or self._stats.collection_tick + PLAYER.STATS_UPDATE_FREQUENCY < Scheduler().cur_tick:
+			self._stats = PlayerStats(self)
+		return self._stats
 
 	@property
 	def settlements(self):
@@ -130,13 +128,6 @@ class Player(ComponentHolder, WorldObject):
 			"SELECT color, name, client_id, settler_level, difficulty_level, max_tier_notification FROM player WHERE rowid = ?", worldid)[0]
 		self.__init(name, Color[color], client_id, difficulty_level, max_tier_notification, settlerlevel = settlerlevel)
 
-	def notify_unit_path_blocked(self, unit):
-		"""Notify the user that a unit stopped moving
-		NOTE: this is just a quick fix for a release
-		      a signaling concept for such events is planned.
-		"""
-		self.log.warning("ERROR: UNIT %s CANNOT MOVE ANY FURTHER!", unit)
-
 	def notify_settler_reached_level(self, message):
 		"""Settler calls this to notify the player
 		@param settler: instance of Settler
@@ -165,8 +156,12 @@ class Player(ComponentHolder, WorldObject):
 			self.session.ingame_gui.message_widget.add(point=pos, string_id=message.disaster_class.NOTIFICATION_TYPE)
 
 	def end(self):
-		self.stats = None
+		self._stats = None
 		self.session = None
+
+		if self.regular_player:
+			SettlerUpdate.unsubscribe(self.notify_settler_reached_level)
+			NewDisaster.unsubscribe(self.notify_new_disaster, sender=self)
 
 	@decorators.temporary_cachedmethod(timeout=STATS_UPDATE_INTERVAL)
 	def get_balance_estimation(self):
@@ -182,17 +177,22 @@ class Player(ComponentHolder, WorldObject):
 		# with the other values here
 
 		get_sum = lambda l, attr : sum ( getattr(obj, attr) for obj in l )
-		tradeposts = [ s.get_component(TradePostComponent) for s in self.settlements ]
+		trade_posts = [ s.get_component(TradePostComponent) for s in self.settlements ]
 		return Data(
 		  running_costs = get_sum(self.settlements, 'cumulative_running_costs'),
 		  taxes = get_sum(self.settlements, 'cumulative_taxes'),
-		  sell_income = get_sum(tradeposts, 'sell_income'),
-		  buy_expenses = get_sum(tradeposts, 'buy_expenses'),
+		  sell_income = get_sum(trade_posts, 'sell_income'),
+		  buy_expenses = get_sum(trade_posts, 'buy_expenses'),
 		  balance = get_sum(self.settlements, 'balance'),
 		)
 
 
 class HumanPlayer(Player):
+
+	def __init(self, *args, **kwargs):
+		super(HumanPlayer, self).__init(*args, **kwargs)
+		self.__inventory_checker = InventoryChecker(PlayerInventoryUpdated, self.get_component(StorageComponent), 4)
+
 	"""Class for players that physically sit in front of the machine where the game is run"""
 	def notify_settler_reached_level(self, message):
 		level_up = super(HumanPlayer, self).notify_settler_reached_level(message)
@@ -205,3 +205,9 @@ class HumanPlayer(Player):
 
 	def notify_mine_empty(self, mine):
 		self.session.ingame_gui.message_widget.add(point=mine.position.center, string_id='MINE_EMPTY')
+
+	def end(self):
+		if hasattr(self, '__inventory_checker'):
+			self.__inventory_checker.remove()
+		super(HumanPlayer, self).end()
+		

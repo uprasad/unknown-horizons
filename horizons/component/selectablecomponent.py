@@ -190,14 +190,6 @@ class SelectableBuildingComponent(SelectableComponent):
 		@param settlement: Settlement instance the building belongs to"""
 		renderer = session.view.renderer['InstanceRenderer']
 
-		"""
-		import cProfile as profile
-		import tempfile
-		outfilename = tempfile.mkstemp(text=True)[1]
-		print 'profile to ', outfilename
-		c = "cls._do_select(renderer, position, session.world, settlement)"
-		profile.runctx(c, globals(), locals(), outfilename)
-		"""
 		cls._do_select(renderer, position, session.world, settlement,
 		               radius, range_applies_only_on_island)
 
@@ -264,7 +256,10 @@ class SelectableBuildingComponent(SelectableComponent):
 				ground_holder = settlement
 
 			for tile in ground_holder.get_tiles_in_radius(position, radius, include_self=False):
-				if ( 'constructible' in tile.classes or 'coastline' in tile.classes ):
+				if 'constructible' in tile.classes or 'coastline' in tile.classes:
+					if settlement is None and tile.settlement is not None:
+						# trying to build a warehouse and the tile is already owned by another player.
+						continue
 					cls._add_selected_tile(tile, renderer)
 		else:
 			# we have to color water too
@@ -355,6 +350,7 @@ class SelectableShipComponent(SelectableUnitComponent):
 			super(SelectableShipComponent, self).deselect()
 			self.instance._update_buoy(remove_only=True)
 
+
 class SelectableFisherComponent(SelectableBuildingComponent):
 	"""Class used to highlight the radius of a fisher. Highlights only the fishing
 	grounds."""
@@ -370,11 +366,6 @@ class SelectableFisherComponent(SelectableBuildingComponent):
 			#cls._selected_tiles.l.append(fish_deposit)
 			for pos in fish_deposit.position:
 				cls._add_fake_tile(pos.x, pos.y, layer, renderer)
-
-	"""@classmethod
-	def get_instance(cls, arguments):
-		arguments = copy.copy(arguments)
-		return SelectableFisherComponent( **arguments )"""
 
 decorators.bind_all(SelectableFisherComponent)
 decorators.bind_all(SelectableBuildingComponent)

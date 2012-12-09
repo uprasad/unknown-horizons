@@ -24,14 +24,16 @@ Cleaner interface to various game/gui functions to make tests easier.
 """
 
 import contextlib
+import types
 from collections import deque
 
 import mock
 from fife import fife
+from fife.extensions import pychan
 
 import horizons.main
-from horizons.command.unit import Act
 from horizons.constants import GAME_SPEED
+from horizons.extscheduler import ExtScheduler
 from horizons.gui.mousetools.navigationtool import NavigationTool
 from horizons.gui.mousetools.buildingtool import BuildingTool
 from horizons.gui.mousetools.cursortool import CursorTool
@@ -49,9 +51,9 @@ def get_player_ship(session):
 	raise Exception('Player ship not found')
 
 
-def move_ship(ship, (x, y)):
+def move_ship(gui, ship, (x, y)):
 	"""Move ship to coordinates and wait until it arrives."""
-	Act(ship, x, y)(ship.owner)
+	gui.cursor_click(x, y, 'right')
 
 	while (ship.position.x, ship.position.y) != (x, y):
 		cooperative.schedule()
@@ -61,8 +63,7 @@ def found_settlement(gui, ship_pos, (x, y)):
 	"""Move ship to coordinates and build a warehouse."""
 	ship = get_player_ship(gui.session)
 	gui.select([ship])
-
-	move_ship(ship, ship_pos)
+	move_ship(gui, ship, ship_pos)
 
 	# Found a settlement
 	gui.trigger('overview_trade_ship', 'found_settlement')
@@ -101,12 +102,14 @@ class CursorToolsPatch(object):
 
 		self.patch1 = mock.patch('horizons.gui.mousetools.CursorTool.get_world_location', patched_world_location_from_event)
 		self.patch2 = mock.patch('horizons.gui.mousetools.CursorTool.get_exact_world_location', patched_world_location_from_event)
+		self.patch3 = mock.patch('horizons.gui.mousetools.TileLayingTool.get_world_location', patched_world_location_from_event)
 
 		NavigationTool._orig_get_hover_instances = NavigationTool.get_hover_instances
 
 	def enable(self):
 		self.patch1.start()
 		self.patch2.start()
+		self.patch3.start()
 
 		# this makes selecting buildings by clicking on them possible. without this, get_hover_instances receives an event with map
 		# coordinates, and will not find the correct building (if any). to fix this, we're converting the coordinates back to screen space
@@ -124,6 +127,7 @@ class CursorToolsPatch(object):
 	def disable(self):
 		self.patch1.stop()
 		self.patch2.stop()
+		self.patch3.stop()
 
 		NavigationTool.get_hover_instances = NavigationTool._orig_get_hover_instances
 
@@ -159,25 +163,117 @@ class GuiHelper(object):
 		"""
 		return self._manager.allWidgets.keys()
 
-	def find(self, name):
-		"""Recursive find a widget by name."""
+	def _get_children(self, w):
+		if hasattr(w, 'children'):
+			return w.children
+		elif hasattr(w, 'findChildren'):
+			return w.findChildren()
+
+	def _find(self, name):
+		"""Recursive find a widget by name.
+
+		This is the actual search implementation behind `GuiHelper.find`.
+		"""
+		match = None
+		seen = set()
 		widgets = deque(self.active_widgets)
-		while widgets:
-			w = widgets.popleft()
-			if w.name == name:
-				return w
-			else:
-				if hasattr(w, 'children'):
-					widgets.extend(w.children)
 
-		return None
+		path_components = list(reversed(name.split('/')))
 
-	def trigger(self, root, event):
+		while path_components:
+			name = path_components.pop()
+
+			while widgets:
+				w = widgets.popleft()
+				seen.add(w)
+				if w.name == name:
+					# When there are still names left in the path, continue our search
+					# in the children of the matched widget
+					if path_components:
+						widgets = deque([x for x in self._get_children(w) if x not in seen])
+						break
+					else:
+						# We're done!
+						match = w
+						break
+				else:
+					widgets.extend([x for x in self._get_children(w) if x not in seen])
+
+			if match:
+				break
+
+		return match
+
+	def find(self, name):
+		"""Find a widget by name.
+
+		`name` can consist of multiple widget names separated by a slash. In this
+		case, this is interpreted as a path to the widget with the last name.
+		This is necessary when multiple widgets exist with the same name.
+
+		Example:
+
+			gui.find('menu/button')
+			# look for a widget 'menu' with a descendant named 'button'
+
+		Recursively searches through all widgets. Some widgets will be extended
+		with helper functions to allow easier interaction in tests.
+		"""
+		match = self._find(name)
+
+		gui_helper = self
+
+		if isinstance(match, pychan.widgets.ListBox):
+			def select(self, value):
+				"""Change selection in listbox to value.
+
+				Example:
+
+				    w = gui.find('list_widget')
+				    w.select('A')
+				"""
+				index = self.items.index(value)
+				self.selected = index
+				# trigger callbacks for selection change
+				gui_helper._trigger_widget_callback(self, can_fail=True)
+
+			match.select = types.MethodType(select, match, match.__class__)
+		elif isinstance(match, pychan.widgets.TextField):
+			def write(self, text):
+				"""Change text inside a textfield."""
+				self.text = unicode(text)
+				return self # return self to allow chaining
+
+			def enter(self):
+				"""Trigger callback as if ENTER was pressed."""
+				gui_helper._trigger_widget_callback(self, can_fail=True)
+
+			match.write = types.MethodType(write, match, match.__class__)
+			match.enter = types.MethodType(enter, match, match.__class__)
+		elif isinstance(match, pychan.widgets.Slider):
+			def slide(self, value):
+				"""Set the slider to this value and trigger callbacks."""
+				self.value = float(value)
+
+				# try two possible event group names
+				# TODO find out why some sliders use 'stepslider' and others 'default'
+				if not gui_helper._trigger_widget_callback(self, can_fail=True):
+					gui_helper._trigger_widget_callback(self, group_name="stepslider", can_fail=True)
+
+			match.slide = types.MethodType(slide, match, match.__class__)
+
+		return match
+
+	def trigger(self, root, event, mouse=None):
 		"""Trigger a widget event in a container.
 
-		root  - container (object or name) that holds the widget
+		root  - container (object, name or path) that holds the widget.
+				For more information on path, see `GuiHelper.find`.
 		event - string describing the event (widget/event/group)
 		        event and group are optional
+		mouse - Optional. Can be 'left' or 'right'. Some event callbacks look
+				at the event that occured, so we need to tell what mouse
+				button triggered this.
 
 		Example:
 			c = gui.find('mainmenu')
@@ -209,11 +305,17 @@ class GuiHelper(object):
 			raise Exception("'%s' contains no widget with the name '%s'" % (
 								root.name, widget_name))
 
+		self._trigger_widget_callback(widget, event_name, group_name, mouse=mouse)
+
+	def _trigger_widget_callback(self, widget, event_name="action", group_name="default", can_fail=False, mouse=None):
+		"""Call callbacks for the given widget."""
 		# Check if this widget has any event callbacks at all
 		try:
 			callbacks = widget.event_mapper.callbacks[group_name]
 		except KeyError:
-			raise Exception("No callbacks for event group '%s' for event '%'" % (
+			if can_fail:
+				return False
+			raise Exception("No callbacks for event group '%s' for event '%s'" % (
 							group_name, widget.name))
 
 		# Unusual events are handled normally
@@ -234,7 +336,11 @@ class GuiHelper(object):
 				raise Exception("No callback for event 'action' or 'mouseClicked' registered for widget '%s'" % (
 								group_name, widget.name))
 
-		callback()
+		kwargs = {'widget': widget}
+		if mouse:
+			kwargs['event'] = self._make_mouse_event(0, 0, button=mouse)
+
+		pychan.tools.applyOnlySuitable(callback, **kwargs)
 
 	@contextlib.contextmanager
 	def handler(self, func):
@@ -261,12 +367,18 @@ class GuiHelper(object):
 			gui.press_key(gui.Key.F4, ctrl=True)
 		"""
 		evt = mock.Mock()
+		evt.isConsumed.return_value = False
 		evt.getKey.return_value = self.Key(keycode)
 		evt.isControlPressed.return_value = ctrl
 		evt.isShiftPressed.return_value = shift
 
-		self.session.keylistener.keyPressed(evt)
-		self.session.keylistener.keyReleased(evt)
+		if self.session:
+			keylistener = self.session.keylistener
+		else:
+			keylistener = horizons.main._modules.gui.mainlistener
+
+		keylistener.keyPressed(evt)
+		keylistener.keyReleased(evt)
 
 	def cursor_move(self, x, y):
 		self.cursor.mouseMoved(self._make_mouse_event(x, y))
@@ -304,6 +416,24 @@ class GuiHelper(object):
 		x, y = coords[-1]
 		self.cursor_click(x, y, 'right')
 
+	def cursor_drag(self, (start_x, start_y), (end_x, end_y), button):
+		"""Press mouse button, move the mouse, release button."""
+		self.cursor_move(start_x, start_y)
+		self.cursor_press_button(start_x, start_y, button)
+		self.run()
+
+		steps = max(abs(end_x - start_x), abs(end_y - start_y))
+		x_step = (end_x - start_x) / float(steps)
+		y_step = (end_y - start_y) / float(steps)
+
+		for i in range(steps):
+			x = int(start_x + i * x_step)
+			y = int(start_y + i * y_step)
+			self.cursor.mouseDragged(self._make_mouse_event(x, y, button))
+			self.run()
+
+		self.cursor_release_button(end_x, end_y, button)
+
 	def _make_mouse_event(self, x, y, button=None, shift=False, ctrl=False):
 		if button:
 			button = {'left': fife.MouseEvent.LEFT,
@@ -336,8 +466,12 @@ class GuiHelper(object):
 			def stop():
 				Flag.running = False
 
-			ticks = Scheduler().get_ticks(seconds)
-			Scheduler().add_new_object(stop, None, run_in=ticks)
+			# Scheduler only exists inside games, use ExtScheduler in the mainmenu
+			if Scheduler():
+				ticks = Scheduler().get_ticks(seconds)
+				Scheduler().add_new_object(stop, None, run_in=ticks)
+			else:
+				ExtScheduler().add_new_object(stop, None, run_in=seconds)
 
 			while Flag.running:
 				cooperative.schedule()
@@ -358,3 +492,14 @@ class GuiHelper(object):
 		"""Run the test at maximum game speed."""
 		if self.session:
 			self.session.speed_set(GAME_SPEED.TICK_RATES[-1])
+
+	def speed_default(self):
+		"""Reset game to normal speed."""
+		if self.session:
+			self.session.speed_set(GAME_SPEED.TICKS_PER_SECOND)
+
+	def debug(self):
+		"""Call this to stop the test from running and be able to interact with game."""
+		self.cursor_map_coords.disable()
+		self.speed_default()
+		self.run(2**20)

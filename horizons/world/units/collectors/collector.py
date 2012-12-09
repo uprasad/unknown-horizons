@@ -408,7 +408,7 @@ class Collector(Unit):
 		if self.start_hidden:
 			self.hide()
 		self.job = None
-		Scheduler().add_new_object(self.search_job , self, COLLECTORS.DEFAULT_WAIT_TICKS)
+		Scheduler().add_new_object(self.search_job, self, COLLECTORS.DEFAULT_WAIT_TICKS)
 		self.state = self.states.idle
 
 	def cancel(self, continue_action):
@@ -530,7 +530,7 @@ class JobList(list):
 		if shuffle_first:
 			self.collector.session.random.shuffle(self)
 		inventory = self.collector.get_home_inventory()
-		self.sort(key=lambda job: min(inventory[res] for res in job.resources) , reverse=False)
+		self.sort(key=lambda job: min(inventory[res] for res in job.resources), reverse=False)
 
 	def _sort_jobs_fewest_available_and_distance(self):
 		"""Sort jobs by distance, but secondarily also consider fewest available resources"""
@@ -543,22 +543,15 @@ class JobList(list):
 		Same as fewest_available_and_distance_, but also considers whether target inv is full."""
 		self._sort_jobs_fewest_available_and_distance()
 		self._sort_target_inventory_full()
-		self._sort_no_specialized_producer_in_range()
 
 	def _sort_jobs_distance(self):
 		"""Prefer targets that are nearer"""
-		self.sort(key=lambda job: self.collector.position.distance(job.object.loading_area))
+		collector_point = self.collector.position
+		self.sort(key=lambda job: collector_point.distance(job.object.loading_area))
 
 	def _sort_target_inventory_full(self):
 		"""Prefer targets with full inventory"""
 		self.sort(key=operator.attrgetter('target_inventory_full_num'), reverse=True)
-
-	def _sort_no_specialized_producer_in_range(self):
-		"""Prefer targets with no specialized producer in range"""
-		sort_function = lambda job: int(len(
-			list(job.object.island.get_specialized_producers_in_range(job.object))) > 0)
-
-		self.sort(key=sort_function)
 
 	def __str__(self):
 		return unicode([ unicode(i) for i in self ])

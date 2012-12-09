@@ -20,20 +20,21 @@
 # ###################################################
 
 import json
-import sqlite3
 
 from collections import defaultdict
 
 from horizons.constants import BUILDINGS, TIER
-from horizons.entities import Entities
 from horizons.util.worldobject import WorldObject
-from horizons.util.shapes import Rect
-from horizons.messaging import UpgradePermissionsChanged
+from horizons.messaging import UpgradePermissionsChanged, SettlementInventoryUpdated
 from horizons.util.changelistener import ChangeListener
+from horizons.util.inventorychecker import InventoryChecker
 from horizons.component.componentholder import ComponentHolder
 from horizons.component.tradepostcomponent import TradePostComponent
+from horizons.component.storagecomponent import StorageComponent
+from horizons.world.buildability.settlementcache import SettlementBuildabilityCache
 from horizons.world.production.producer import Producer, UnitProducer
 from horizons.world.resourcehandler import ResourceHandler
+from horizons.scheduler import Scheduler
 
 class Settlement(ComponentHolder, WorldObject, ChangeListener, ResourceHandler):
 	"""The Settlement class describes a settlement and stores all the necessary information
@@ -68,6 +69,11 @@ class Settlement(ComponentHolder, WorldObject, ChangeListener, ResourceHandler):
 		self.warehouse = None # this is set later in the same tick by the warehouse itself or load() here
 		self.upgrade_permissions = upgrade_permissions
 		self.tax_settings = tax_settings
+		Scheduler().add_new_object(self.__init_inventory_checker, self)
+
+	def init_buildability_cache(self, terrain_cache):
+		self.buildability_cache = SettlementBuildabilityCache(terrain_cache, self.ground_map)
+		self.buildability_cache.modify_area(self.ground_map.keys())
 
 	@classmethod
 	def make_default_upgrade_permissions(cls):
@@ -162,34 +168,15 @@ class Settlement(ComponentHolder, WorldObject, ChangeListener, ResourceHandler):
 			tax_settings[level] = tax
 		self.__init(session, WorldObject.get_object_by_id(owner), upgrade_permissions, tax_settings)
 
-		try:
-			# normal tile loading for new savegames
-			tile_data = db("SELECT data FROM settlement_tiles WHERE rowid = ?", worldid)[0][0]
-			tile_data = json.loads(tile_data)
-			for (x, y) in tile_data: # NOTE: json saves tuples as list
-				tup = (x, y)
-				tile = island.ground_map[tup]
-				self.ground_map[tup] = tile
-				tile.settlement = self
-		except sqlite3.OperationalError:
-			print "Updating data of outdated savegame.."
-			# old savegame, create settlement tiles provisionally (not correct, but useable)
-			# TODO: remove when there aren't any savegames from before december 2011 any more
-			for b_type, x, y in db("SELECT type, x, y FROM building WHERE location = ?", worldid):
-				cls = Entities.buildings[b_type]
-				position = Rect.init_from_topleft_and_size(x, y, cls.size[0], cls.size[1])
-				for coord in position.get_radius_coordinates(cls.radius, include_self=True):
-					tile = island.get_tile_tuple(coord)
-					if tile is not None:
-						if tile.settlement is None:
-							self.ground_map[coord] = island.ground_map[coord]
-							tile.settlement = self
+		# load the settlement tile map
+		tile_data = db("SELECT data FROM settlement_tiles WHERE rowid = ?", worldid)[0][0]
+		coords_list = [tuple(raw_coords) for raw_coords in json.loads(tile_data)] # json saves tuples as list
+		for coords in coords_list:
+			tile = island.ground_map[coords]
+			self.ground_map[coords] = tile
+			tile.settlement = self
 
-		# load super here cause basic stuff is just set up now
-
-		# load all buildings from this settlement
-		# the buildings will expand the area of the settlement by adding everything,
-		# that is in the radius of the building, to the settlement.
+		# load all buildings in this settlement
 		from horizons.world import load_building
 		for building_id, building_type in \
 			  db("SELECT rowid, type FROM building WHERE location = ?", worldid):
@@ -214,7 +201,7 @@ class Settlement(ComponentHolder, WorldObject, ChangeListener, ResourceHandler):
 			except KeyError:
 				pass
 
-	def add_building(self, building):
+	def add_building(self, building, load=False):
 		"""Adds a building to the settlement.
 		This does not set building.settlement, it must be set beforehand.
 		@see Island.add_building
@@ -226,6 +213,8 @@ class Settlement(ComponentHolder, WorldObject, ChangeListener, ResourceHandler):
 			self.buildings_by_id[building.id] = [building]
 		if building.has_component(Producer) and not building.has_component(UnitProducer):
 			building.get_component(Producer).add_production_finished_listener(self.settlement_building_production_finished)
+		if not load and not building.buildable_upon and self.buildability_cache:
+			self.buildability_cache.modify_area([coords for coords in building.position.tuple_iter()])
 		if hasattr(self.owner, 'add_building'):
 			# notify interested players of added building
 			self.owner.add_building(building)
@@ -236,6 +225,8 @@ class Settlement(ComponentHolder, WorldObject, ChangeListener, ResourceHandler):
 		self.buildings_by_id[building.id].remove(building)
 		if building.has_component(Producer) and not building.has_component(UnitProducer):
 			building.get_component(Producer).remove_production_finished_listener(self.settlement_building_production_finished)
+		if not building.buildable_upon and self.buildability_cache:
+			self.buildability_cache.add_area([coords for coords in building.position.tuple_iter()])
 		if hasattr(self.owner, 'remove_building'):
 			# notify interested players of removed building
 			self.owner.remove_building(building)
@@ -249,7 +240,12 @@ class Settlement(ComponentHolder, WorldObject, ChangeListener, ResourceHandler):
 		for res, amount in produced_res.iteritems():
 			self.produced_res[res] += amount
 
+	def __init_inventory_checker(self):
+		# Check for changed inventories every 4 ticks
+		self.__inventory_checker = InventoryChecker(SettlementInventoryUpdated, self.get_component(StorageComponent), 4)
+
 	def end(self):
+		assert self.buildability_cache is None
 		self.session = None
 		self.owner = None
 		self.buildings = None
@@ -257,3 +253,5 @@ class Settlement(ComponentHolder, WorldObject, ChangeListener, ResourceHandler):
 		self.produced_res = None
 		self.buildings_by_id = None
 		self.warehouse = None
+		if hasattr(self, '__inventory_checker'):
+			self.__inventory_checker.remove()

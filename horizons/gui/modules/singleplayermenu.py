@@ -32,7 +32,7 @@ import horizons.main
 from horizons.extscheduler import ExtScheduler
 from horizons.savegamemanager import SavegameManager
 from horizons.gui.modules import AIDataSelection, PlayerDataSelection
-from horizons.constants import AI, LANGUAGENAMES
+from horizons.constants import LANGUAGENAMES
 from horizons.gui.widgets.imagebutton import OkButton
 from horizons.gui.widgets.minimap import Minimap
 from horizons.world import World
@@ -51,6 +51,12 @@ class SingleplayerMenu(object):
 	# game options
 	resource_densities = [0.5, 0.7, 1, 1.4, 2]
 
+	def __init__(self, mainmenu):
+		self.mainmenu = mainmenu
+		self.widgets = mainmenu.widgets
+		self.hide = mainmenu.hide
+		self.current = None
+
 	def show_single(self, show='scenario'): # show scenarios to highlight tutorials
 		"""
 		@param show: string, which type of games to show
@@ -61,10 +67,11 @@ class SingleplayerMenu(object):
 
 		# start with default single player settings
 		self.widgets.reload('singleplayermenu')
-		self._switch_current_widget('singleplayermenu', center=True)
+		self.mainmenu._switch_current_widget('singleplayermenu', center=True)
+		self.current = self.mainmenu.current
 		self.active_right_side = None
 
-		for mode in ('random', 'scenario', 'campaign', 'free_maps'):
+		for mode in ('random', 'scenario', 'free_maps'):
 			self.widgets.reload('sp_%s' % mode)
 			right_side = self.widgets['sp_%s' % mode]
 			self.current.findChild(name="right_side_box").addChild(right_side)
@@ -79,13 +86,12 @@ class SingleplayerMenu(object):
 		self._select_single(show)
 
 	def _select_single(self, show):
-		assert show in ('random', 'scenario', 'campaign', 'free_maps')
+		assert show in ('random', 'scenario', 'free_maps')
 		self.hide()
 		event_map = {
-			'cancel'    : Callback.ChainedCallbacks(self._save_player_name, self.show_main),
+			'cancel'    : Callback.ChainedCallbacks(self._save_player_name, self.mainmenu.show_main),
 			'okay'      : self.start_single,
 			'scenario'  : Callback(self._select_single, show='scenario'),
-			'campaign'  : Callback(self._select_single, show='campaign'),
 			'random'    : Callback(self._select_single, show='random'),
 			'free_maps' : Callback(self._select_single, show='free_maps')
 		}
@@ -106,7 +112,6 @@ class SingleplayerMenu(object):
 			self._setup_random_map_selection(right_side)
 			self._setup_game_settings_selection()
 			self._on_random_map_parameter_changed()
-			self.active_right_side.findChild(name="open_random_map_archive").capture(self._open_random_map_archive)
 			self.current.aidata.show()
 
 		elif show == 'free_maps':
@@ -122,22 +127,6 @@ class SingleplayerMenu(object):
 				self.active_right_side.distributeData({'maplist': 0})
 			self.current.aidata.show()
 			self._update_free_map_infos()
-
-		elif show == 'campaign':
-			# tell people that we don't have any content
-			text = u"We currently don't have any campaigns available for you. " + \
-				u"If you are interested in adding campaigns to Unknown Horizons, " + \
-				u"please contact us via our website (http://www.unknown-horizons.org)!"
-			self.show_popup("No campaigns available yet", text)
-
-			self.current.files, maps_display = SavegameManager.get_campaigns()
-			self.active_right_side.distributeInitialData({ 'maplist' : maps_display, })
-			self.active_right_side.mapEvents({
-				'maplist/action': self._update_campaign_infos
-			})
-			if maps_display: # select first entry
-				self.active_right_side.distributeData({'maplist': 0})
-			self._update_campaign_infos()
 
 		elif show == 'scenario':
 			self.current.files, maps_display = SavegameManager.get_available_scenarios(hide_test_scenarios=True)
@@ -163,7 +152,7 @@ class SingleplayerMenu(object):
 			self._update_scenario_infos()
 
 		self.current.show()
-		self.on_escape = self.show_main
+		self.mainmenu.on_escape = self.mainmenu.show_main
 
 	def start_single(self):
 		""" Starts a single player horizons. """
@@ -182,13 +171,12 @@ class SingleplayerMenu(object):
 			map_file = self._get_selected_map()
 
 		is_scenario = bool(self.current.collectData('scenario'))
-		is_campaign = bool(self.current.collectData('campaign'))
-		if not is_scenario and not is_campaign:
+		if not is_scenario:
 			ai_players = int(self.current.aidata.get_ai_players())
 			horizons.globals.fife.set_uh_setting("AIPlayers", ai_players)
 		horizons.globals.fife.save_settings()
 
-		self.show_loading_screen()
+		self.mainmenu.show_loading_screen()
 		if is_scenario:
 			try:
 				options = StartGameOptions.create_start_scenario(map_file)
@@ -197,15 +185,6 @@ class SingleplayerMenu(object):
 			except InvalidScenarioFileFormat as e:
 				self._show_invalid_scenario_file_popup(e)
 				self._select_single(show='scenario')
-		elif is_campaign:
-			campaign_info = SavegameManager.get_campaign_info(filename=map_file)
-			if not campaign_info:
-				self._show_invalid_scenario_file_popup("Unknown Error")
-				self._select_single(show='campaign')
-			scenario = campaign_info.get('scenarios')[0].get('level')
-			horizons.main._start_map(scenario, ai_players=0, is_scenario=True, campaign={
-				'campaign_name': campaign_info.get('codename'), 'scenario_index': 0, 'scenario_name': scenario
-			})
 		else: # free play/random map
 			options = StartGameOptions.create_start_map(map_file)
 			options.set_human_data(playername, playercolor)
@@ -302,11 +281,19 @@ class SingleplayerMenu(object):
 		settings_box.addChild(widget)
 
 		# make click on labels change the respective checkboxes
-		for setting in u'free_trader', u'pirates', u'disasters':
-			def toggle(setting):
+		for (setting, setting_save_name) in (u'free_trader', 'MapSettingsFreeTraderEnabled'), (u'pirates','MapSettingsPirateEnabled'), (u'disasters','MapSettingsDisastersEnabled'):
+			def on_box_toggle(setting, setting_save_name):
+				"""Called whenever the checkbox is toggled"""
+				box = self.current.findChild(name=setting)
+				horizons.globals.fife.set_uh_setting(setting_save_name, box.marked)
+				horizons.globals.fife.save_settings()
+			def toggle(setting, setting_save_name):
+				"""Called by the label to toggle the checkbox"""
 				box = self.current.findChild(name=setting)
 				box.marked = not box.marked
-			self.current.findChild(name=u'lbl_'+setting).capture(Callback(toggle, setting))
+			self.current.findChild(name=setting).capture(Callback(on_box_toggle, setting, setting_save_name))
+			self.current.findChild(name=setting).marked = horizons.globals.fife.get_uh_setting(setting_save_name)
+			self.current.findChild(name=u'lbl_'+setting).capture(Callback(toggle, setting, setting_save_name))
 
 		resource_density_slider = widget.findChild(name='resource_density_slider')
 		def on_resource_density_slider_change():
@@ -318,14 +305,6 @@ class SingleplayerMenu(object):
 		resource_density_slider.value = horizons.globals.fife.get_uh_setting("MapResourceDensity")
 
 		on_resource_density_slider_change()
-
-	def _open_random_map_archive(self):
-		popup = self.widgets['random_map_archive']
-		# ok should be triggered on enter, therefore we need to focus the button
-		# pychan will only allow it after the widgets is shown
-		#ExtScheduler().add_new_object(lambda : popup.findChild(name=OkButton.DEFAULT_NAME).requestFocus(), self, run_in=0)
-		popup.mapEvents({OkButton.DEFAULT_NAME : popup.hide})
-		popup.show()
 
 	def _get_natural_resource_multiplier(self):
 		return self.resource_densities[int(self.widgets['game_settings'].findChild(name='resource_density_slider').value)]
@@ -389,25 +368,15 @@ class SingleplayerMenu(object):
 			self._show_invalid_scenario_file_popup(e)
 			return
 
+		#xgettext:python-format
 		self.current.findChild(name="uni_map_difficulty").text = \
-			_("Difficulty: {difficulty}").format(difficulty=difficulty) #xgettext:python-format
+			_("Difficulty: {difficulty}").format(difficulty=difficulty)
+		#xgettext:python-format
 		self.current.findChild(name="uni_map_author").text = \
-			_("Author: {author}").format(author=author) #xgettext:python-format
+			_("Author: {author}").format(author=author)
+		#xgettext:python-format
 		self.current.findChild(name="uni_map_desc").text = \
-			_("Description: {desc}").format(desc=desc) #xgettext:python-format
-
-	def _update_campaign_infos(self):
-		"""Fill in infos of selected campaign to label"""
-		campaign_info = SavegameManager.get_campaign_info(filename = self._get_selected_map())
-		if not campaign_info:
-			self._show_invalid_scenario_file_popup("Unknown error")
-			return
-		self.current.findChild(name="map_difficulty").text = \
-			_("Difficulty: {difficulty}").format(difficulty=campaign_info.get('difficulty', '')) #xgettext:python-format
-		self.current.findChild(name="map_author").text = \
-			_("Author: {author}").format(author=campaign_info.get('author', '')) #xgettext:python-format
-		self.current.findChild(name="map_desc").text = \
-			_("Description: {desc}").format(desc=campaign_info.get('description', '')) #xgettext:python-format
+			_("Description: {desc}").format(desc=desc)
 
 	def _update_scenario_translation_infos(self, new_map_name):
 		"""Fill in translation infos of selected scenario to translation label.

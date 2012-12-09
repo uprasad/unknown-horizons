@@ -36,7 +36,7 @@ from horizons.util.color import Color
 from horizons.util.python import decorators
 from horizons.util.shapes import Circle, Point, Rect
 from horizons.util.worldobject import WorldObject
-from horizons.constants import UNITS, BUILDINGS, RES, GROUND, GAME
+from horizons.constants import UNITS, BUILDINGS, RES, GROUND, GAME, MAP, PATHS
 from horizons.ai.trader import Trader
 from horizons.ai.pirate import Pirate
 from horizons.ai.aiplayer import AIPlayer
@@ -48,7 +48,6 @@ from horizons.world.units.weapon import Weapon
 from horizons.command.unit import CreateUnit
 from horizons.component.healthcomponent import HealthComponent
 from horizons.component.storagecomponent import StorageComponent
-from horizons.util.dbreader import DbReader
 from horizons.world.disaster.disastermanager import DisasterManager
 from horizons.world import worldutils
 
@@ -89,6 +88,11 @@ class World(BuildingOwner, WorldObject):
 		# destructor-like thing.
 		super(World, self).end()
 
+		# let the AI players know that the end is near to speed up destruction
+		for player in self.players:
+			if hasattr(player, 'early_end'):
+				player.early_end()
+
 		for ship in self.ships[:]:
 			ship.remove()
 		for island in self.islands:
@@ -109,8 +113,15 @@ class World(BuildingOwner, WorldObject):
 		self.ship_map = None
 		self.fish_indexer = None
 		self.ground_units = None
-		self.trader = None
-		self.pirate = None
+
+		if self.pirate is not None:
+			self.pirate.end()
+			self.pirate = None
+
+		if self.trader is not None:
+			self.trader.end()
+			self.trader = None
+
 		self.islands = None
 		self.diplomacy = None
 		self.bullets = None
@@ -152,6 +163,8 @@ class World(BuildingOwner, WorldObject):
 		self.water = dict((tile, 1.0) for tile in self.ground_map)
 		self._init_water_bodies()
 		self.sea_number = self.water_body[(self.min_x, self.min_y)]
+		for island in self.islands:
+			island.terrain_cache.create_sea_cache()
 
 		# assemble list of water and coastline for ship, that can drive through shallow water
 		# NOTE: this is rather a temporary fix to make the fisher be able to move
@@ -162,6 +175,8 @@ class World(BuildingOwner, WorldObject):
 			for coord, tile in island.ground_map.iteritems():
 				if 'coastline' in tile.classes or 'constructible' not in tile.classes:
 					self.water_and_coastline[coord] = 1.0
+		self._init_shallow_water_bodies()
+		self.shallow_sea_number = self.shallow_water_body[(self.min_x, self.min_y)]
 
 		# create ship position list. entries: ship_map[(x, y)] = ship
 		self.ship_map = {}
@@ -266,15 +281,15 @@ class World(BuildingOwner, WorldObject):
 
 		#calculate map dimensions
 		self.min_x, self.min_y, self.max_x, self.max_y = 0, 0, 0, 0
-		for i in self.islands:
-			self.min_x = min(i.rect.left, self.min_x)
-			self.min_y = min(i.rect.top, self.min_y)
-			self.max_x = max(i.rect.right, self.max_x)
-			self.max_y = max(i.rect.bottom, self.max_y)
-		self.min_x -= 10
-		self.min_y -= 10
-		self.max_x += 10
-		self.max_y += 10
+		for island in self.islands:
+			self.min_x = min(island.position.left, self.min_x)
+			self.min_y = min(island.position.top, self.min_y)
+			self.max_x = max(island.position.right, self.max_x)
+			self.max_y = max(island.position.bottom, self.max_y)
+		self.min_x -= savegame_db.map_padding
+		self.min_y -= savegame_db.map_padding
+		self.max_x += savegame_db.map_padding
+		self.max_y += savegame_db.map_padding
 
 		self.map_dimensions = Rect.init_from_borders(self.min_x, self.min_y, self.max_x, self.max_y)
 
@@ -284,21 +299,22 @@ class World(BuildingOwner, WorldObject):
 
 		# big sea water tile class
 		if not preview:
-			default_grounds = Entities.grounds[int(self.properties.get('default_ground', GROUND.WATER[0]))]
+			default_grounds = Entities.grounds[self.properties.get('default_ground', '%d-straight' % GROUND.WATER[0])]
 
-		# extra world size that is added so that the player can't see the "black void"
-		border = 30
-		fake_tile_class = Entities.grounds[-1]
-		for x in xrange(self.min_x-border, self.max_x+border, 10):
-			for y in xrange(self.min_y-border, self.max_y+border, 10):
+		fake_tile_class = Entities.grounds['-1-special']
+		fake_tile_size = 10
+		for x in xrange(self.min_x-MAP.BORDER, self.max_x+MAP.BORDER, fake_tile_size):
+			for y in xrange(self.min_y-MAP.BORDER, self.max_y+MAP.BORDER, fake_tile_size):
+				fake_tile_x = x - 1
+				fake_tile_y = y + fake_tile_size - 1
 				if not preview:
 					# we don't need no references, we don't need no mem control
-					default_grounds(self.session, x, y)
-				for x_offset in xrange(0, 10):
-					if x+x_offset < self.max_x and x+x_offset >= self.min_x:
-						for y_offset in xrange(0, 10):
-							if y+y_offset < self.max_y and y+y_offset >= self.min_y:
-								self.ground_map[(x+x_offset, y+y_offset)] = fake_tile_class(self.session, x, y)
+					default_grounds(self.session, fake_tile_x, fake_tile_y)
+				for x_offset in xrange(fake_tile_size):
+					if self.min_x <= x + x_offset < self.max_x:
+						for y_offset in xrange(fake_tile_size):
+							if self.min_y <= y + y_offset < self.max_y:
+								self.ground_map[(x+x_offset, y+y_offset)] = fake_tile_class(self.session, fake_tile_x, fake_tile_y)
 		self.fake_tile_map = copy.copy(self.ground_map)
 
 		# remove parts that are occupied by islands, create the island map and the full map
@@ -353,31 +369,41 @@ class World(BuildingOwner, WorldObject):
 		self.set_forced_player(force_player_id)
 
 		if self.player is None and self.session.is_game_loaded():
-			self.log.warning('WARNING: Cannot autoselect a player because there are no \
-			or multiple candidates.')
+			self.log.warning('WARNING: Cannot autoselect a player because there '
+			                 'are no or multiple candidates.')
 
-	def _init_water_bodies(self):
-		"""This function runs the flood fill algorithm on the water to make it easy
-		to recognise different water bodies."""
+	@classmethod
+	def _recognize_water_bodies(cls, map_dict):
 		moves = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
 
 		n = 0
-		self.water_body = dict.fromkeys(self.water)
-		for coords, num in self.water_body.iteritems():
+		for coords, num in map_dict.iteritems():
 			if num is not None:
 				continue
 
-			self.water_body[coords] = n
+			map_dict[coords] = n
 			queue = deque([coords])
 			while queue:
 				x, y = queue[0]
 				queue.popleft()
 				for dx, dy in moves:
 					coords2 = (x + dx, y + dy)
-					if coords2 in self.water_body and self.water_body[coords2] is None:
-						self.water_body[coords2] = n
+					if coords2 in map_dict and map_dict[coords2] is None:
+						map_dict[coords2] = n
 						queue.append(coords2)
 			n += 1
+
+	def _init_water_bodies(self):
+		"""This function runs the flood fill algorithm on the water to make it easy
+		to recognise different water bodies."""
+		self.water_body = dict.fromkeys(self.water)
+		self._recognize_water_bodies(self.water_body)
+
+	def _init_shallow_water_bodies(self):
+		"""This function runs the flood fill algorithm on the water and the coast to
+		make it easy to recognise different water bodies for fishers."""
+		self.shallow_water_body = dict.fromkeys(self.water_and_coastline)
+		self._recognize_water_bodies(self.shallow_water_body)
 
 	def init_fish_indexer(self):
 		radius = Entities.buildings[ BUILDINGS.FISHER ].radius
@@ -403,7 +429,7 @@ class World(BuildingOwner, WorldObject):
 		for logger_name in loggers_to_silence:
 			logger = logging.getLogger(logger_name)
 			loggers_to_silence[logger_name] = logger.getEffectiveLevel()
-			logger.setLevel( logging.WARN )
+			logger.setLevel(logging.WARN)
 
 		# add a random number of environmental objects
 		if natural_resource_multiplier != 0:
@@ -541,7 +567,8 @@ class World(BuildingOwner, WorldObject):
 		@return set of islands in radius"""
 		islands = set()
 		for island in self.islands:
-			for tile in island.get_surrounding_tiles(point, radius):
+			for tile in island.get_surrounding_tiles(point, radius=radius,
+			                                         include_corners=False):
 				islands.add(island)
 				break
 		return islands
@@ -631,7 +658,11 @@ class World(BuildingOwner, WorldObject):
 		if isinstance(self.map_name, list):
 			db("INSERT INTO metadata VALUES(?, ?)", 'random_island_sequence', ' '.join(self.map_name))
 		else:
-			db("INSERT INTO metadata VALUES(?, ?)", 'map_name', self.map_name)
+			# the map name has to be simplified because the absolute paths won't be transferable between machines
+			simplified_name = self.map_name
+			if self.map_name.startswith(PATHS.USER_MAPS_DIR):
+				simplified_name = 'USER_MAPS_DIR:' + simplified_name[len(PATHS.USER_MAPS_DIR):]
+			db("INSERT INTO metadata VALUES(?, ?)", 'map_name', simplified_name)
 
 		for island in self.islands:
 			island.save(db)
@@ -649,12 +680,6 @@ class World(BuildingOwner, WorldObject):
 		Weapon.save_attacks(db)
 		self.disaster_manager.save(db)
 
-	def save_map(self, path, name):
-		"""Save the current map."""
-		if hasattr(self.session, 'world_editor'):
-			# save a map created in the editor
-			self.session.world_editor.save_map(path, name)
-
 	def get_checkup_hash(self):
 		"""Returns a collection of important game state values. Used to check if two mp games have diverged.
 		Not designed to be reliable."""
@@ -669,15 +694,15 @@ class World(BuildingOwner, WorldObject):
 			# dicts usually aren't hashable, this makes them
 			# since defaultdicts appear, we discard values that can be autogenerated
 			# (those are assumed to default to something evaluating False)
-			dict_hash = lambda d : sorted( i for i in d.iteritems() if i[1] )
+			dict_hash = lambda d : sorted(i for i in d.iteritems() if i[1])
 			for settlement in island.settlements:
-				storage_dict =settlement.get_component(StorageComponent).inventory._storage
+				storage_dict = settlement.get_component(StorageComponent).inventory._storage
 				entry = {
 					'owner': str(settlement.owner.worldid),
 					'inhabitants': str(settlement.inhabitants),
 					'cumulative_running_costs': str(settlement.cumulative_running_costs),
 					'cumulative_taxes': str(settlement.cumulative_taxes),
-					'inventory': str( dict_hash(storage_dict) )
+					'inventory': str(dict_hash(storage_dict))
 				}
 				data['settlements'].append(entry)
 		for ship in self.ships:

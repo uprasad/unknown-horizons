@@ -69,15 +69,11 @@ CREATE TABLE "storage_properties" (
 	"value" TEXT
 );
 
-CREATE TABLE "trade_buy" (
-	"object" INT NOT NULL,
-	"resource" INT NOT NULL,
-	"trade_limit" INT NOT NULL
-);
-
-CREATE TABLE "trade_sell" (
-	"object" INT NOT NULL,
-	"resource" INT NOT NULL,
+CREATE TABLE "trade_slots" (
+	"trade_post" INT NOT NULL,
+	"slot_id" INT NOT NULL,
+	"resource_id" INT NOT NULL,
+	"selling" BOOL NOT NULL,
 	"trade_limit" INT NOT NULL
 );
 
@@ -296,7 +292,8 @@ CREATE TABLE "ai_mission_domestic_trade" (
 CREATE TABLE "ai_mission_found_settlement" (
 	"land_manager" INT NOT NULL,
 	"ship" INT NOT NULL,
-	"warehouse_builder" INT NOT NULL,
+	"x" INT NOT NULL,
+	"y" INT NOT NULL,
 	"state" INT NOT NULL 
 );
 
@@ -603,6 +600,11 @@ CREATE TABLE "last_active_settlement" (
 	"type" TEXT NOT NULL,
 	"value" INT NOT NULL
 );
+
+CREATE TABLE "fish_data" (
+	"last_usage_tick" INT NOT NULL
+);
+
 
 
 COMMIT;

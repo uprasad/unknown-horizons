@@ -24,11 +24,15 @@ import os.path
 import json
 import shutil
 import tempfile
+
+from collections import defaultdict
 from sqlite3 import OperationalError
 
-from horizons.constants import VERSION, UNITS
+from horizons.constants import BUILDINGS, VERSION, UNITS
+from horizons.entities import Entities
 from horizons.util.dbreader import DbReader
 from horizons.util.python import decorators
+from horizons.util.shapes import Rect
 
 class SavegameUpgrader(object):
 	"""The class that prepares saved games to be loaded by the current version."""
@@ -249,6 +253,74 @@ class SavegameUpgrader(object):
 		db("ALTER TABLE player ADD COLUMN max_tier_notification INTEGER")
 		db("UPDATE player SET max_tier_notification = 0")
 
+	def _upgrade_to_rev67(self, db):
+		db('CREATE TABLE "trade_slots" ("trade_post" INT NOT NULL, "slot_id" INT NOT NULL, "resource_id" INT NOT NULL, "selling" BOOL NOT NULL, "trade_limit" INT NOT NULL)')
+		for trade_post, in db("SELECT DISTINCT object FROM (SELECT object FROM trade_sell UNION SELECT object FROM trade_buy) ORDER BY object"):
+			slot_id = 0
+			for table in ['trade_buy', 'trade_sell']:
+				for resource_id, limit in db("SELECT resource, trade_limit FROM " + table + " WHERE object = ? ORDER BY object, resource", trade_post):
+					db("INSERT INTO trade_slots VALUES(?, ?, ?, ?, ?)", trade_post, slot_id, resource_id, table == 'trade_sell', limit)
+					slot_id += 1
+
+	def _upgrade_to_rev68(self, db):
+		settlement_founding_missions = []
+		db_result = db("SELECT rowid, land_manager, ship, warehouse_builder, state FROM ai_mission_found_settlement")
+		for (worldid, land_manager_id, ship_id, builder_id, state) in db_result:
+			x, y = db("SELECT x, y FROM ai_builder WHERE rowid = ?", builder_id)[0]
+			settlement_founding_missions.append((worldid, land_manager_id, ship_id, x, y, state))
+
+		db("DROP TABLE ai_mission_found_settlement")
+		db('CREATE TABLE "ai_mission_found_settlement" ("land_manager" INT NOT NULL, "ship" INT NOT NULL, "x" INT NOT NULL, "y" INT NOT NULL, "state" INT NOT NULL)')
+
+		for row in settlement_founding_missions:
+			db("INSERT INTO ai_mission_found_settlement(rowid, land_manager, ship, x, y, state) VALUES(?, ?, ?, ?, ?, ?)", *row)
+
+	def _upgrade_to_rev69(self, db):
+		settlement_map = {}
+		for data in db("SELECT rowid, data FROM settlement_tiles"):
+			settlement_id = int(data[0])
+			coords_list = [tuple(raw_coords) for raw_coords in json.loads(data[1])] # json saves tuples as list
+			for coords in coords_list:
+				settlement_map[coords] = settlement_id
+		db("DELETE FROM settlement_tiles")
+
+		deposits = []
+		for (worldid, building_id, x, y, location_id) in db("SELECT rowid, type, x, y, location FROM building WHERE type = ? OR type = ?",
+			    BUILDINGS.CLAY_DEPOSIT, BUILDINGS.MOUNTAIN):
+			worldid = int(worldid)
+			building_id = int(building_id)
+			origin_coords = (int(x), int(y))
+			location_id = int(location_id)
+
+			settlement_ids = set()
+			position = Rect.init_from_topleft_and_size_tuples(origin_coords, Entities.buildings[building_id].size)
+			for coords in position.tuple_iter():
+				if coords in settlement_map:
+					settlement_ids.add(settlement_map[coords])
+			if not settlement_ids:
+				continue # no settlement covers any of the deposit
+			else:
+				# assign all of it to the earlier settlement
+				settlement_id = sorted(settlement_ids)[0]
+				for coords in position.tuple_iter():
+					settlement_map[coords] = settlement_id
+				if location_id != settlement_id:
+					db("UPDATE building SET location = ? WHERE rowid = ?", settlement_id, worldid)
+
+		# save the new settlement tiles data
+		ground_map = defaultdict(lambda: [])
+		for (coords, settlement_id) in settlement_map.iteritems():
+			ground_map[settlement_id].append(coords)
+
+		for (settlement_id, coords_list) in ground_map.iteritems():
+			data = json.dumps(coords_list)
+			db("INSERT INTO settlement_tiles(rowid, data) VALUES(?, ?)", settlement_id, data)
+
+	def _upgrade_to_rev70(self, db):
+		db('CREATE TABLE "fish_data" ("last_usage_tick" INT NOT NULL)')
+		for row in db("SELECT rowid FROM building WHERE type = ?", BUILDINGS.FISH_DEPOSIT):
+			db("INSERT INTO fish_data(rowid, last_usage_tick) VALUES(?, ?)", row[0], -1000000)
+
 	def _upgrade(self):
 		# fix import loop
 		from horizons.savegamemanager import SavegameManager
@@ -302,9 +374,26 @@ class SavegameUpgrader(object):
 				self._upgrade_to_rev65(db)
 			if rev < 66:
 				self._upgrade_to_rev66(db)
+			if rev < 67:
+				self._upgrade_to_rev67(db)
+			if rev < 68:
+				self._upgrade_to_rev68(db)
+			if rev < 69:
+				self._upgrade_to_rev69(db)
+			if rev < 70:
+				self._upgrade_to_rev70(db)
 
 			db('COMMIT')
 			db.close()
+
+	@classmethod
+	def can_upgrade(cls, from_savegame_version):
+		"""Calculates whether a savegame can be upgraded from the current version"""
+		for i in xrange(from_savegame_version+1, VERSION.SAVEGAMEREVISION+1, 1):
+			if not hasattr(cls, "_upgrade_to_rev" + str(i)):
+				return False
+		return True
+
 
 	def get_path(self):
 		"""Return the path to the up-to-date version of the saved game."""

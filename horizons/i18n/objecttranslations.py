@@ -40,13 +40,16 @@
 #
 ###############################################################################
 
-from horizons.constants import VERSION
-
-object_translations = dict()
+object_translations = {}
 
 def set_translations():
+	"""Instead of overwriting object_translations, operates on the same
+	object (i.e. deleting dict keys, then updating) so that everything
+	importing object_translations once keeps getting updates. #1905, #1909
+	"""
 	global object_translations
-	object_translations = {
+	object_translations.clear()
+	object_translations.update({
 
 	"content/objects/buildings/alvearies.yaml" : {
 		# name of buildings:alvearies
@@ -218,7 +221,7 @@ def set_translations():
 		# name of buildings:mainsquare
 		"name"                        : _("Main Square"),
 		# tooltip_text of buildings:mainsquare
-		"tooltip_text"                : _("Supplies citizens with goods."),
+		"tooltip_text"                : _("Supplies citizens with goods. Provides community."),
 		},
 
 	"content/objects/buildings/mountain.yaml" : {
@@ -513,4 +516,4 @@ def set_translations():
 		# tab6_headline of gui_buildmenu:build_menu_per_type
 		"tab6_headline"               : _("Aesthetics"),
 		},
-	}
+	})

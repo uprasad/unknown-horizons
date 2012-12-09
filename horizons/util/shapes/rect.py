@@ -24,6 +24,8 @@ from horizons.util.python.decorators import bind_all
 from horizons.util.shapes import Shape, Point
 
 class Rect(Shape):
+	__slots__ = ('top', 'left', 'right', 'bottom', 'origin')
+
 	def __init__(self, *args):
 		if len(args) == 2 and isinstance(args[0], Point) and isinstance(args[1], Point): #args: edge1, edge2
 			self.top = min(args[0].y, args[1].y)
@@ -91,6 +93,7 @@ class Rect(Shape):
 		y_coords.sort()
 		self.top = y_coords[0]
 		self.bottom = y_coords[1]
+		self.origin = Point(self.left, self.top)
 		return self
 
 	@property
@@ -151,7 +154,7 @@ class Rect(Shape):
 		if not include_self:
 			self_coords = frozenset(self.get_coordinates())
 			for y, x_range in borders.iteritems():
-				if y >= self.top and y <= self.bottom: # we have to sort out the self_coords here
+				if self.top <= y <= self.bottom: # we have to sort out the self_coords here
 					for x in xrange(x_range[0], x_range[1]+1):
 						t = (x, y)
 						if t not in self_coords:
@@ -167,7 +170,8 @@ class Rect(Shape):
 
 	@property
 	def center(self):
-		""" Returns the center point of the rect. Implemented with integer division, which means the upper left is preferred """
+		"""Returns the center point of the rect.
+		Implemented with integer division, which means the upper left is preferred."""
 		return Point((self.right + self.left) // 2, (self.bottom + self.top) // 2)
 
 	def __contains__(self, point):
@@ -255,6 +259,9 @@ class Rect(Shape):
 			return self.right < other.right
 		return self.bottom < other.bottom
 
+	def __hash__(self):
+		return hash((self.top, self.right, self.bottom, self.left))
+
 	def tuple_iter(self):
 		"""Generates an iterator, that returns tuples"""
 		for x in xrange(self.left, self.right+1):
@@ -272,6 +279,10 @@ class Rect(Shape):
 			for y in xrange(self.top, self.bottom):
 				yield Point(x, y)
 
+	@classmethod
+	def get_surrounding_offsets(cls, size):
+		rect = cls.init_from_topleft_and_size_tuples((0, 0), size)
+		return list(rect.get_surrounding())
 
 class ConstRect(Const, Rect):
 	"""An immutable Rect.

@@ -113,7 +113,7 @@ class Production(ChangeListener):
 			remaining_ticks = 1
 		db('INSERT INTO production(rowid, state, prod_line_id, remaining_ticks, \
 		      _pause_old_state, creation_tick, owner) VALUES(?, ?, ?, ?, ?, ?, ?)',
-		         None, self._state.index, self._prod_line.id, remaining_ticks, 
+		         None, self._state.index, self._prod_line.id, remaining_ticks,
 		         None if self._pause_old_state is None else self._pause_old_state.index,
 			    translated_creation_tick, owner_id)
 
@@ -140,7 +140,7 @@ class Production(ChangeListener):
 		elif self._state == PRODUCTION.STATES.waiting_for_res or \
 		     self._state == PRODUCTION.STATES.inventory_full:
 			# no need to call now, this just restores the state before
-			# saving , where it hasn't triggered yet, therefore it won't now
+			# saving, where it hasn't triggered yet, therefore it won't now
 			self._add_listeners()
 
 		self._state_history = db.get_production_state_history(worldid, self.prod_id)
@@ -204,7 +204,8 @@ class Production(ChangeListener):
 
 			# apply state
 			if self._state in (PRODUCTION.STATES.waiting_for_res,
-			                   PRODUCTION.STATES.inventory_full):
+			                   PRODUCTION.STATES.inventory_full,
+			                   PRODUCTION.STATES.done):
 				# just restore watching
 				self._add_listeners(check_now=True)
 
@@ -220,7 +221,8 @@ class Production(ChangeListener):
 			self._state = PRODUCTION.STATES.paused
 
 			if self._pause_old_state in (PRODUCTION.STATES.waiting_for_res,
-			                             PRODUCTION.STATES.inventory_full):
+			                             PRODUCTION.STATES.inventory_full,
+			                             PRODUCTION.STATES.done):
 				self._remove_listeners()
 			elif self._pause_old_state == PRODUCTION.STATES.producing:
 				# save when production finishes and remove that call

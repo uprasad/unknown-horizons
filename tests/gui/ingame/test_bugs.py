@@ -85,7 +85,7 @@ def test_ticket_1369(gui):
 			world.diplomacy.add_ally_pair( ship.owner, player )
 
 	# move ship near foreign warehouse and wait for it to arrive
-	move_ship(ship, (68, 23))
+	move_ship(gui, ship, (68, 23))
 
 	# click trade button
 	gui.trigger('overview_trade_ship', 'trade')
@@ -94,7 +94,7 @@ def test_ticket_1369(gui):
 	assert gui.find(name='buy_sell_goods')
 
 	# move ship away from warehouse
-	move_ship(ship, (77, 17))
+	move_ship(gui, ship, (77, 17))
 
 	# trade widget should not be visible anymore
 # For now, the trade widget will stay visible.
@@ -317,3 +317,19 @@ def test_ticket_1848(gui):
 
 	gui.cursor_click(51, 13, 'left')
 	gui.trigger('tab_account', 'show_production_overview')
+
+
+@gui_test(use_dev_map=True)
+def test_ticket_1948(gui):
+	"""Triggers a crash that happens when building a storage tent on the border of the settlement"""
+	# Units cannot be selected right now, you need to do it this way. This is almost
+	# the same as selecting it with the mouse
+	ship = get_player_ship(gui.session)
+	gui.select([ship])
+	found_settlement(gui, (59, 1), (56, 3))
+
+	# Select storage tent
+	gui.trigger('mainhud', 'build')
+	gui.trigger('tab', 'button_11')
+	# Build storage at the border of the settlement
+	gui.cursor_click(37, 20, 'left')

@@ -22,7 +22,7 @@
 import logging
 from horizons.ai.aiplayer.behavior import BehaviorManager
 from horizons.ai.aiplayer.behavior.profile import BehaviorProfileManager
-from horizons.ai.aiplayer.combat.combatmanager import  PirateCombatManager
+from horizons.ai.aiplayer.combat.combatmanager import PirateCombatManager
 from horizons.ai.aiplayer.combat.unitmanager import UnitManager
 from horizons.ai.aiplayer.strategy.strategymanager import PirateStrategyManager
 from horizons.scheduler import Scheduler
@@ -189,3 +189,7 @@ class Pirate(GenericAI):
 		del self.ships[unit]
 		self.combat_manager.remove_unit(unit)
 		self.unit_manager.remove_unit(unit)
+
+	def end(self):
+		self.strategy_manager.end()
+		super(Pirate, self).end()

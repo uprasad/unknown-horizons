@@ -41,7 +41,7 @@ class Field(NatureBuildingResourceHandler):
 	layer = LAYERS.FIELDS
 
 	def initialize(self, **kwargs):
-		super(Field, self).initialize( ** kwargs)
+		super(Field, self).initialize(**kwargs)
 
 		if self.owner.is_local_player:
 			# make sure to have a farm nearby when we can reasonably assume that the crops are fully grown
@@ -56,7 +56,7 @@ class Field(NatureBuildingResourceHandler):
 	def _check_covered_by_farm(self):
 		"""Warn in case there is no farm nearby to cultivate the field"""
 		farm_in_range = any( (farm.position.distance( self.position ) <= farm.radius) for farm in
-		                     self.settlement.buildings_by_id[ BUILDINGS.FARM ] )
+		                     self.settlement.buildings_by_id[BUILDINGS.FARM] )
 		if not farm_in_range and self.owner.is_local_player:
 			pos = self.position.origin
 			self.session.ingame_gui.message_widget.add(point=pos, string_id="FIELD_NEEDS_FARM",
@@ -67,7 +67,7 @@ class AnimalField(Field):
 	def create_collector(self):
 		self.animals = []
 		for (animal, number) in self.session.db("SELECT unit_id, count FROM animals \
-		                                    WHERE building_id = ?", self.id):
+		                                         WHERE building_id = ?", self.id):
 			for i in xrange(0, number):
 				unit = Entities.units[animal](self, session=self.session)
 				unit.initialize()
@@ -100,10 +100,23 @@ class ResourceDeposit(NatureBuilding):
 	walkable = False
 
 class Fish(BuildableSingleEverywhere, BuildingResourceHandler, BasicBuilding):
-
 	def __init__(self, *args, **kwargs):
 		super(Fish, self).__init__(*args, **kwargs)
+		self.last_usage_tick = -1000000 # a long time ago
 
 		# Make the fish run at different speeds
 		multiplier = 0.7 + self.session.random.random() * 0.6
 		self._instance.setTimeMultiplier(multiplier)
+
+	def load(self, db, worldid):
+		super(Fish, self).load(db, worldid)
+		self.last_usage_tick = db.get_last_fish_usage_tick(worldid)
+
+	def save(self, db):
+		super(Fish, self).save(db)
+		translated_tick = self.last_usage_tick - Scheduler().cur_tick # pre-translate for the loading process
+		db("INSERT INTO fish_data(rowid, last_usage_tick) VALUES(?, ?)", self.worldid, translated_tick)
+
+	def remove_incoming_collector(self, collector):
+		super(Fish, self).remove_incoming_collector(collector)
+		self.last_usage_tick = Scheduler().cur_tick

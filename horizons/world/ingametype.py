@@ -93,7 +93,7 @@ class IngameType(type):
 		self.component_templates = yaml_data['components']
 		self.action_sets = yaml_data['actionsets']
 		self.baseclass = yaml_data['baseclass'] # mostly only for debug
-		self._real_object = None # wrapped by _object
+		self._real_object = None # wrapped by _fife_object
 
 		self._parse_component_templates()
 
@@ -112,7 +112,7 @@ class IngameType(type):
 		* commands: horizons/commands. Abstracts all user interactions.
 		* scheduler: horizons/scheduler.py. Manages ingame time.
 		* extscheduler: horizons/extscheduler.py. Manages wall clock time.
-		* scenario: horizons/scenario. Condition-action system for scenarios and full campaigns
+		* scenario: horizons/scenario. Condition-action system for scenarios
 		* automatic tests: tests/. Contains unit tests, gui tests and game (system) tests
 		* networking: horizons/network. Sending stuff over the wire
 		* concreteobject: horizons/world/concreteobject.py. Things with graphical representations
@@ -158,7 +158,7 @@ class IngameType(type):
 
 
 	@property
-	def _object(self):
+	def _fife_object(self):
 		if self._real_object is None:
 			self._loadObject()
 		return self._real_object

@@ -74,7 +74,6 @@ def write(comment, string):
 
 scenario = yaml.load(open('content/scenarios/$1_en.yaml', 'r'))
 write('scenario difficulty', prep(scenario['difficulty']))
-write('scenario author', prep(scenario['author']))
 write('scenario description', prep(scenario['description']))
 
 for event in scenario['events']:
@@ -115,12 +114,18 @@ for event in scenario['events']:
 				write(comment, widget)
 END
 
-xgettext --output-dir=po --output=$1.pot \
+if [ "$1" = 'tutorial' ]; then
+	OUTPUT_DIR="po/uh-$1"
+else
+	OUTPUT_DIR="po/scenarios/templates"
+fi
+
+xgettext --output-dir=$OUTPUT_DIR --output=$1.pot \
          --from-code=UTF-8 \
-	    --add-comments \
-	    --add-location \
+         --add-comments \
+         --add-location \
          --width=80 \
-	    --sort-by-file  \
+         --sort-by-file  \
          --copyright-holder='The Unknown Horizons Team' \
          --package-name='Unknown Horizons' \
          --package-version=$VERSION \
@@ -129,13 +134,14 @@ xgettext --output-dir=po --output=$1.pot \
 rm po/$1.py
 
 # some strings contain two entries per line => remove line numbers from both
-perl -pi -e 's,(#: .*):[0-9][0-9]*,\1,g' po/$1.pot
-perl -pi -e 's,(#: .*):[0-9][0-9]*,\1,g' po/$1.pot
+perl -pi -e 's,(#: .*):[0-9][0-9]*,\1,g' $OUTPUT_DIR/$1.pot
+perl -pi -e 's,(#: .*):[0-9][0-9]*,\1,g' $OUTPUT_DIR/$1.pot
 
 
-diff=$(git diff --numstat po/$1.pot |awk '{print $1;}')
-if [ $diff -le 2 ]; then      # only changed version and date (two lines)
-    git checkout -- po/$1.pot # => discard this template change
+diff=$(git diff --numstat $OUTPUT_DIR/$1.pot |awk '{print $1;}')
+if [ $diff -le 2 ]; then
+    # only changed version and date (two lines) => discard this template change
+    git checkout -- $OUTPUT_DIR/$1.pot
 fi
 
 if [ "x$2" = x ]; then
@@ -144,9 +150,11 @@ fi
 
 # Create .mo files and extract the translations using gettext.
 echo "   Compiling these translations for $1:"
-for file in $(ls $2); do
-    path=$(pwd)/$2/$file
-    lang=`basename "$path" | sed "s,$1-,,;s,.po,,"`
+for lang in $(ls $2); do
+    if [ $lang == 'templates' ]; then
+        continue;
+    fi
+    path=$(pwd)/$2/$lang/$1.po
     mo=po/mo/$lang/LC_MESSAGES
     R='s,:,,g;s,.po,,g;s,alencia,,g;s,(/.*//|messages|message|translations),\t,g;s/[.,]//g'
     mkdir -p $mo
@@ -172,7 +180,6 @@ def translate(arg):
 scenario = yaml.load(open('content/scenarios/$1_en.yaml', 'r'))
 
 scenario['difficulty'] = _(scenario['difficulty'])
-scenario['author'] = _(scenario['author'])
 scenario['description'] = _(scenario['description'])
 scenario['locale'] = '$lang'
 scenario['translation_status'] = '$numbers'

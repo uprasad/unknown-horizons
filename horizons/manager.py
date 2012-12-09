@@ -47,7 +47,7 @@ class SPManager(LivingObject):
 		# if we are in demo playback mode, every incoming command has to be thrown away.
 		if self.commands:
 			return
-		ret = command(issuer = self.session.world.player) # actually execute the command
+		ret = command(issuer=self.session.world.player) # actually execute the command
 		# some commands might have a return value, so forward it
 		return ret
 
@@ -119,7 +119,7 @@ class MPManager(LivingObject):
 			self.gamecommands = []
 			self.commandsmanager.add_packet(commandpacket)
 			self.log.debug("sending command for tick %d" % (commandpacket.tick))
-			self.networkinterface.send_to_all_clients(commandpacket)
+			self.networkinterface.send_packet(commandpacket)
 
 			self.localcommandsmanager.add_packet(CommandPacket(self.calculate_execution_tick(tick),
 					self.session.world.player.worldid, self.localcommands))
@@ -133,7 +133,7 @@ class MPManager(LivingObject):
 			                              self.session.world.player.worldid, hash_value)
 				self.checkuphashmanager.add_packet(checkuphashpacket)
 				self.log.debug("sending checkuphash for tick %d" % (checkuphashpacket.tick))
-				self.networkinterface.send_to_all_clients(checkuphashpacket)
+				self.networkinterface.send_packet(checkuphashpacket)
 
 		# decide if tick can be calculated
 		# in the first few ticks, no data is available
@@ -168,7 +168,7 @@ class MPManager(LivingObject):
 
 	def hash_value_check(self, tick):
 		if tick % self.HASH_EVAL_DISTANCE == 0:
-			if self.checkuphashmanager.are_checkup_hash_values_equal(tick, self.hash_value_diff) == False:
+			if not self.checkuphashmanager.are_checkup_hash_values_equal(tick, self.hash_value_diff):
 				self.log.error("MPManager: Hash values generated in tick %s are not equal" % str(tick - self.HASHDELAY))
 				# if this is reached, we are screwed. Something went wrong in the simulation,
 				# but we don't know what. Stop the game.

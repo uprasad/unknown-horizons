@@ -1,11 +1,32 @@
+# ###################################################
+# Copyright (C) 2012 The Unknown Horizons Team
+# team@unknown-horizons.org
+# This file is part of Unknown Horizons.
+#
+# Unknown Horizons is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the
+# Free Software Foundation, Inc.,
+# 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+# ###################################################
+
 # Point
 
 def distance_point_point(p1, p2):
 	return ((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2) ** 0.5
-	
+
 def distance_point_tuple(point, (x, y)):
 	return ((point.x - x) ** 2 + (point.y - y) ** 2) ** 0.5
-	
+
 def distance_point_circle(point, circle):
 	dist = point.distance(circle.center) - circle.radius
 	return dist if dist >= 0 else 0
@@ -13,7 +34,7 @@ def distance_point_circle(point, circle):
 def distance_point_rect(point, rect):
 	return ((max(rect.left - point.x, 0, point.x - rect.right) ** 2) +
             (max(rect.top - point.y, 0, point.y - rect.bottom) ** 2)) ** 0.5
-	
+
 def distance_point_annulus(point, annulus):
 	dist = point.distance(annulus.center)
 	if dist < annulus.min_radius:
@@ -39,12 +60,58 @@ def distance_circle_annulus(circle, annulus):
 # Rect
 
 def distance_rect_rect(r1, r2):
-	return ((max(r1.left - r2.right, 0, r2.left - r1.right) ** 2) +
-            (max(r1.top - r2.bottom, 0, r2.top - r1.bottom) ** 2)) ** 0.5
-	
+	dx = 0
+	t = r1.left - r2.right
+	if t > dx:
+		dx = t
+	t = r2.left - r1.right
+	if t > dx:
+		dx = t
+
+	dy = 0
+	t = r1.top - r2.bottom
+	if t > dy:
+		dy = t
+	t = r2.top - r1.bottom
+	if t > dy:
+		dy = t
+	return (dx * dx + dy * dy) ** 0.5
+
+def distance_rect_rect_sq(r1, r2):
+	dx = 0
+	t = r1.left - r2.right
+	if t > dx:
+		dx = t
+	t = r2.left - r1.right
+	if t > dx:
+		dx = t
+
+	dy = 0
+	t = r1.top - r2.bottom
+	if t > dy:
+		dy = t
+	t = r2.top - r1.bottom
+	if t > dy:
+		dy = t
+	return dx * dx + dy * dy
+
 def distance_rect_tuple(rect, (x, y)):
-	return ((max(rect.left - x, 0, x - rect.right) ** 2) +
-            (max(rect.top - y, 0, y - rect.bottom) ** 2)) ** 0.5
+	dx = 0
+	t = rect.left - x
+	if t > dx:
+		dx = t
+	t = x - rect.right
+	if t > dx:
+		dx = t
+
+	dy = 0
+	t = rect.top - y
+	if t > dy:
+		dy = t
+	t = y - rect.bottom
+	if t > dy:
+		dy = t
+	return (dx * dx + dy * dy) ** 0.5
 
 def distance_rect_circle(rect, circle):
 	dist = rect.distance(circle.center) - circle.radius

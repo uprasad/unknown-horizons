@@ -19,6 +19,8 @@
 # 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 # ###################################################
 
+from operator import itemgetter
+
 from horizons.constants import AI, COLORS
 from horizons.util.color import Color
 from horizons.util.difficultysettings import DifficultySettings
@@ -37,17 +39,19 @@ class StartGameOptions(object):
 		self.is_map = False
 		self.is_multiplayer = False
 		self.is_scenario = False
-		self.campaign = None
 
 		self.player_name = 'Player'
 		self.player_color = None
 		self.ai_players = 0
 		self.human_ai = AI.HUMAN_AI
 
+		# this is used by the map editor to pass along the new map's size
+		self.map_padding = None
+
 	def init_new_world(self, session):
 		# NOTE: this must be sorted before iteration, cause there is no defined order for
 		#       iterating a dict, and it must happen in the same order for mp games.
-		for i in sorted(self._get_player_list(), lambda p1, p2: cmp(p1['id'], p2['id'])):
+		for i in sorted(self._get_player_list(), key=itemgetter('id')):
 			session.world.setup_player(i['id'], i['name'], i['color'], i['clientid'] if self.is_multiplayer else None, i['local'], i['ai'], i['difficulty'])
 		session.world.set_forced_player(self.force_player_id)
 		center = session.world.init_new_world(self.trader_enabled, self.pirate_enabled, self.natural_resource_multiplier)
@@ -104,11 +108,10 @@ class StartGameOptions(object):
 		return options
 
 	@classmethod
-	def create_start_singleplayer(cls, game_identifier, is_scenario, campaign, ai_players,
+	def create_start_singleplayer(cls, game_identifier, is_scenario, ai_players,
 		                          trader_enabled, pirate_enabled, force_player_id, is_map):
 		options = StartGameOptions(game_identifier)
 		options.is_scenario = is_scenario
-		options.campaign = campaign
 		options.ai_players = ai_players
 		options.trader_enabled = trader_enabled
 		options.pirate_enabled = pirate_enabled
@@ -140,15 +143,6 @@ class StartGameOptions(object):
 	def create_start_scenario(cls, scenario_file):
 		options = StartGameOptions(scenario_file)
 		options.is_scenario = True
-		return options
-
-	@classmethod
-	def create_start_campaign(cls, scenario_file, campaign, force_player_id):
-		options = StartGameOptions(scenario_file)
-		options.campaign = campaign
-		options.force_player_id = force_player_id
-		options.is_scenario = True
-		options.pirate_enabled = False
 		return options
 
 	@classmethod

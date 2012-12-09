@@ -25,6 +25,7 @@ from horizons.util.pathfinding.roadpathfinder import RoadPathFinder
 from horizons.util.python import decorators
 from horizons.util.shapes import Circle, Point, Rect
 from horizons.util.worldobject import WorldObject
+from horizons.world.buildability.terraincache import TerrainRequirement
 from horizons.constants import BUILDINGS
 from horizons.entities import Entities
 
@@ -78,13 +79,16 @@ class _BuildPosition(object):
 	def __eq__(self, other):
 		if not isinstance(other, _BuildPosition):
 			return False
-		return self.position == other.position and \
-		       self.rotation == other.rotation and \
-		       self.action == other.action and \
-		       self.tearset == other.tearset
+		return (self.position == other.position and
+		        self.rotation == other.rotation and
+		        self.action == other.action and
+		        self.tearset == other.tearset)
 
 	def __ne__(self, other):
 		return not self.__eq__(other)
+
+	def __hash__(self):
+		return hash((self.position, self.rotation, self.action))
 
 class _NotBuildableError(Exception):
 	"""Internal exception."""
@@ -98,6 +102,7 @@ class Buildable(object):
 	island, settlement, ground requirements etc. Does not care about building costs."""
 
 	irregular_conditions = False # whether all ground tiles have to fulfill the same conditions
+	terrain_type = TerrainRequirement.LAND
 
 	# check this far for fuzzy build
 	CHECK_NEARBY_LOCATIONS_UP_TO_DISTANCE = 3
@@ -304,6 +309,8 @@ class BuildableSingle(Buildable):
 
 class BuildableSingleEverywhere(BuildableSingle):
 	"""Buildings, that can be built everywhere. Usually not used for buildings placeable by humans."""
+	terrain_type = None
+
 	@classmethod
 	def check_build(cls, session, point, rotation=45, check_settlement=True, ship=None, issuer=None):
 		# for non-quadratic buildings, we have to switch width and height depending on the rotation
@@ -372,16 +379,17 @@ class BuildableLine(Buildable):
 
 		possible_builds = []
 
-		for i in path:
+		#TODO duplicates recalculation code in world.building.path
+		for x, y in path:
 			action = ''
-			for action_char, offset in \
+			for action_char, (xoff, yoff) in \
 			    sorted(BUILDINGS.ACTION.action_offset_dict.iteritems()): # order is important here
-				if (offset[0]+i[0], offset[1]+i[1]) in path:
+				if action_char in 'abcd' and (xoff + x, yoff + y) in path:
 					action += action_char
 			if action == '':
 				action = 'single' # single trail piece with no neighbours
 
-			build = cls.check_build(session, Point(*i))
+			build = cls.check_build(session, Point(x, y))
 			build.action = action
 			possible_builds.append(build)
 
@@ -389,8 +397,10 @@ class BuildableLine(Buildable):
 
 
 class BuildableSingleOnCoast(BuildableSingle):
-	"""Buildings one can only build on coast, such as BoatBuilder, Fisher"""
+	"""Buildings one can only build on coast, such as the fisher."""
 	irregular_conditions = True
+	terrain_type = TerrainRequirement.LAND_AND_COAST
+
 	@classmethod
 	def _check_island(cls, session, position, island=None):
 		# ground has to be either coastline or constructible, > 1 tile must be coastline
@@ -403,7 +413,10 @@ class BuildableSingleOnCoast(BuildableSingle):
 
 		flat_land_found = False
 		coastline_found = False
+		first_coords = None
 		for coords in position.tuple_iter():
+			if first_coords is None:
+				first_coords = coords
 			# can't use get_tile_tuples since it discards None's
 			tile = island.get_tile_tuple(coords)
 			if tile is None:
@@ -465,6 +478,7 @@ class BuildableSingleOnCoast(BuildableSingle):
 
 class BuildableSingleOnOcean(BuildableSingleOnCoast):
 	"""Requires ocean nearby as well"""
+	terrain_type = TerrainRequirement.LAND_AND_COAST_NEAR_SEA
 
 	@classmethod
 	def _check_island(cls, session, position, island=None):
@@ -513,6 +527,8 @@ class BuildableSingleOnDeposit(BuildableSingle):
 	the buildingclass.
 	"""
 	irregular_conditions = True
+	terrain_type = None
+
 	@classmethod
 	def _check_buildings(cls, session, position, island=None):
 		"""Check if there are buildings blocking the build"""
