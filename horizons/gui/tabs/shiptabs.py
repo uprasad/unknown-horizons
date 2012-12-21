@@ -33,10 +33,9 @@ from horizons.component.selectablecomponent import SelectableComponent
 
 
 class ShipOverviewTab(OverviewTab):
-	def __init__(self, instance, widget='overview_trade_ship.xml',
-			icon_path='content/gui/icons/tabwidget/ship/ship_inv_%s.png'):
-		self.helptext = _("Ship overview")
-		super(ShipOverviewTab, self).__init__(instance, widget, icon_path)
+	widget = 'overview_trade_ship.xml'
+	icon_path = 'content/gui/icons/tabwidget/ship/ship_inv_%s.png'
+	helptext = _("Ship overview")
 
 	def init_widget(self):
 		super(ShipOverviewTab, self).init_widget()
@@ -123,14 +122,18 @@ class ShipOverviewTab(OverviewTab):
 
 
 class FightingShipOverviewTab(ShipOverviewTab):
-	has_stance = True
-	def __init__(self, instance, widget='overview_war_ship.xml',
-			icon_path='content/gui/icons/tabwidget/ship/ship_inv_%s.png'):
-		super(FightingShipOverviewTab, self).__init__(instance, widget, icon_path)
+	widget = 'overview_war_ship.xml'
+	icon_path = 'content/gui/icons/tabwidget/ship/ship_inv_%s.png'
 
+	has_stance = True
+
+	def __init__(self, instance):
+		super(FightingShipOverviewTab, self).__init__(instance)
 
 		#create weapon inventory, needed only in gui for inventory widget
 		self.weapon_inventory = self.instance.get_weapon_storage()
+
+	def init_widget(self):
 		self.widget.findChild(name='weapon_inventory').init(self.instance.session.db, self.weapon_inventory)
 
 	def _refresh_combat(self):
@@ -162,18 +165,14 @@ class FightingShipOverviewTab(ShipOverviewTab):
 		super(FightingShipOverviewTab, self).on_instance_removed()
 
 class TraderShipOverviewTab(OverviewTab):
-	def __init__(self, instance):
-		super(TraderShipOverviewTab, self).__init__(
-			widget = 'overview_tradership.xml',
-			icon_path='content/gui/icons/tabwidget/ship/ship_inv_%s.png',
-			instance = instance)
-		self.helptext = _("Ship overview")
+	widget = 'overview_tradership.xml'
+	icon_path = 'content/gui/icons/tabwidget/ship/ship_inv_%s.png'
+	helptext = _("Ship overview")
 
 class EnemyShipOverviewTab(OverviewTab):
-	def  __init__(self, instance):
-		super(EnemyShipOverviewTab, self).__init__(
-			widget = 'overview_enemyunit.xml',
-			icon_path='content/gui/icons/tabwidget/ship/ship_inv_%s.png',
-			instance = instance)
+	widget = 'overview_enemyunit.xml'
+	icon_path = 'content/gui/icons/tabwidget/ship/ship_inv_%s.png'
+	helptext = _("Ship overview")
+
+	def init_widget(self):
 		self.widget.findChild(name="headline").text = self.instance.owner.name
-		self.helptext = _("Ship overview")

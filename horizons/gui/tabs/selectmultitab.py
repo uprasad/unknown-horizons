@@ -32,10 +32,14 @@ class SelectMultiTab(TabInterface):
 	"""
 	Tab shown when multiple units are selected
 	"""
+	widget = 'overview_select_multi.xml'
+	icon_path = 'content/gui/icons/tabwidget/common/inventory_%s.png'
+	helptext = _("Selected Units")
+
 	max_row_entry_number = 3
 	max_column_entry_number = 4
-	def __init__(self, session=None, widget='overview_select_multi.xml',
-	             icon_path='content/gui/icons/tabwidget/common/inventory_%s.png'):
+
+	def __init__(self, session=None):
 		self.session = session
 
 		# keep track of units that have stance
@@ -45,7 +49,6 @@ class SelectMultiTab(TabInterface):
 		# keep track of number of instances per type
 		self.type_number = {}
 
-		self.helptext = _("Selected Units")
 		for i in self.session.selected_instances:
 			if hasattr(i, 'stance'):
 				self.stance_unit_number += 1
@@ -59,7 +62,7 @@ class SelectMultiTab(TabInterface):
 
 		self._scheduled_refresh = False
 
-		super(SelectMultiTab, self).__init__(widget=widget, icon_path=icon_path)
+		super(SelectMultiTab, self).__init__()
 
 	def init_widget(self):
 		if self.stance_unit_number != 0:

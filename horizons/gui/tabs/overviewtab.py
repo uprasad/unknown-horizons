@@ -26,12 +26,15 @@ from horizons.component.namedcomponent import NamedComponent
 
 
 class OverviewTab(TabInterface):
+	widget = 'overviewtab.xml'
+	icon_path = 'content/gui/icons/tabwidget/common/building_overview_%s.png'
+	helptext = _("Overview")
+
 	has_stance = False
-	def __init__(self, instance, widget='overviewtab.xml',
-	             icon_path='content/gui/icons/tabwidget/common/building_overview_%s.png'):
+
+	def __init__(self, instance):
 		self.instance = instance
-		self.helptext = _("Overview")
-		super(OverviewTab, self).__init__(widget=widget, icon_path=icon_path)
+		super(OverviewTab, self).__init__()
 
 	def init_widget(self):
 		# set player emblem
@@ -96,12 +99,10 @@ class OverviewTab(TabInterface):
 
 
 class GroundUnitOverviewTab(OverviewTab):
+	widget = 'overview_groundunit.xml'
+	helptext = _("Unit overview")
+
 	has_stance = True
-	def __init__(self, instance):
-		self.helptext = _("Unit overview")
-		super(GroundUnitOverviewTab, self).__init__(
-			widget = 'overview_groundunit.xml',
-			instance = instance)
 	
 	def init_widget(self):
 		super(GroundUnitOverviewTab, self).init_widget()
@@ -113,8 +114,4 @@ class GroundUnitOverviewTab(OverviewTab):
 		self.add_remove_listener(weapon_storage_widget.remove)
 
 class FireStationOverviewTab(OverviewTab):
-	def  __init__(self, instance):
-		super(FireStationOverviewTab, self).__init__(
-			widget = 'overview_firestation.xml',
-			instance = instance
-		)
+	widget = 'overview_firestation.xml'

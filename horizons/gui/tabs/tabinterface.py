@@ -44,6 +44,7 @@ class TabInterface(object):
 	TabWidget will call this method based on callbacks. If you set any callbacks
 	yourself, make sure you get them removed when the widget is deleted.
 
+	@param widget: Filename of widget to load.
 	@param icon_path: Where to look for a,d,h,u icons; must contain '%s'
 	"""
 
@@ -52,21 +53,31 @@ class TabInterface(object):
 	"""
 	lazy_loading = False
 
+	"""
+	Override this in your subclass either as class attribute, or by passing it
+	to the constructor. The value of the constructor has preference over the
+	class attribute.
+	"""
+	widget = None
+	icon_path = 'content/gui/images/tabwidget/tab_%s.png'
+
 	scheduled_update_delay = 0.4 # seconds, update after this time when an update is scheduled
 
-	def __init__(self, widget=None, icon_path='content/gui/images/tabwidget/tab_%s.png', **kwargs):
+	def __init__(self, widget=None, icon_path=None, **kwargs):
 		"""
-		@param widget: filename of a widget. Set this to None if you create your own widget at self.widget
+		@param widget: filename of a widget. Set this to None if you create your
+		               widget in `get_widget`.
 		"""
 		super(TabInterface, self).__init__()
-		if widget is not None:
-			self.widget = widget
+		if widget or self.__class__.widget:
+			self.widget = widget or self.__class__.widget
 			if not self.__class__.lazy_loading:
 				self._setup_widget()
 		else:
 			# set manually by child
 			self.widget = None
 
+		icon_path = icon_path or self.__class__.icon_path
 		self.button_background_image = 'content/gui/images/tabwidget/tab_dark.png' # TabButtons background image
 		self.button_background_image_active = 'content/gui/images/tabwidget/tab_active_xxl.png' # TabButtons background image when selected
 		# Override these by modifying icon_path if you want different icons for your tab:

@@ -34,6 +34,9 @@ class TradeTab(TabInterface):
 	"""Ship to trade post's trade tab. International as well as national trade."""
 	log = logging.getLogger("gui.tabs.tradetab")
 
+	widget = 'tradetab.xml'
+	icon_path = 'content/gui/icons/tabwidget/warehouse/buysell_%s.png'
+
 	scheduled_update_delay = 0.3
 
 	# map the size buttons in the gui to an amount
@@ -55,8 +58,7 @@ class TradeTab(TabInterface):
 		@param instance: ship instance used for trading
 		"""
 		self.instance = instance
-		super(TradeTab,self).__init__(widget='tradetab.xml',
-		                              icon_path='content/gui/icons/tabwidget/warehouse/buysell_%s.png')
+		super(TradeTab,self).__init__()
 
 	def init_widget(self):
 		events = {}
