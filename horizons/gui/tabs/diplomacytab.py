@@ -31,19 +31,20 @@ class PlayerDiplomacyTab(TabInterface):
 	Diplomacy tab set per player.
 	It displays the menu for selecting the status between the local player and the tab's player
 	"""
-	def __init__(self, player, widget='diplomacy.xml',
-	             icon_path='images/tabwidget/emblems/emblem_%s'):
+	widget = 'diplomacy.xml'
+	icon_path = 'images/tabwidget/emblems/emblem_%s'
+
+	def __init__(self, player):
 		self.local_player = player.session.world.player
 		self.player = player
 		self.diplomacy = player.session.world.diplomacy
-		self.icon_path = icon_path
 
-		super(PlayerDiplomacyTab, self).__init__(widget, icon_path)
+		super(PlayerDiplomacyTab, self).__init__()
 
 		# Set these here to override the defaults in TabInterface.__init__
 		# before they are used.
 		color = self.player.color.name
-		self.path = self.active_path = self.icon_path % color.name
+		self.path = self.path_active = self.path % color
 
 	def init_widget(self):
 		self.widget.findChild(name='headline').text = self.player.name

@@ -31,12 +31,8 @@ from horizons.messaging import SettlerUpdate
 
 
 class SettlerOverviewTab(OverviewTab):
-	def  __init__(self, instance):
-		self.helptext = _("Settler overview")
-		super(SettlerOverviewTab, self).__init__(
-			widget = 'overview_settler.xml',
-			instance = instance
-		)
+	widget = 'overview_settler.xml'
+	helptext = _("Settler overview")
 
 	def init_widget(self):
 		super(SettlerOverviewTab, self).init_widget()

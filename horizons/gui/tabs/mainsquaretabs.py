@@ -53,10 +53,9 @@ class MainSquareTab(OverviewTab):
 
 class AccountTab(MainSquareTab):
 	"""Display basic income and expenses of a settlement"""
-	def __init__(self, instance):
-		self.helptext = _("Account")
-		super(AccountTab, self).__init__(instance=instance, widget='tab_account.xml',
-		                                 icon_path='icons/tabwidget/warehouse/account')
+	widget = 'tab_account.xml'
+	icon_path = 'icons/tabwidget/warehouse/account'
+	helptext = _("Account")
 
 	def init_widget(self):
 		super(AccountTab, self).init_widget()
@@ -86,9 +85,7 @@ class AccountTab(MainSquareTab):
 		self.widget.child_finder('balance').text = unicode(sign+' '+str(abs(balance)))
 
 class MainSquareOverviewTab(AccountTab):
-	def __init__(self, instance):
-		self.helptext = _('Main square overview')
-		super(MainSquareOverviewTab, self).__init__(instance=instance)
+	helptext = _('Main square overview')
 
 	def init_widget(self):
 		super(MainSquareOverviewTab, self).init_widget()
@@ -104,15 +101,16 @@ class MainSquareOverviewTab(AccountTab):
 		super(MainSquareOverviewTab, self).refresh()
 
 class MainSquareSettlerLevelTab(MainSquareTab):
+	widget = "mainsquare_inhabitants.xml"
 	LEVEL = None # overwrite in subclass
+
 	def __init__(self, instance):
 		self.max_inhabitants = instance.session.db.get_settler_inhabitants_max(self.__class__.LEVEL)
 		self.min_inhabitants = instance.session.db.get_settler_inhabitants_min(self.__class__.LEVEL)
 		self.helptext = instance.session.db.get_settler_name(self.__class__.LEVEL)
 
-		widget = "mainsquare_inhabitants.xml"
 		icon_path = 'icons/tabwidget/mainsquare/inhabitants{tier}'.format(tier=self.__class__.LEVEL)
-		super(MainSquareSettlerLevelTab, self).__init__(widget=widget, instance=instance, icon_path=icon_path)
+		super(MainSquareSettlerLevelTab, self).__init__(instance=instance, icon_path=icon_path)
 
 	def init_widget(self):
 		super(MainSquareSettlerLevelTab, self).init_widget()

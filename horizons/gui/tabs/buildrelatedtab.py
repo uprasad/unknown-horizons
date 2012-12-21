@@ -36,12 +36,10 @@ class BuildRelatedTab(OverviewTab):
 	only displays those buildings actually related to the selected building.
 	Examples: tree for lumberjack; pavilion, school, etc. for inhabitants.
 	"""
+	widget = 'related_buildings.xml'
+	icon_path = 'icons/tabwidget/production/related'
+	helptext = _("Build related buildings")
 	template_gui_xml = 'related_buildings_container.xml'
-
-	def  __init__(self, instance, widget='related_buildings.xml',
-	              icon_path='icons/tabwidget/production/related'):
-		self.helptext = _("Build related buildings")
-		super(BuildRelatedTab, self).__init__(widget=widget, instance=instance, icon_path=icon_path)
 
 	def refresh(self):
 		"""
