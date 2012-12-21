@@ -38,17 +38,16 @@ class PlayerDiplomacyTab(TabInterface):
 		self.local_player = player.session.world.player
 		self.player = player
 		self.diplomacy = player.session.world.diplomacy
-		self.icon_path = icon_path
 
 		super(PlayerDiplomacyTab, self).__init__()
 
 		# Set these here to override the defaults in TabInterface.__init__
 		# before they are used.
 		color = self.player.color.name
-		self.button_up_image = icon_path % color
-		self.button_active_image = icon_path % color
-		self.button_down_image = icon_path % color
-		self.button_hover_image = icon_path % color
+		self.button_up_image = self.icon_path % color
+		self.button_active_image = self.icon_path % color
+		self.button_down_image = self.icon_path % color
+		self.button_hover_image = self.icon_path % color
 
 	def init_widget(self):
 		self.widget.findChild(name='headline').text = self.player.name

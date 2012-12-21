@@ -32,9 +32,9 @@ class OverviewTab(TabInterface):
 
 	has_stance = False
 
-	def __init__(self, instance):
+	def __init__(self, instance, widget=None, icon_path=None):
 		self.instance = instance
-		super(OverviewTab, self).__init__()
+		super(OverviewTab, self).__init__(widget=widget, icon_path=icon_path)
 
 	def init_widget(self):
 		# set player emblem

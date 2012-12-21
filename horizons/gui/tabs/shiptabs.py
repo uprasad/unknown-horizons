@@ -127,13 +127,10 @@ class FightingShipOverviewTab(ShipOverviewTab):
 
 	has_stance = True
 
-	def __init__(self, instance):
-		super(FightingShipOverviewTab, self).__init__(instance)
-
+	def init_widget(self):
+		super(ShipOverviewTab, self).init_widget()
 		#create weapon inventory, needed only in gui for inventory widget
 		self.weapon_inventory = self.instance.get_weapon_storage()
-
-	def init_widget(self):
 		self.widget.findChild(name='weapon_inventory').init(self.instance.session.db, self.weapon_inventory)
 
 	def _refresh_combat(self):
@@ -175,4 +172,5 @@ class EnemyShipOverviewTab(OverviewTab):
 	helptext = _("Ship overview")
 
 	def init_widget(self):
+		super(ShipOverviewTab, self).init_widget()
 		self.widget.findChild(name="headline").text = self.instance.owner.name
