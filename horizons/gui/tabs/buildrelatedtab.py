@@ -39,8 +39,8 @@ class BuildRelatedTab(OverviewTab):
 
 	def  __init__(self, instance, widget='related_buildings.xml',
 	              icon_path='content/gui/icons/tabwidget/production/related_%s.png'):
-		super(BuildRelatedTab, self).__init__(widget=widget, instance=instance, icon_path=icon_path)
 		self.helptext = _("Build related buildings")
+		super(BuildRelatedTab, self).__init__(widget=widget, instance=instance, icon_path=icon_path)
 
 	def refresh(self):
 		"""

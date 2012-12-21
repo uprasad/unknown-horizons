@@ -35,9 +35,12 @@ from horizons.component.selectablecomponent import SelectableComponent
 class ShipOverviewTab(OverviewTab):
 	def __init__(self, instance, widget='overview_trade_ship.xml',
 			icon_path='content/gui/icons/tabwidget/ship/ship_inv_%s.png'):
-		super(ShipOverviewTab, self).__init__(instance, widget, icon_path)
-		self.widget.child_finder('inventory').init(self.instance.session.db, self.instance.get_component(StorageComponent).inventory)
 		self.helptext = _("Ship overview")
+		super(ShipOverviewTab, self).__init__(instance, widget, icon_path)
+
+	def init_widget(self):
+		super(ShipOverviewTab, self).init_widget()
+		self.widget.child_finder('inventory').init(self.instance.session.db, self.instance.get_component(StorageComponent).inventory)
 
 	def _configure_route(self):
 		self.route_menu = RouteConfig(self.instance)

@@ -34,10 +34,6 @@ from horizons.component.namedcomponent import NamedComponent
 
 class MainSquareTab(OverviewTab):
 	"""Tab for main square. Refreshes when one building on the settlement changes"""
-	def __init__(self, instance, widget, icon_path):
-		super(MainSquareTab, self).__init__(instance=instance, widget=widget, icon_path=icon_path)
-		self.init_values()
-
 	@property
 	def settlement(self):
 		return self.instance.settlement
@@ -58,10 +54,12 @@ class MainSquareTab(OverviewTab):
 class AccountTab(MainSquareTab):
 	"""Display basic income and expenses of a settlement"""
 	def __init__(self, instance):
+		self.helptext = _("Account")
 		super(AccountTab, self).__init__(instance=instance, widget='tab_account.xml',
 		                                 icon_path='content/gui/icons/tabwidget/warehouse/account_%s.png')
-		self.helptext = _("Account")
 
+	def init_widget(self):
+		super(AccountTab, self).init_widget()
 		self.widget.mapEvents({
 		  'show_production_overview/mouseClicked' : self.show_production_overview
 		  })
@@ -86,8 +84,11 @@ class AccountTab(MainSquareTab):
 
 class MainSquareOverviewTab(AccountTab):
 	def __init__(self, instance):
-		super(MainSquareOverviewTab, self).__init__(instance=instance)
 		self.helptext = _('Main square overview')
+		super(MainSquareOverviewTab, self).__init__(instance=instance)
+
+	def init_widget(self):
+		super(MainSquareOverviewTab, self).init_widget()
 		self.widget.child_finder('headline').text = self.settlement.get_component(NamedComponent).name
 		self.widget.child_finder('headline').helptext = _('Click to change the name of your settlement')
 
@@ -102,18 +103,21 @@ class MainSquareOverviewTab(AccountTab):
 class MainSquareSettlerLevelTab(MainSquareTab):
 	LEVEL = None # overwrite in subclass
 	def __init__(self, instance):
-		widget = "mainsquare_inhabitants.xml"
-		icon_path = 'content/gui/icons/tabwidget/mainsquare/inhabitants{incr}_%s.png'.format(incr=self.__class__.LEVEL)
-		super(MainSquareSettlerLevelTab, self).__init__(widget=widget, instance=instance, icon_path=icon_path)
 		self.max_inhabitants = instance.session.db.get_settler_inhabitants_max(self.__class__.LEVEL)
 		self.min_inhabitants = instance.session.db.get_settler_inhabitants_min(self.__class__.LEVEL)
 		self.helptext = instance.session.db.get_settler_name(self.__class__.LEVEL)
 
+		widget = "mainsquare_inhabitants.xml"
+		icon_path = 'content/gui/icons/tabwidget/mainsquare/inhabitants{incr}_%s.png'.format(incr=self.__class__.LEVEL)
+		super(MainSquareSettlerLevelTab, self).__init__(widget=widget, instance=instance, icon_path=icon_path)
+
+	def init_widget(self):
+		super(MainSquareSettlerLevelTab, self).init_widget()
 		slider = self.widget.child_finder('tax_slider')
 		val_label = self.widget.child_finder('tax_val_label')
 		setup_tax_slider(slider, val_label, self.settlement, self.__class__.LEVEL)
 		self.widget.child_finder('tax_val_label').text = unicode(self.settlement.tax_settings[self.__class__.LEVEL])
-		self.widget.child_finder('headline').text = _(instance.session.db.get_settler_name(self.__class__.LEVEL))
+		self.widget.child_finder('headline').text = _(self.instance.session.db.get_settler_name(self.__class__.LEVEL))
 
 	@classmethod
 	def shown_for(cls, instance):

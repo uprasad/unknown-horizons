@@ -54,13 +54,15 @@ class TradeTab(TabInterface):
 		"""
 		@param instance: ship instance used for trading
 		"""
+		self.instance = instance
 		super(TradeTab,self).__init__(widget='tradetab.xml',
 		                              icon_path='content/gui/icons/tabwidget/warehouse/buysell_%s.png')
+
+	def init_widget(self):
 		events = {}
 		for k, v in self.exchange_size_buttons.iteritems():
 			events[v] = Callback(self.set_exchange, k)
 		self.widget.mapEvents(events)
-		self.instance = instance
 		self.partner = None
 		self.set_exchange(50, initial=True)
 
