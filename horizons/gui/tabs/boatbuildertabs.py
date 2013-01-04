@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -132,7 +132,6 @@ class BoatbuilderTab(_BoatbuilderOverviewTab):
 #			upgrades_box.addChild(Label(text=u"+ love"))
 #			upgrades_box.addChild(Label(text=u"+ affection"))
 # no upgrades in 2010.1 release ---^
-			upgrades_box.stylize('menu_black')
 
 			# Update needed resources
 			production = self.producer.get_productions()[0]

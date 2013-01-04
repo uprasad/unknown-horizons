@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -34,7 +34,7 @@ from horizons.scenario import CONDITIONS
 from horizons.scheduler import Scheduler
 from horizons.component.componentholder import ComponentHolder
 from horizons.component.storagecomponent import StorageComponent
-from horizons.messaging import SettlerUpdate, NewDisaster, PlayerInventoryUpdated
+from horizons.messaging import SettlerUpdate, PlayerInventoryUpdated, PlayerLevelUpgrade
 from horizons.component.tradepostcomponent import TradePostComponent
 
 class Player(ComponentHolder, WorldObject):
@@ -86,7 +86,6 @@ class Player(ComponentHolder, WorldObject):
 
 		if self.regular_player:
 			SettlerUpdate.subscribe(self.notify_settler_reached_level)
-			NewDisaster.subscribe(self.notify_new_disaster, sender=self)
 
 	@property
 	def is_local_player(self):
@@ -129,31 +128,16 @@ class Player(ComponentHolder, WorldObject):
 		self.__init(name, Color[color], client_id, difficulty_level, max_tier_notification, settlerlevel = settlerlevel)
 
 	def notify_settler_reached_level(self, message):
-		"""Settler calls this to notify the player
-		@param settler: instance of Settler
-		@return: bool, True if actually incremented the level"""
-		assert isinstance(message, SettlerUpdate)
+		"""Settler calls this to notify the player."""
 		if message.sender.owner is not self:
-			return False # was settler of another player
+			return
 		if message.level > self.settler_level:
 			self.settler_level = message.level
 			self.session.scenario_eventhandler.check_events(CONDITIONS.settler_level_greater)
 			for settlement in self.settlements:
 				settlement.level_upgrade(self.settler_level)
 			self._changed()
-			return True
-		else:
-			return False
-
-	def notify_mine_empty(self, mine):
-		"""The Mine calls this function to let the player know that the mine is empty."""
-		pass
-
-	def notify_new_disaster(self, message):
-		"""The message bus calls this when a building is 'infected' with a disaster."""
-		if self.is_local_player:
-			pos = message.building.position.center
-			self.session.ingame_gui.message_widget.add(point=pos, string_id=message.disaster_class.NOTIFICATION_TYPE)
+			PlayerLevelUpgrade.broadcast(self, self.settler_level, message.sender)
 
 	def end(self):
 		self._stats = None
@@ -161,7 +145,6 @@ class Player(ComponentHolder, WorldObject):
 
 		if self.regular_player:
 			SettlerUpdate.unsubscribe(self.notify_settler_reached_level)
-			NewDisaster.unsubscribe(self.notify_new_disaster, sender=self)
 
 	@decorators.temporary_cachedmethod(timeout=STATS_UPDATE_INTERVAL)
 	def get_balance_estimation(self):
@@ -188,26 +171,13 @@ class Player(ComponentHolder, WorldObject):
 
 
 class HumanPlayer(Player):
+	"""Class for players that physically sit in front of the machine where the game is run"""
 
 	def __init(self, *args, **kwargs):
 		super(HumanPlayer, self).__init(*args, **kwargs)
 		self.__inventory_checker = InventoryChecker(PlayerInventoryUpdated, self.get_component(StorageComponent), 4)
 
-	"""Class for players that physically sit in front of the machine where the game is run"""
-	def notify_settler_reached_level(self, message):
-		level_up = super(HumanPlayer, self).notify_settler_reached_level(message)
-		if level_up and message.sender.owner.is_local_player: 
-			# add message and update ingame gui
-			self.session.ingame_gui.message_widget.add(point=message.sender.position.center,
-			                                           string_id='SETTLER_LEVEL_UP',
-			                                           message_dict={'level': message.level+1})
-		return level_up
-
-	def notify_mine_empty(self, mine):
-		self.session.ingame_gui.message_widget.add(point=mine.position.center, string_id='MINE_EMPTY')
-
 	def end(self):
 		if hasattr(self, '__inventory_checker'):
 			self.__inventory_checker.remove()
 		super(HumanPlayer, self).end()
-		

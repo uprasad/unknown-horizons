@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -83,7 +83,7 @@ class Bullet(ComponentHolder, WorldObject):
 
 
 		self._instance = session.view.layers[LAYERS.FIELDS].createInstance(
-			self._fife_object, fife.ModelCoordinate(int(self.x),int(self.y), 0), str(self.worldid))
+			self._fife_object, fife.ModelCoordinate(int(self.x), int(self.y), 0), str(self.worldid))
 		fife.InstanceVisual.create(self._instance)
 		location = fife.Location(self._instance.getLocation().getLayer())
 		location.setExactLayerCoordinates(fife.ExactModelCoordinate(self.x, self.y, 0))

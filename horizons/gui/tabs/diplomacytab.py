@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -57,9 +57,6 @@ class PlayerDiplomacyTab(TabInterface):
 		self.button_down_image = icon_path % color
 		self.button_hover_image = icon_path % color
 		self.helptext = player.name
-
-		self.widget.stylize("menu_black")
-		self.widget.findChild(name='headline').stylize('headline')
 
 	def show(self):
 		super(PlayerDiplomacyTab, self).show()

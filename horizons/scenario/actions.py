@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -97,7 +97,7 @@ def do_win(session):
 	                                          _("Do you want to continue playing?"),
 	                                          show_cancel_button=True)
 	if not continue_playing:
-		Scheduler().add_new_object(Callback(session.gui.quit_session, force=True), session, run_in=0)
+		Scheduler().add_new_object(session.quit, session, run_in=0)
 	else:
 		UnPauseCommand().execute(session)
 
@@ -141,7 +141,7 @@ def alter_inventory(session, resource, amount):
 					resource, amount)
 
 @register()
-def highlight_position(session, where, play_sound=False, color=(0,0,0)):
+def highlight_position(session, where, play_sound=False, color=(0, 0, 0)):
 	"""Highlights a position on the minimap.
 	where: (x, y) coordinate tuple
 	color is a optional parameter that defines the color of the highlight. """

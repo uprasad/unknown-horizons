@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -45,13 +45,7 @@ def test_example(gui):
 	# Main menu
 	main_menu = gui.find(name='menu')
 	gui.trigger(main_menu, 'single_button')
-
-	filter_non_tooltip = lambda l : [i for i in l if i.name != "tooltip_container"]
-
-	# Single-player menu
-	assert len( filter_non_tooltip( gui.active_widgets ) ) == 1
-	singleplayer_menu = gui.active_widgets[0]
-	gui.trigger(singleplayer_menu, 'okay') # start a game
+	gui.trigger('singleplayermenu', 'okay')
 
 	# Hopefully we're ingame now
 	assert gui.active_widgets
@@ -83,7 +77,7 @@ def test_example(gui):
 
 	# Cancel current game
 	def dialog():
-		gui.trigger('popup_window', 'okButton/action/__execute__')
+		gui.trigger('popup_window', 'okButton')
 
 	# Dialog handling has to be done by a separate generator.
 	with gui.handler(dialog):

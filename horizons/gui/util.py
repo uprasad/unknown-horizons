@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -22,9 +22,10 @@
 import os
 
 from fife.extensions.pychan import loadXML
-from fife.extensions.pychan.widgets import Icon, ImageButton, HBox
+from fife.extensions.pychan.widgets import Container, HBox, Icon
 
 from horizons.i18n import translate_widget
+from horizons.gui.widgets.imagebutton import ImageButton
 from horizons.util.python import decorators
 from horizons.util.python.callback import Callback
 
@@ -82,14 +83,15 @@ def load_uh_widget(filename, style=None, center_widget=False):
 		elif w.name.startswith("uni_") or w.comment.startswith("uni_"):
 			w.font = '16_black_unifont'
 	if center_widget:
-		widget.position_technique = "automatic" # "center:center"
+		widget.position_technique = "center:center"
 
 	return widget
 
 @decorators.cachedfunction
-def get_res_icon_path(res, size=32, greyscale=False):
+def get_res_icon_path(res, size=32, greyscale=False, full_path=True):
 	"""Returns path of a resource icon or placeholder path, if icon does not exist.
 	@param res: resource id. Pass 'placeholder' to get placeholder path.
+	@param full_path: whether to return full icon path or a stub path suitable for ImageButton path=
 	"""
 	icon_path = 'content/gui/icons/resources/{size}/'.format(size=size)
 	if greyscale:
@@ -98,6 +100,7 @@ def get_res_icon_path(res, size=32, greyscale=False):
 		icon_path = icon_path + 'placeholder.png'
 	else:
 		icon_path = icon_path + '{res:03d}.png'.format(res=res)
+
 	try:
 		Icon(image=icon_path)
 	except RuntimeError: # ImageManager: image not found, use placeholder or die
@@ -106,7 +109,12 @@ def get_res_icon_path(res, size=32, greyscale=False):
 		else:
 			print '[WW] Image not found: {icon_path}'.format(icon_path=icon_path)
 			icon_path = get_res_icon_path('placeholder', size)
-	return icon_path
+
+	if full_path:
+		return icon_path
+	else:
+		# remove 'content/gui/' and '.png'
+		return icon_path[12:][:-4]
 
 def create_resource_icon(res_id, db):
 	"""Creates a pychan Icon for a resource. Helptext is set to name of *res_id*.
@@ -115,36 +123,6 @@ def create_resource_icon(res_id, db):
 	widget = Icon(image=get_res_icon_path(res_id))
 	widget.helptext = db.get_res_name(res_id)
 	return widget
-
-class LazyWidgetsDict(dict):
-	"""Dictionary for UH widgets. Loads widget on first access."""
-	def __init__(self, styles, *args, **kwargs):
-		"""
-		@param styles: Dictionary, { 'widgetname' : 'stylename' }. parameter for stylize().
-		"""
-		super(LazyWidgetsDict, self).__init__(*args, **kwargs)
-		self.styles = styles
-
-	def __getitem__(self, widgetname):
-		try:
-			return dict.__getitem__(self, widgetname)
-		except KeyError:
-			self._load_widget(widgetname)
-			return dict.__getitem__(self, widgetname)
-
-	def _load_widget(self, widgetname):
-		"""
-		We do styling before setting headlines to the default headline style.
-		If you want your headlines to not be styled, rename them.
-		"""
-		self[widgetname] = load_uh_widget(widgetname+'.xml',
-		                                  style=self.styles.get(widgetname))
-
-	def reload(self, widgetname):
-		"""Reloads a widget"""
-		if widgetname in self:
-			del self[widgetname]
-		# loading happens automatically on next access
 
 
 def create_resource_selection_dialog(on_click, inventory, db,
@@ -159,11 +137,13 @@ def create_resource_selection_dialog(on_click, inventory, db,
 	@param amount_per_line: how many resource icons per line. Default: try to fit layout
 	"""
 	from horizons.gui.widgets.imagefillstatusbutton import ImageFillStatusButton
-	dummy_icon_path = "content/gui/icons/resources/none_gray.png"
+	dummy_icon_path = "icons/resources/none_gray"
 
 	dlg = load_uh_widget(widget)
 
-	button_width = ImageFillStatusButton.CELL_SIZE[0] # used for dummy button
+	icon_size = ImageFillStatusButton.ICON_SIZE # used for dummy button
+	cell_size = ImageFillStatusButton.CELL_SIZE
+	button_width = cell_size[0]
 	vbox = dlg.findChild(name="resources")
 	amount_per_line = amount_per_line or vbox.width // button_width
 	# Add the zero element to the beginning that allows to remove the currently
@@ -177,8 +157,10 @@ def create_resource_selection_dialog(on_click, inventory, db,
 			continue
 		# create button (dummy one or real one)
 		if res_id == 0 or inventory is None:
-			button = ImageButton( size=(button_width, button_width), name="resource_icon_00")
-			button.up_image, button.down_image, button.hover_image = (dummy_icon_path,)*3
+			reset_button = ImageButton(max_size=icon_size, name="resource_icon_00")
+			reset_button.path = dummy_icon_path
+			button = Container(size=cell_size)
+			button.addChild(reset_button)
 		else:
 			amount = inventory[res_id]
 			filled = int(float(inventory[res_id]) / float(inventory.get_limit(res_id)) * 100.0)

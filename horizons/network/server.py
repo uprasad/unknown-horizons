@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -214,10 +214,10 @@ class Server(object):
 			peer.reset()
 
 
-	def error(self, player, message, _type = ErrorType.NotSet):
+	def error(self, player, message, _type=ErrorType.NotSet):
 		self._error(player.peer, S_(player, message), _type)
 
-	def _error(self, peer, message, _type = ErrorType.NotSet):
+	def _error(self, peer, message, _type=ErrorType.NotSet):
 		self.send(peer, packets.cmd_error(message, _type))
 
 	def fatalerror(self, player, message, later=True):

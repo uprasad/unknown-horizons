@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -75,12 +75,12 @@ class MainListener(fife.IKeyListener, fife.ICommandListener, LivingObject):
 			shutil.move(temp_path, final_path)
 
 			# ingame message if there is a session
-			if self.gui.session is not None:
-				self.gui.session.ingame_gui.message_widget.add(point=None, string_id='SCREENSHOT',
-				                                               message_dict={'file': final_path})
+			session = horizons.main._modules.session
+			if session:
+				session.ingame_gui.message_widget.add(point=None, string_id='SCREENSHOT',
+				                                      message_dict={'file': final_path})
 		elif action == _Actions.QUICKLOAD:
-			from horizons.main import _load_last_quicksave
-			_load_last_quicksave(self.gui.session)
+			horizons.main._load_last_quicksave()
 		else:
 			key_event_handled = False # nope, nothing triggered
 

@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -31,10 +31,11 @@ from horizons.command.game import UnPauseCommand
 from horizons.command.misc import Chat
 from horizons.gui.widgets.pickbeltwidget import PickBeltWidget
 from horizons.gui.widgets.imagebutton import OkButton
+from horizons.gui.windows import Window
 from horizons.scenario.actions import show_message
 
 
-class LogBook(PickBeltWidget):
+class LogBook(PickBeltWidget, Window):
 	"""Implementation of the logbook as described here:
 	http://wiki.unknown-horizons.org/w/Message_System
 
@@ -44,17 +45,17 @@ class LogBook(PickBeltWidget):
 	log = logging.getLogger('gui.widgets.logbook')
 
 	widget_xml = 'captains_log.xml'
-	style = 'book'
-	page_pos = (170,38)
+	page_pos = (170, 38)
 	sections = (('logbook', _(u'Logbook')),
 	            ('statistics', _(u'Statistics')),
 	            ('chat_overview', _(u'Chat')))
 
-	def __init__(self, session):
+	def __init__(self, session, windows):
 		self.statistics_index = [i for i, sec in self.sections].index('statistics')
 		self._page_ids = {} # dict mapping self._cur_entry to message.msgcount
 		super(LogBook, self).__init__()
 		self.session = session
+		self._windows = windows
 		self._parameters = [] # list of lists of all parameters added to a logbook page
 		self._message_log = [] # list of all messages that have been displayed
 		self._messages_to_display = [] # list messages to display on page close
@@ -77,7 +78,7 @@ class LogBook(PickBeltWidget):
 		"""Initial gui setup for all subpages accessible through pickbelts."""
 		self._gui = self.get_widget()
 		self._gui.mapEvents({
-		  OkButton.DEFAULT_NAME : self.hide,
+		  OkButton.DEFAULT_NAME : self._windows.close,
 		  'backwardButton' : Callback(self._scroll, -2),
 		  'forwardButton' : Callback(self._scroll, 2),
 		  'stats_players' : Callback(self.show_statswidget, widget='players'),
@@ -135,7 +136,7 @@ class LogBook(PickBeltWidget):
 			self.set_cur_entry(int(value[0][0])) # this also redraws
 
 	def show(self, msg_id=None):
-		if not hasattr(self,'_gui'):
+		if not hasattr(self, '_gui'):
 			self._init_gui()
 		if msg_id:
 			self._cur_entry = self._page_ids[msg_id]
@@ -144,12 +145,10 @@ class LogBook(PickBeltWidget):
 			self._redraw_captainslog()
 			if self.current_mode == self.statistics_index:
 				self.show_statswidget(self.last_stats_widget)
-			self.session.ingame_gui.on_switch_main_widget(self)
 
 	def hide(self):
 		if not self._hiding_widget:
 			self._hiding_widget = True
-			self.session.ingame_gui.on_switch_main_widget(None)
 			self._hide_statswidgets()
 			self._gui.hide()
 			self._hiding_widget = False
@@ -169,12 +168,6 @@ class LogBook(PickBeltWidget):
 
 	def is_visible(self):
 		return hasattr(self, '_gui') and self._gui.isVisible()
-
-	def toggle_visibility(self):
-		if self.is_visible():
-			self.hide()
-		else:
-			self.show()
 
 	def _redraw_captainslog(self):
 		"""Redraws gui. Necessary when current message has changed."""
@@ -290,7 +283,7 @@ class LogBook(PickBeltWidget):
 			self._cur_entry = len_old
 		if show_logbook and hasattr(self, "_gui"):
 			self._redraw_captainslog()
-			self.show()
+			self._windows.show(self)
 
 	def clear(self):
 		"""Remove all entries"""
@@ -347,11 +340,16 @@ class LogBook(PickBeltWidget):
 		Otherwise, switch to displaying the new widget instead of hiding.
 		@param widget: 'players' or 'settlements' or 'ships'
 		"""
-		if self.stats_visible is not None and self.stats_visible == widget:
-			self.hide()
-		else:
-			self.show()
+		# we're treating every statswidget as a separate window, so if the stats change,
+		# close the logbook and reopen it with a different active widget
+		if self.stats_visible != widget:
+			if self.stats_visible:
+				self._windows.close()
+
+			self._windows.show(self)
 			self.show_statswidget(widget=widget)
+		else:
+			self._windows.close()
 
 	def _show_ships(self):
 		self.session.ingame_gui.players_ships.show()

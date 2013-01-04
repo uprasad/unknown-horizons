@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -66,9 +66,12 @@ class AccountTab(MainSquareTab):
 		  'show_production_overview/mouseClicked' : self.show_production_overview
 		  })
 
+		# FIXME having to access the WindowManager this way is pretty ugly
+		self._windows = self.instance.session.ingame_gui.windows
+		self.prod_overview = ProductionOverview(self._windows, self.settlement)
+
 	def show_production_overview(self):
-		self.prod_overview = ProductionOverview(self.settlement)
-		self.prod_overview.toggle_visibility()
+		self._windows.toggle(self.prod_overview)
 
 	def refresh(self):
 		super(AccountTab, self).refresh()
@@ -178,7 +181,7 @@ class MainSquareSettlerLevelTab(MainSquareTab):
 			if not container.findChild(name="resident_"+str(column)):
 				label = Label(name="resident_"+str(column), position=(position_x, 0), text=unicode(number))
 				container.addChild(label)
-				count_label = Label(name="resident_count_"+str(column), position=(position_x - 1,20), text=unicode(house_count))
+				count_label = Label(name="resident_count_"+str(column), position=(position_x - 1, 20), text=unicode(house_count))
 				container.addChild(count_label)
 			else:
 				container.findChild(name="resident_"+str(column)).text = unicode(number)

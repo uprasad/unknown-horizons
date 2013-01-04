@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 
@@ -128,6 +128,10 @@ class SettlerUpdate(Message):
 	"""
 	arguments = ('level', 'change', )
 
+class PlayerLevelUpgrade(Message):
+	"""Sent when the settler level of a player increases."""
+	arguments = ('level', 'building', )
+
 class SettlerInhabitantsChanged(Message):
 	"""Class to signal that the number of inhabitants in a settler building
 	have changed."""
@@ -169,7 +173,7 @@ class HoverSettlementChanged(Message):
 
 class NewSettlement(Message):
 	"""Sent when a new settlement is created"""
-	arguments = ('settlement', )
+	arguments = ('settlement', 'warehouse_position', )
 
 class HoverInstancesChanged(Message):
 	"""Sent when hovering over a different set of instances.
@@ -202,14 +206,6 @@ class PlayerInventoryUpdated(Message):
 	"""Message sent whenever a player's inventory is updated"""
 	pass
 
-class AutosaveIntervalChanged(Message):
-	"""Sent when the autosave interval is changed."""
-	pass
-
-class MinimapRotationSettingChanged(Message):
-	"""Sent when the setting that enables/disables rotating the minimap with the map is changed."""
-	pass
-
 class LanguageChanged(Message):
 	"""Sent when the language has changed."""
 	pass
@@ -217,3 +213,11 @@ class LanguageChanged(Message):
 class SpeedChanged(Message):
 	"""Sent when the ingame speed has changed."""
 	arguments = ('old', 'new', )
+
+class SettingChanged(Message):
+	"""Sent when a setting is changed in the dialog."""
+	arguments = ('setting_name', 'old_value', 'new_value', )
+
+class MineEmpty(Message):
+	"""Sent when there are no more resources left in a mine."""
+	arguments = ('mine', )

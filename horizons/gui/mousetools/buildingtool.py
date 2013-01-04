@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -125,8 +125,6 @@ class BuildingTool(NavigationTool):
 		self.load_gui()
 		self.__class__.gui.show()
 		self.session.ingame_gui.minimap_to_front()
-
-		self.session.gui.on_escape = self.on_escape
 
 		self.highlight_buildable()
 		WorldObjectDeleted.subscribe(self._on_worldobject_deleted)
@@ -472,7 +470,7 @@ class BuildingTool(NavigationTool):
 		self._build_logic.on_escape(self.session)
 		if self.__class__.gui is not None:
 			self.__class__.gui.hide()
-		self.session.set_cursor() # will call remove()
+		self.session.ingame_gui.set_cursor() # will call remove()
 
 	def mouseMoved(self, evt):
 		self.log.debug("BuildingTool mouseMoved")

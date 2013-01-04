@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -73,7 +73,7 @@ class TogglePauseCommand(Command):
 
 	def __call__(self, issuer):
 		session = issuer.session
-		session.gui.toggle_pause()
+		session.ingame_gui.toggle_pause()
 
 Command.allow_network(TogglePauseCommand)
 

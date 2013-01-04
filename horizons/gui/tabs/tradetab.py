@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -54,8 +54,8 @@ class TradeTab(TabInterface):
 		"""
 		@param instance: ship instance used for trading
 		"""
-		super(TradeTab,self).__init__(widget='tradetab.xml',
-		                              icon_path='content/gui/icons/tabwidget/warehouse/buysell_%s.png')
+		super(TradeTab, self).__init__(widget='tradetab.xml',
+		                               icon_path='content/gui/icons/tabwidget/warehouse/buysell_%s.png')
 		events = {}
 		for k, v in self.exchange_size_buttons.iteritems():
 			events[v] = Callback(self.set_exchange, k)

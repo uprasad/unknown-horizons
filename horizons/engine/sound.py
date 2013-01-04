@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -55,6 +55,14 @@ class Sound(object):
 			self.last_tracks.extend(ingame_tracks)
 
 		self.setup_sound()
+
+	def end(self):
+		if self.engine.get_fife_setting("PlaySounds"):
+			for emitter in self.emitter['ambient'][:]:
+				emitter.stop()
+				self.emitter['ambient'].remove(emitter)
+			self.emitter['effects'].stop()
+			self.emitter['speech'].stop()
 
 	def setup_sound(self):
 		if self.engine.get_fife_setting("PlaySounds"):

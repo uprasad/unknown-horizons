@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -174,7 +174,6 @@ class Fife(ApplicationBase):
 		#init pychan
 		debug_pychan = self.get_fife_setting('PychanDebug') # default is False
 		self.pychan.init(self.engine, debug_pychan) # pychan debug mode may have performance impacts
-		self.pychan.setupModalExecution(self.loop, self.breakLoop)
 		self.console = self.pychan.manager.hook.guimanager.getConsole()
 
 		init_pychan()

@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -19,22 +19,24 @@
 # 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 # ###################################################
 
-from fife.extensions.pychan.widgets import ImageButton
+from fife import fife
 
 from horizons.util.python.callback import Callback
 from horizons.gui.util import load_uh_widget
+from horizons.gui.widgets.imagebutton import ImageButton, OkButton
+from horizons.gui.windows import Window
+
 
 class PickBeltWidget(object):
 	"""Base class for widget with sections behaving as pages"""
 	sections = () # Tuple with widget name and Label
 	widget_xml = '' # xml to load for the widget
-	style = 'book'
 	pickbelt_start_pos = (5, 150)
 	page_pos = (185, 45)
 
 	def __init__(self):
 		self.page_widgets = {}
-		self.widget = load_uh_widget(self.widget_xml, style=self.style, center_widget=True)
+		self.widget = load_uh_widget(self.widget_xml, center_widget=True)
 
 		# Lists holding pickbelt ImageButtons, placed to the left/right of the book
 		self.buttons = {'left': [], 'right': []}
@@ -45,9 +47,9 @@ class PickBeltWidget(object):
 		# Create the required pickbelts
 		for i, (name, text) in enumerate(self.sections):
 			for side in self.buttons:
-				pickbelt = ImageButton(is_focusable=False, text=text)
+				pickbelt = ImageButton(text=text)
 				pickbelt.name = name + '_' + side
-				pickbelt.up_image = 'content/gui/images/background/pickbelt_%s.png' % side
+				pickbelt.path = 'images/background/pickbelt_%s' % side
 				pickbelt.font = "small_tooltip"
 
 				pickbelt.capture(Callback(self.update_view, i), event_name="mouseClicked")
@@ -91,7 +93,7 @@ class OptionsPickbeltWidget(PickBeltWidget):
 		super(OptionsPickbeltWidget, self).__init__(*args, **kwargs)
 
 
-class CreditsPickbeltWidget(PickBeltWidget):
+class CreditsPickbeltWidget(PickBeltWidget, Window):
 	"""Widget for credits dialog with pickbelt style pages"""
 	widget_xml = 'credits.xml'
 	# Can set as class attribute directly since no gettext calls
@@ -102,3 +104,22 @@ class CreditsPickbeltWidget(PickBeltWidget):
 		('credits_packagers', u'Packagers'),
 		('credits_thanks', u'Thanks'),
 	)
+
+	def __init__(self, windows):
+		Window.__init__(self, windows)
+		PickBeltWidget.__init__(self)
+
+		# Overwrite a few style pieces
+		for box in self.widget.findChildren(name='box'):
+			box.margins = (30, 0) # to get some indentation
+			box.padding = 3
+		for listbox in self.widget.findChildren(name='translators'):
+			listbox.background_color = fife.Color(255, 255, 255, 0)
+
+		self.widget.findChild(name=OkButton.DEFAULT_NAME).capture(self._windows.close)
+
+	def show(self):
+		self.widget.show()
+
+	def hide(self):
+		self.widget.hide()

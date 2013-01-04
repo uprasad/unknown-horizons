@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -60,7 +60,7 @@ def redirect(stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
 	os.dup2(ofd.fileno(), sys.stdout.fileno())
 	os.dup2(efd.fileno(), sys.stderr.fileno())
 
-def usage(fd = sys.stdout):
+def usage(fd=sys.stdout):
 	fd.write("Usage: %s " % (sys.argv[0]))
 	if os.name == "posix":
 		fd.write("[-d] ")

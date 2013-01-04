@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -35,7 +35,6 @@ class SelectionTool(NavigationTool):
 	def __init__(self, session):
 		super(SelectionTool, self).__init__(session)
 		self.deselect_at_end = True # Set this to deselect selections while exiting SelectionTool
-		self.session.gui.on_escape = self.session.gui.toggle_pause
 
 	def remove(self):
 		# Deselect if needed while exiting
@@ -160,10 +159,10 @@ class SelectionTool(NavigationTool):
 				self.deselect_at_end = False # Handover to AttackingTool without deselecting
 				break
 
-		if attacking_unit_found and not isinstance(self.session.cursor, AttackingTool):
-			self.session.set_cursor('attacking')
-		if not attacking_unit_found and isinstance(self.session.cursor, AttackingTool):
-			self.session.set_cursor()
+		if attacking_unit_found and not isinstance(self.session.ingame_gui.cursor, AttackingTool):
+			self.session.ingame_gui.set_cursor('attacking')
+		if not attacking_unit_found and isinstance(self.session.ingame_gui.cursor, AttackingTool):
+			self.session.ingame_gui.set_cursor()
 			horizons.globals.fife.set_cursor_image('default')
 
 	def mousePressed(self, evt):

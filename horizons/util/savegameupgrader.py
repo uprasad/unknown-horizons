@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -284,7 +284,6 @@ class SavegameUpgrader(object):
 				settlement_map[coords] = settlement_id
 		db("DELETE FROM settlement_tiles")
 
-		deposits = []
 		for (worldid, building_id, x, y, location_id) in db("SELECT rowid, type, x, y, location FROM building WHERE type = ? OR type = ?",
 			    BUILDINGS.CLAY_DEPOSIT, BUILDINGS.MOUNTAIN):
 			worldid = int(worldid)

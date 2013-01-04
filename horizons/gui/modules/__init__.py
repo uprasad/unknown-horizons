@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -27,3 +27,6 @@ from singleplayermenu import SingleplayerMenu
 from multiplayermenu import MultiplayerMenu
 from help import HelpDialog
 from select_savegame import SelectSavegameDialog
+from loadingscreen import LoadingScreen
+from pausemenu import PauseMenu
+from settings import SettingsDialog

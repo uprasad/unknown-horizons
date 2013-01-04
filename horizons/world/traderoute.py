@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -168,7 +168,7 @@ class TradeRoute(ChangeListener):
 					amount_transferred = settlement.transfer_to_storageholder(amount, res, self.ship)
 				else:
 					amount_transferred, error = settlement.get_component(TradePostComponent).sell_resource(
-					  self.ship.worldid, res, amount,add_error_type=True, suppress_messages=suppress_messages)
+					  self.ship.worldid, res, amount, add_error_type=True, suppress_messages=suppress_messages)
 					if error == TRADE_ERROR_TYPE.PERMANENT:
 						# pretend to have everything and move on, waiting doesn't make sense
 						amount_transferred = amount

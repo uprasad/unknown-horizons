@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -85,10 +85,12 @@ class FoundSettlement(ShipMission):
 		self.log.info('%s reached BO area', self)
 
 		builder = BasicBuilder(BUILDINGS.WAREHOUSE, self.coords, 0)
-		self.warehouse = builder.execute(self.land_manager, ship=self.ship)
-		if not self.warehouse:
-			self.report_failure('Unable to build the warehouse')
+		if not builder.have_resources(self.land_manager, ship=self.ship):
+			self.report_failure('Not enough resources for a warehouse at %s' % str(self.coords))
 			return
+
+		self.warehouse = builder.execute(self.land_manager, ship=self.ship)
+		assert self.warehouse
 
 		self.land_manager.settlement = self.warehouse.settlement
 		self.log.info('%s built the warehouse', self)
@@ -107,7 +109,6 @@ class FoundSettlement(ShipMission):
 
 		island = land_manager.island
 		personality = land_manager.owner.personality_manager.get('FoundSettlement')
-		too_close_penalty_threshold_sq = personality.too_close_penalty_threshold * personality.too_close_penalty_threshold
 
 		available_spots_list = list(sorted(island.terrain_cache.cache[warehouse_class.terrain_type][warehouse_class.size].intersection(island.available_land_cache.cache[warehouse_class.size])))
 		if not available_spots_list:

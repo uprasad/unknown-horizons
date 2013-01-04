@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -135,7 +135,7 @@ class TabInterface(object):
 		self.init_values()
 
 	def _load_widget(self, widget):
-		widget = load_uh_widget(widget, style="menu_black")
+		widget = load_uh_widget(widget)
 		widget.child_finder = PychanChildFinder(widget)
 		return widget
 

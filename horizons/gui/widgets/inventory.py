@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -77,8 +77,8 @@ class Inventory(Container):
 				self.__icon.position = (130, 53)
 				self.legend.position = (150, 53)
 			elif isinstance(self._inventory, PositiveSizedSlotStorage):
-				self.__icon.position = ( 0, 203)
-				self.legend.position = (20, 203)
+				self.__icon.position = ( 0, 248)
+				self.legend.position = (20, 248)
 
 		self.update()
 
@@ -94,7 +94,6 @@ class Inventory(Container):
 		self._draw(vbox, current_hbox)
 
 		self.adaptLayout()
-		self.stylize('menu_black')
 
 	def _draw(self, vbox, current_hbox, index=0):
 		"""Draws the inventory."""
@@ -107,7 +106,7 @@ class Inventory(Container):
 
 			while len(self._res_order) + len(new_res) > self._inventory.slotnum:
 				for i in xrange(self._inventory.slotnum):
-					if self._inventory[self._res_order[i]]:
+					if len(self._res_order) <= i or self._inventory[self._res_order[i]]:
 						# search empty slot
 						continue
 					# insert new res here

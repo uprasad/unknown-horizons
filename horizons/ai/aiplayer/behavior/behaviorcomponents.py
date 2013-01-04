@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -74,7 +74,7 @@ class BehaviorComponent(object):
 		else:
 			return 0.0
 
-# Components below are roughly divided into "Aggressive, Normal,Cautious" etc.
+# Components below are roughly divided into "Aggressive, Normal, Cautious" etc.
 # (division below is not related to the way dictionaries in BehaviorManager are named (offensive, idle, defensive))
 
 

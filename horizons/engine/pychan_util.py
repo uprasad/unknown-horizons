@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -27,13 +27,14 @@ from fife.extensions import pychan
 from horizons.gui.style import STYLES
 from horizons.messaging import GuiAction
 from horizons.util.python.callback import Callback
+from horizons.gui.widgets.imagebutton import ImageButton
 
 import horizons.globals
 
 class RenameLabel(pychan.widgets.Label):
 	"""A regular label that signals that it will display a rename dialog when clicked upon (by changing the cursor)"""
 	pass # implementation added dynamically below
-class RenameImageButton(pychan.widgets.ImageButton):
+class RenameImageButton(ImageButton):
 	pass # as above
 
 def handle_gcn_exception(e, msg=None):
@@ -71,6 +72,7 @@ def init_pychan():
 	from horizons.gui.widgets.imagefillstatusbutton import ImageFillStatusButton
 	from horizons.gui.widgets.progressbar import ProgressBar
 	from horizons.gui.widgets.toggleimagebutton import ToggleImageButton
+	# additionally, ImageButton is imported from widgets.imagebutton above
 	from horizons.gui.widgets.imagebutton import CancelButton, DeleteButton, MainmenuButton, OkButton
 	from horizons.gui.widgets.icongroup import TabBG, TilingHBox
 	from horizons.gui.widgets.stepslider import StepSlider
@@ -84,14 +86,14 @@ def init_pychan():
 	           HealthWidget, StanceWidget, WeaponStorageWidget,
 	           AutoResizeContainer, RenameLabel, RenameImageButton,
 	           TilingHBox,
+			 # This overwrites the ImageButton provided by FIFE!
+	           ImageButton,
 	           ]
 
 	for widget in widgets:
 		pychan.widgets.registerWidget(widget)
 
 	# add uh styles
-	# NOTE: do this before adding tooltip feature, because pychan has a design issue
-	# where it sometimes uses the class hierarchy and sometimes treats each class differently.
 	for name, stylepart in STYLES.iteritems():
 		pychan.manager.addStyle(name, stylepart)
 
@@ -136,29 +138,6 @@ def init_pychan():
 	setup_cursor_change_on_hover()
 
 	setup_trigger_signals_on_action()
-
-
-	# NOTE: there is a bug with the tuple notation: http://fife.trac.cvsdude.com/engine/ticket/656
-	# work around this here for now:
-	def conv(d):
-		entries = []
-		for k, v in d.iteritems():
-			if isinstance(v, dict): # recurse
-				v = conv(v)
-			if isinstance(k, tuple): # resolve tuple-notation, add separate keys
-				for k_i in k:
-					entries.append( (k_i, v) )
-			else:
-				entries.append( (k, v) )
-
-		return dict(entries)
-
-	# patch uh styles
-	STYLES = conv(STYLES)
-
-	# patch fife default styles
-	pychan.manager.styles = conv(pychan.manager.styles)
-
 
 
 def setup_cursor_change_on_hover():
@@ -221,20 +200,3 @@ def setup_trigger_signals_on_action():
 		cls.__init__ = add_action_triggers_a_signal( cls.__init__ )
 
 	make_action_trigger_a_signal(pychan.widgets.Widget)
-
-
-def get_button_event(button):
-	"""Returns the callback that is triggered when the button is clicked on.
-	If this should run in combination with --gui-log, call the returned event callback with parameters like this:
-		pychan.tools.applyOnlySuitable(callback, event=event, widget=widget)
-
-	@param button: pychan Button"""
-	try:
-		# try dialog action
-		return button.event_mapper.callbacks['__execute__']['action']
-	except KeyError:
-		try:
-			# try mapped event
-			return button.event_mapper.callbacks['default']['action']
-		except KeyError:
-			return None

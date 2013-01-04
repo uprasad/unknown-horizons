@@ -1,4 +1,4 @@
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -20,6 +20,8 @@
 
 import itertools
 import json
+import math
+from math import sin, cos
 
 import horizons.globals
 from fife import fife
@@ -29,10 +31,8 @@ from horizons.util.python.decorators import bind_all
 from horizons.util.shapes import Circle, Point, Rect
 from horizons.command.unit import Act
 from horizons.component.namedcomponent import NamedComponent
-from horizons.messaging import MinimapRotationSettingChanged
+from horizons.messaging import SettingChanged
 
-import math
-from math import sin, cos
 
 class Minimap(object):
 	"""A basic minimap.
@@ -125,12 +125,9 @@ class Minimap(object):
 
 		self.minimap_image = _MinimapImage(self, targetrenderer)
 
-		#import random
-		#ExtScheduler().add_new_object(lambda : self.highlight( (50+random.randint(-50,50), random.randint(-50,50) + 50 )), self, 2, loops=-1)
-
 		self._rotation_setting = horizons.globals.fife.get_uh_setting("MinimapRotation")
 		if self.use_rotation:
-			MinimapRotationSettingChanged.subscribe(self._on_rotation_setting_change)
+			SettingChanged.subscribe(self._on_setting_changed)
 
 	def end(self):
 		self.disable()
@@ -138,7 +135,7 @@ class Minimap(object):
 		self.session = None
 		self.renderer = None
 		if self.use_rotation:
-			MinimapRotationSettingChanged.unsubscribe(self._on_rotation_setting_change)
+			SettingChanged.unsubscribe(self._on_setting_changed)
 
 	def disable(self):
 		"""Due to the way the minimap works, there isn't really a show/hide,
@@ -638,7 +635,7 @@ class Minimap(object):
 		self.minimap_image.rendertarget.resizeImage(name, p, img, new_width, new_height)
 
 
-	def rotate_right (self):
+	def rotate_right(self):
 		# keep track of rotation at any time, but only apply
 		# if it's actually used
 		self.rotation -= 1
@@ -646,7 +643,7 @@ class Minimap(object):
 		if self._get_rotation_setting():
 			self.draw()
 
-	def rotate_left (self):
+	def rotate_left(self):
 		# see above
 		self.rotation += 1
 		self.rotation %= 4
@@ -671,16 +668,17 @@ class Minimap(object):
 			return False
 		return self._rotation_setting
 
-	def _on_rotation_setting_change(self, message):
-		self._rotation_setting = horizons.globals.fife.get_uh_setting("MinimapRotation")
-		self.draw()
+	def _on_setting_changed(self, message):
+		if message.setting_name == "MinimapRotation":
+			self._rotation_setting = message.new_value
+			self.draw()
 
 	_rotations = { 0 : 0,
 				         1 : 3 * math.pi / 2,
 				         2 : math.pi,
 				         3 : math.pi / 2
 				         }
-	def _get_rotated_coords (self, tup):
+	def _get_rotated_coords(self, tup):
 		"""Rotates according to current rotation settings.
 		Input coord must be relative to screen origin, not minimap origin"""
 		return self._rotate(tup, self._rotations)
@@ -690,10 +688,10 @@ class Minimap(object):
 				              2 : math.pi,
 				              3 : 3 * math.pi / 2
 				              }
-	def _get_from_rotated_coords (self, tup):
+	def _get_from_rotated_coords(self, tup):
 		return self._rotate (tup, self._from_rotations)
 
-	def _rotate (self, tup, rotations):
+	def _rotate(self, tup, rotations):
 		rotation = rotations[ self.rotation ]
 
 		x = tup[0]

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -28,6 +28,7 @@ import horizons.main
 from horizons.engine import UH_MODULE
 from horizons.constants import LANGUAGENAMES
 from horizons.gui.widgets.pickbeltwidget import OptionsPickbeltWidget
+from horizons.messaging import SettingChanged
 
 class SettingsDialog(Setting):
 	"""
@@ -47,28 +48,6 @@ class SettingsDialog(Setting):
 			if style != no_restyle_str:
 				wdg.stylize(style)
 		wdg.stylize = no_restyle
-
-		# on_escape HACK at the interface between fife gui and uh gui.
-		# show_dialog of gui.py would handle this nicely, but to be able to
-		# reuse the fife code, we have do something here.
-
-		if horizons.main._modules.session is not None:
-			gui = horizons.main._modules.session.ingame_gui
-		else:
-			gui = horizons.main._modules.gui
-
-		# overwrite hide of widget to reset on_escape to old value when the settings
-		# dialog has been hidden
-		old_on_escape = gui.on_escape
-		old_hide = wdg.hide
-		def on_hide():
-			old_hide()
-			gui.on_escape = old_on_escape
-			return True # event is handled
-
-		# use it for escape and hide to cover all cases
-		gui.on_escape = on_hide
-		wdg.hide = on_hide
 
 		return wdg
 
@@ -109,5 +88,7 @@ class SettingsDialog(Setting):
 		# catch events for settings that should be displayed in another way than they should be saved
 		if module == UH_MODULE and name == "Language":
 			val = LANGUAGENAMES.get_by_value(val)
+
+		SettingChanged.broadcast(self, name, self.get(module, name), val)
 		return super(SettingsDialog, self).set(module, name, val, extra_attrs)
 

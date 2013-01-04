@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -42,7 +42,6 @@ class TearingTool(NavigationTool):
 		self.selected = WeakList()
 		self.oldedges = None
 		self.tear_tool_active = True
-		self.session.gui.on_escape = self.on_escape
 		self.session.ingame_gui.hide_menu()
 		self.session.selected_instances.clear()
 		horizons.globals.fife.set_cursor_image("tearing")
@@ -70,7 +69,7 @@ class TearingTool(NavigationTool):
 		evt.consume()
 
 	def on_escape(self):
-		self.session.set_cursor()
+		self.session.ingame_gui.set_cursor()
 
 	def mouseReleased(self, evt):
 		"""Tear selected instances and set selection tool as cursor"""

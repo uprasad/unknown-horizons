@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -45,7 +45,7 @@ except ImportError as e:
 	sys.exit(1)
 
 from run_uh import init_environment
-init_environment()
+init_environment(False)
 
 import horizons.main
 

@@ -1,6 +1,6 @@
 # -.- coding: utf-8 -.-
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -65,7 +65,7 @@ class VERSION:
 	IS_DEV_VERSION = True
 	#RELEASE_VERSION = u'2012.1'
 
-	MIN_FIFE_REVISION = 4071
+	MIN_FIFE_REVISION = 4077
 
 	## +=1 this if you changed the savegame "api"
 	SAVEGAMEREVISION = 70
@@ -477,7 +477,6 @@ class PATHS:
 	ACTION_SETS_DIRECTORY = os.path.join("content", "gfx")
 	TILE_SETS_DIRECTORY = os.path.join("content", "gfx", "base")
 	SAVEGAME_TEMPLATE = os.path.join("content", "savegame_template.sql")
-	ISLAND_TEMPLATE = os.path.join("content", "island_template.sql")
 
 	ATLAS_FILES_DIR = os.path.join("content", "gfx", "atlas")
 	ATLAS_DB_PATH = os.path.join("content", "atlas.sql")
@@ -493,7 +492,6 @@ class PATHS:
 	                                 for d in (
 	                                 "/base",
 	                                 "/buildings",
-	                                 "/buildings_preview",
 	                                 "/misc",
 	                                 "/terrain",
 	                                 "/units",

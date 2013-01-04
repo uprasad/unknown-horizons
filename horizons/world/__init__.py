@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -50,6 +50,7 @@ from horizons.component.healthcomponent import HealthComponent
 from horizons.component.storagecomponent import StorageComponent
 from horizons.world.disaster.disastermanager import DisasterManager
 from horizons.world import worldutils
+from horizons.util.savegameaccessor import SavegameAccessor
 
 class World(BuildingOwner, WorldObject):
 	"""The World class represents an Unknown Horizons map with all its units, grounds, buildings, etc.
@@ -248,20 +249,6 @@ class World(BuildingOwner, WorldObject):
 		self.diplomacy = Diplomacy()
 		if self.session.is_game_loaded():
 			self.diplomacy.load(self, savegame_db)
-
-		# add diplomacy notification listeners
-		def notify_change(caller, old_state, new_state, a, b):
-			player1 = u"%s" % a.name
-			player2 = u"%s" % b.name
-
-			data = {'player1' : player1, 'player2' : player2}
-
-			string_id = 'DIPLOMACY_STATUS_{old}_{new}'.format(old=old_state.upper(),
-			                                                  new=new_state.upper())
-			self.session.ingame_gui.message_widget.add(point=None, string_id=string_id,
-			                                           message_dict=data)
-
-		self.diplomacy.add_diplomacy_status_changed_listener(notify_change)
 
 	def _load_disasters(self, savegame_db):
 		# disasters are only enabled if they are explicitly set to be enabled
@@ -467,8 +454,6 @@ class World(BuildingOwner, WorldObject):
 		if pirate_enabled:
 			self.pirate = Pirate(self.session, 99998, "Captain Blackbeard", Color())
 
-		# Fire a message for new world creation
-		self.session.ingame_gui.message_widget.add(point=None, string_id='NEW_WORLD')
 		assert ret_coords is not None, "Return coords are None. No players loaded?"
 		return ret_coords
 
@@ -740,6 +725,14 @@ class World(BuildingOwner, WorldObject):
 def load_building(session, db, typeid, worldid):
 	"""Loads a saved building. Don't load buildings yourself in the game code."""
 	return Entities.buildings[typeid].load(session, db, worldid)
+
+
+def load_raw_world(map_file):
+	WorldObject.reset()
+	world = World(session=None)
+	world.inited = True
+	world.load_raw_map(SavegameAccessor(map_file, True), preview=True)
+	return world
 
 
 decorators.bind_all(World)

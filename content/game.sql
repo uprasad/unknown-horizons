@@ -145,15 +145,13 @@ INSERT INTO "message_text" VALUES('YOU_LOST',         'You failed the scenario.'
 
 CREATE TABLE "message_icon" (
 	"icon_id" INT NOT NULL,
-	"up_image" TEXT NOT NULL,
-	"down_image" TEXT NOT NULL,
-	"hover_image" TEXT NOT NULL
+	"path" TEXT NOT NULL
 );
-INSERT INTO "message_icon" VALUES(1, 'content/gui/icons/widgets/messages/msg_letter_n.png', 'content/gui/icons/widgets/messages/msg_letter_d.png', 'content/gui/icons/widgets/messages/msg_letter_h.png');
-INSERT INTO "message_icon" VALUES(2, 'content/gui/icons/widgets/messages/msg_system_n.png', 'content/gui/icons/widgets/messages/msg_system_d.png', 'content/gui/icons/widgets/messages/msg_system_h.png');
-INSERT INTO "message_icon" VALUES(3, 'content/gui/icons/widgets/messages/msg_save_n.png',   'content/gui/icons/widgets/messages/msg_save_d.png',   'content/gui/icons/widgets/messages/msg_save_h.png');
-INSERT INTO "message_icon" VALUES(4, 'content/gui/icons/widgets/messages/msg_anchor_n.png', 'content/gui/icons/widgets/messages/msg_anchor_d.png', 'content/gui/icons/widgets/messages/msg_anchor_h.png');
-INSERT INTO "message_icon" VALUES(5, 'content/gui/icons/widgets/messages/msg_money_n.png',  'content/gui/icons/widgets/messages/msg_money_d.png',  'content/gui/icons/widgets/messages/msg_money_h.png');
+INSERT INTO "message_icon" VALUES(1, 'icons/widgets/messages/msg_letter');
+INSERT INTO "message_icon" VALUES(2, 'icons/widgets/messages/msg_system');
+INSERT INTO "message_icon" VALUES(3, 'icons/widgets/messages/msg_save');
+INSERT INTO "message_icon" VALUES(4, 'icons/widgets/messages/msg_anchor');
+INSERT INTO "message_icon" VALUES(5, 'icons/widgets/messages/msg_money');
 
 CREATE TABLE "ai" (
 	"client_id" TEXT NOT NULL,
@@ -171,7 +169,7 @@ INSERT INTO "related_buildings" VALUES( 3,  4, 1);
 INSERT INTO "related_buildings" VALUES( 3,  5, 1);
 INSERT INTO "related_buildings" VALUES( 3, 21, 1);
 INSERT INTO "related_buildings" VALUES( 3, 32, 1);
-INSERT INTO "related_buildings" VALUES( 3, 42, 1);
+-- INSERT INTO "related_buildings" VALUES( 3, 42, 1);
 INSERT INTO "related_buildings" VALUES( 6,  1, 0);
 INSERT INTO "related_buildings" VALUES( 8, 17, 1);
 INSERT INTO "related_buildings" VALUES(20, 18, 1);
@@ -180,12 +178,12 @@ INSERT INTO "related_buildings" VALUES(20, 22, 1);
 INSERT INTO "related_buildings" VALUES(20, 36, 1);
 INSERT INTO "related_buildings" VALUES(20, 38, 1);
 INSERT INTO "related_buildings" VALUES(20, 39, 0);
-INSERT INTO "related_buildings" VALUES(20, 40, 1);
+-- INSERT INTO "related_buildings" VALUES(20, 40, 1);
 INSERT INTO "related_buildings" VALUES(20, 46, 1);
-INSERT INTO "related_buildings" VALUES(20, 49, 1);
-INSERT INTO "related_buildings" VALUES(20, 60, 1);
-INSERT INTO "related_buildings" VALUES(20, 61, 1);
-INSERT INTO "related_buildings" VALUES(20, 62, 1);
+-- INSERT INTO "related_buildings" VALUES(20, 49, 1);
+-- INSERT INTO "related_buildings" VALUES(20, 60, 1);
+-- INSERT INTO "related_buildings" VALUES(20, 61, 1);
+-- INSERT INTO "related_buildings" VALUES(20, 62, 1);
 INSERT INTO "related_buildings" VALUES(45,  3, 0);
 
 CREATE TABLE "tile_set" (
@@ -247,31 +245,31 @@ INSERT INTO "resource" VALUES(31, 'tobacco leaves', 2.5, 1, 1);
 INSERT INTO "resource" VALUES(32, 'tobaccos', 10, 1, 1);
 -- tradeable   name   value   id   show_inv
 INSERT INTO "resource" VALUES(33, 'cattle', 0, 0, 1);
-INSERT INTO "resource" VALUES(34, 'pigs', 0, 0, 1);
+INSERT INTO "resource" VALUES(34, 'pigs', 0, 0, 0); -- unused and thus made untradable and hidden from inventories
 INSERT INTO "resource" VALUES(35, 'cattle for slaughter', 2, 0, 1);
-INSERT INTO "resource" VALUES(36, 'pigs for slaughter', 2, 0, 1);
+INSERT INTO "resource" VALUES(36, 'pigs for slaughter', 2, 0, 0); -- unused and thus made untradable and hidden from inventories
 INSERT INTO "resource" VALUES(37, 'herbs', 0, 0, 1);
-INSERT INTO "resource" VALUES(38, 'medical herbs', 2.5, 1, 1);
-INSERT INTO "resource" VALUES(39, 'acorns', 0, 0, 1);
+INSERT INTO "resource" VALUES(38, 'medical herbs', 2.5, 0, 0); -- unused and thus made untradable and hidden from inventories
+INSERT INTO "resource" VALUES(39, 'acorns', 0, 0, 0); -- unused and thus made untradable and hidden from inventories
 INSERT INTO "resource" VALUES(40, 'cannon', 100, 1, 1);
-INSERT INTO "resource" VALUES(41, 'dagger', 10, 0, 0);
+INSERT INTO "resource" VALUES(41, 'dagger', 10, 0, 0); -- unused and thus made untradable and hidden from inventories
 INSERT INTO "resource" VALUES(42, 'grain', 0, 0, 1); -- corn ears
 INSERT INTO "resource" VALUES(43, 'corn', 2, 0, 1);
 INSERT INTO "resource" VALUES(44, 'flour', 2.5, 1, 1);
-INSERT INTO "resource" VALUES(45, 'spice plants', 2, 0, 1);
-INSERT INTO "resource" VALUES(46, 'spices', 2.5, 1, 1);
-INSERT INTO "resource" VALUES(47, 'condiments', 10, 1, 1);
-INSERT INTO "resource" VALUES(51, 'stone deposit', 0, 0, 1);
-INSERT INTO "resource" VALUES(52, 'stone tops', 7.5, 1, 1);
-INSERT INTO "resource" VALUES(53, 'cocoa beans', 2, 0, 1);
-INSERT INTO "resource" VALUES(54, 'cocoa', 2.5, 1, 1);
-INSERT INTO "resource" VALUES(55, 'confectionery', 10, 1, 1);
-INSERT INTO "resource" VALUES(56, 'candles', 10, 1, 1);
-INSERT INTO "resource" VALUES(57, 'vines', 2, 0, 1);
-INSERT INTO "resource" VALUES(58, 'grapes', 2.5, 1, 1);
+INSERT INTO "resource" VALUES(45, 'spice plants', 2, 0, 0); -- unused and thus made untradable and hidden from inventories
+INSERT INTO "resource" VALUES(46, 'spices', 2.5, 0, 0); -- unused and thus made untradable and hidden from inventories
+INSERT INTO "resource" VALUES(47, 'condiments', 10, 0, 0); -- unused and thus made untradable and hidden from inventories
+INSERT INTO "resource" VALUES(51, 'stone deposit', 0, 0, 0); -- unused and thus made untradable and hidden from inventories
+INSERT INTO "resource" VALUES(52, 'stone tops', 7.5, 0, 0); -- unused and thus made untradable and hidden from inventories
+INSERT INTO "resource" VALUES(53, 'cocoa beans', 2, 0, 0); -- unused and thus made untradable and hidden from inventories
+INSERT INTO "resource" VALUES(54, 'cocoa', 2.5, 0, 0); -- unused and thus made untradable and hidden from inventories
+INSERT INTO "resource" VALUES(55, 'confectionery', 10, 0, 0); -- unused and thus made untradable and hidden from inventories
+INSERT INTO "resource" VALUES(56, 'candles', 10, 0, 0); -- unused and thus made untradable and hidden from inventories
+INSERT INTO "resource" VALUES(57, 'vines', 2, 0, 0); -- unused and thus made untradable and hidden from inventories
+INSERT INTO "resource" VALUES(58, 'grapes', 2.5, 0, 0); -- unused and thus made untradable and hidden from inventories
 -- tradeable   name   value   id   show_inv
-INSERT INTO "resource" VALUES(59, 'alvearies', 2, 0, 1);
-INSERT INTO "resource" VALUES(60, 'honeycombs', 2.5, 1, 1);
+INSERT INTO "resource" VALUES(59, 'alvearies', 2, 0, 0); -- unused and thus made untradable and hidden from inventories
+INSERT INTO "resource" VALUES(60, 'honeycombs', 2.5, 0, 0); -- unused and thus made untradable and hidden from inventories
 INSERT INTO "resource" VALUES(99, 'fire', NULL, 0, 0);
 
 CREATE TABLE "weapon" (

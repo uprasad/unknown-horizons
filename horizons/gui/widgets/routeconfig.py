@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -30,6 +30,7 @@ from horizons.util.shapes import Point
 from fife.extensions.pychan import widgets
 from horizons.component.storagecomponent import StorageComponent
 from horizons.gui.widgets.minimap import Minimap
+from horizons.gui.windows import Window
 from horizons.command.uioptions import RouteConfigCommand
 from horizons.component.namedcomponent import NamedComponent
 from horizons.component.ambientsoundcomponent import AmbientSoundComponent
@@ -38,7 +39,7 @@ from horizons.gui.widgets.imagebutton import OkButton
 
 import horizons.globals
 
-class RouteConfig(object):
+class RouteConfig(Window):
 	"""
 	Widget that allows configurating a ship's trading route
 	"""
@@ -48,7 +49,9 @@ class RouteConfig(object):
 	hover_button_path = "content/gui/images/tabwidget/buysell_toggle.png"
 	MAX_ENTRIES = 7
 	MIN_ENTRIES = 2
-	def __init__(self, instance):
+	def __init__(self, windows, instance):
+		super(RouteConfig, self).__init__(windows)
+
 		self.instance = instance
 
 		if not hasattr(instance, 'route'):
@@ -69,10 +72,7 @@ class RouteConfig(object):
 		self.instance.add_remove_listener(self.on_instance_removed, no_duplicates=True)
 		self.instance.route.add_change_listener(self.on_route_change, no_duplicates=True, call_listener_now=True)
 
-		self.session.ingame_gui.on_switch_main_widget(self)
-
 	def hide(self):
-		self.session.ingame_gui.on_switch_main_widget(None)
 		self.minimap.disable()
 		self._gui.hide()
 
@@ -84,7 +84,7 @@ class RouteConfig(object):
 			self.session.ingame_gui.message_widget.add(point=None, string_id="ROUTE_DISABLED")
 
 	def on_instance_removed(self):
-		self.hide()
+		self._windows.close()
 		self.instance = None
 
 	def on_route_change(self):
@@ -117,15 +117,6 @@ class RouteConfig(object):
 			self.start_route()
 		else:
 			self.stop_route()
-
-	def is_visible(self):
-		return self._gui.isVisible()
-
-	def toggle_visibility(self):
-		if self.is_visible():
-			self.hide()
-		else:
-			self.show()
 
 	def remove_entry(self, entry):
 		if self.resource_menu_shown:
@@ -308,6 +299,7 @@ class RouteConfig(object):
 		self.slots[entry] = {}
 		for num in range(slot_amount):
 			slot = load_uh_widget('trade_single_slot.xml')
+			slot.name = 'slot_%d' % num
 			slot.position = (x_position, 0)
 
 			slot.action = "load"
@@ -336,6 +328,7 @@ class RouteConfig(object):
 	def add_gui_entry(self, warehouse, resource_list=None):
 		vbox = self._gui.findChild(name="left_vbox")
 		entry = load_uh_widget("route_entry.xml")
+		entry.name = 'container_%s' % len(self.widgets)
 		entry.settlement = weakref.ref( warehouse.settlement )
 		self.widgets.append(entry)
 
@@ -387,6 +380,15 @@ class RouteConfig(object):
 
 		self._gui.adaptLayout()
 
+	def on_map_click(self, event, drag):
+		if drag:
+			return
+		if event.getButton() == fife.MouseEvent.LEFT:
+			map_coords = event.map_coords
+			tile = self.session.world.get_tile(Point(*map_coords))
+			if tile is not None and tile.settlement is not None:
+				self.append_warehouse( tile.settlement.warehouse )
+
 	def _init_gui(self):
 		"""
 		Initial init of gui.
@@ -400,14 +402,7 @@ class RouteConfig(object):
 		self.slots_per_entry = 3
 
 		icon = self._gui.findChild(name="minimap")
-		def on_click(event, drag):
-			if drag:
-				return
-			if event.getButton() == fife.MouseEvent.LEFT:
-				map_coords = event.map_coords
-				tile = self.session.world.get_tile(Point(*map_coords))
-				if tile is not None and tile.settlement is not None:
-					self.append_warehouse( tile.settlement.warehouse )
+
 
 		self.minimap = Minimap(icon, session=self.session,
 		                       world=self.session.world,
@@ -416,7 +411,7 @@ class RouteConfig(object):
 		                       imagemanager=horizons.globals.fife.imagemanager,
 		                       cam_border=False,
 		                       use_rotation=False,
-		                       on_click=on_click)
+		                       on_click=self.on_map_click)
 
 		resources = self.session.db.get_res_id_and_icon(only_tradeable=True)
 		# map an icon for a resource
@@ -447,7 +442,7 @@ class RouteConfig(object):
 		wait_at_load_box.capture(toggle_wait_at_load)
 
 		self._gui.mapEvents({
-		  OkButton.DEFAULT_NAME : self.hide,
+		  OkButton.DEFAULT_NAME : self._windows.close,
 		  'start_route/mouseClicked' : self.toggle_route
 		  })
 

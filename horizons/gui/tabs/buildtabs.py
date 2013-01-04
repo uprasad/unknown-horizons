@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -151,15 +151,10 @@ class BuildTab(TabInterface):
 			#check whether to disable build menu icon (not enough res available)
 			if enough_res:
 				icon.image = "content/gui/images/buttons/buildmenu_button_bg.png"
-				path = "content/gui/icons/buildmenu/{id:03d}{{mode}}.png".format(id=building_id)
-				button.down_image = path.format(mode='_h')
-				button.hover_image = path.format(mode='_h')
+				button.path = "icons/buildmenu/{id:03d}".format(id=building_id)
 			else:
 				icon.image = "content/gui/images/buttons/buildmenu_button_bg_bw.png"
-				path = "content/gui/icons/buildmenu/greyscale/{id:03d}{{mode}}.png".format(id=building_id)
-				button.down_image = path.format(mode='')
-				button.hover_image = path.format(mode='')
-			button.up_image = path.format(mode='')
+				button.path = "icons/buildmenu/greyscale/{id:03d}".format(id=building_id)
 
 			button.capture(Callback(self.build_callback, building_id))
 

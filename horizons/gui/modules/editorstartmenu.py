@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -21,21 +21,19 @@
 
 import horizons.main
 
-from horizons.editor.worldeditor import WorldEditor
 from horizons.gui.util import load_uh_widget
+from horizons.gui.windows import Window
 from horizons.savegamemanager import SavegameManager
 from horizons.util.python.callback import Callback
 from horizons.util.startgameoptions import StartGameOptions
 
-class EditorStartMenu(object):
-	def __init__(self, parent, from_main_menu):
-		self._from_main_menu = from_main_menu
-		self.parent = parent
-		self._gui = load_uh_widget('editor_start_menu.xml', style='book')
+class EditorStartMenu(Window):
+	def __init__(self, windows):
+		super(EditorStartMenu, self).__init__(windows)
+
+		self._gui = load_uh_widget('editor_start_menu.xml')
+		self._gui.position_technique = "center:center"
 		self._right_side = None
-		self._old_on_escape = None
-		self._old_current_widget = self.parent.current
-		self._old_on_escape = self.parent.on_escape
 		self._select_mode('create_new_map')
 
 	def show(self):
@@ -44,12 +42,11 @@ class EditorStartMenu(object):
 
 		events = {}
 		events['okay'] = self.act
-		events['cancel'] = self.cancel
+		events['cancel'] = self._windows.close
 		events['create_new_map'] = Callback(self._select_mode, 'create_new_map')
 		events['load_existing_map'] = Callback(self._select_mode, 'load_existing_map')
 		events['load_saved_game_map'] = Callback(self._select_mode, 'load_saved_game_map')
 		self._gui.mapEvents(events)
-		self.parent.on_escape = self.cancel
 
 	def _select_mode(self, mode):
 		modes = {
@@ -63,39 +60,26 @@ class EditorStartMenu(object):
 		if isinstance(self._right_side, modes[mode]):
 			return
 
-		self.hide()
-		self.findChild(name=mode).marked = True
-		self._right_side = modes[mode](self, self._gui.findChild(name='right_side'))
-		self.show()
-
-	def cancel(self):
-		self.hide()
-		if self._from_main_menu:
-			self.parent.show_main()
-		else:
-			# if we don't do this then it will still be paused without the pause menu
-			self.parent.on_escape()
-			self.parent.on_escape()
+		self._gui.hide()
+		self._gui.findChild(name=mode).marked = True
+		self._right_side = modes[mode](self._windows, self._gui.findChild(name='right_side'))
+		self._right_side.show()
+		self._gui.show()
 
 	def hide(self):
 		self._gui.hide()
-		self.parent.current = self._old_current_widget
-		self.parent.on_escape = self._old_on_escape
 
 	def act(self):
 		self._right_side.act()
-
-	def findChild(self, **kwargs):
-		return self._gui.findChild(**kwargs)
 
 
 class EditorCreateMapWidget(object):
 	sizes = [50, 100, 150, 200, 250]
 
-	def __init__(self, parent, parent_widget):
-		self.parent = parent
+	def __init__(self, windows, parent_widget):
+		self._windows = windows
 		self._parent_widget = parent_widget
-		self._gui = load_uh_widget('editor_create_map.xml', style='book')
+		self._gui = load_uh_widget('editor_create_map.xml')
 		self._gui.findChild(name='size_150').marked = True
 
 		for size in self.sizes:
@@ -110,21 +94,18 @@ class EditorCreateMapWidget(object):
 		for size in self.sizes:
 			option_name = 'size_%d' % size
 			if self._gui.findChild(name=option_name).marked:
-				self.parent.hide()
-				self.parent.parent.show_loading_screen()
+				self._windows.close()
 
 				# the empty list is interpreted as the empty list of random map island strings
 				options = StartGameOptions.create_editor_load([])
 				options.map_padding = size // 2
-				session = horizons.main.start_singleplayer(options)
-				session.world_editor = WorldEditor(session.world)
-				session.ingame_gui.setup()
+				horizons.main.start_singleplayer(options)
 				return
 
 
 class EditorSelectMapWidget(object):
-	def __init__(self, parent, parent_widget):
-		self.parent = parent
+	def __init__(self, windows, parent_widget):
+		self._windows = windows
 		self._parent_widget = parent_widget
 		self._gui = load_uh_widget('editor_select_map.xml')
 		self._map_data = None
@@ -141,14 +122,13 @@ class EditorSelectMapWidget(object):
 			# No map selected yet => select first available one
 			self._gui.distributeData({'map_list': 0})
 
-		self.parent.hide()
-		self.parent.parent.show_loading_screen()
+		self._windows.close()
 		horizons.main.edit_map(self._map_data[0][selected_map_index])
 
 
 class EditorSelectSavedGameWidget(object):
-	def __init__(self, parent, parent_widget):
-		self.parent = parent
+	def __init__(self, windows, parent_widget):
+		self._windows = windows
 		self._parent_widget = parent_widget
 		self._gui = load_uh_widget('editor_select_saved_game.xml')
 		self._saved_game_data = None
@@ -170,6 +150,5 @@ class EditorSelectSavedGameWidget(object):
 			# No map selected yet => select first available one
 			self._gui.distributeData({'saved_game_list': 0})
 
-		self.parent.hide()
-		self.parent.parent.show_loading_screen()
+		self._windows.close()
 		horizons.main.edit_game_map(self._saved_game_data[0][selection_index])

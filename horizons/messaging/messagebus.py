@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 
@@ -109,6 +109,9 @@ class SimpleMessageBus(object):
 			raise TypeError("Unsupported type")
 
 		self._callbacks[type].append(callback)
+
+	def unsubscribe(self, type, callback):
+		self._callbacks[type].remove(callback)
 
 	def broadcast(self, type, *args, **kwargs):
 		if not type in self._message_types:

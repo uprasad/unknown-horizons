@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -35,7 +35,7 @@ from horizons.extscheduler import ExtScheduler
 from horizons.constants import LANGUAGENAMES, PATHS
 from horizons.network.networkinterface import NetworkInterface
 from horizons.engine import UH_MODULE
-from horizons.messaging import AutosaveIntervalChanged, MinimapRotationSettingChanged
+
 
 class SettingsHandler(object):
 	"""Handles settings-related boilerplate code as well as gui."""
@@ -48,15 +48,8 @@ class SettingsHandler(object):
 		return self.engine._setting
 
 	def add_settings(self):
-		def update_minimap(*args):
-			MinimapRotationSettingChanged.broadcast(None)
-
-		def update_autosave_interval(*args):
-			AutosaveIntervalChanged.broadcast(None)
-
 		#self.createAndAddEntry(self, module, name, widgetname, applyfunction=None, initialdata=None, requiresrestart=False)
-		self._setting.createAndAddEntry(UH_MODULE, "AutosaveInterval", "autosaveinterval",
-		                                applyfunction=update_autosave_interval)
+		self._setting.createAndAddEntry(UH_MODULE, "AutosaveInterval", "autosaveinterval")
 		self._setting.createAndAddEntry(UH_MODULE, "AutosaveMaxCount", "autosavemaxcount")
 		self._setting.createAndAddEntry(UH_MODULE, "QuicksaveMaxCount", "quicksavemaxcount")
 		self._setting.createAndAddEntry(UH_MODULE, "EdgeScrolling", "edgescrolling")
@@ -65,8 +58,7 @@ class SettingsHandler(object):
 		self._setting.createAndAddEntry(UH_MODULE, "MiddleMousePan", "middle_mouse_pan")
 		self._setting.createAndAddEntry(UH_MODULE, "UninterruptedBuilding", "uninterrupted_building")
 		self._setting.createAndAddEntry(UH_MODULE, "AutoUnload", "auto_unload")
-		self._setting.createAndAddEntry(UH_MODULE, "MinimapRotation", "minimaprotation",
-		                                applyfunction=update_minimap)
+		self._setting.createAndAddEntry(UH_MODULE, "MinimapRotation", "minimaprotation")
 
 		self._setting.createAndAddEntry(UH_MODULE, "QuotesType", "quotestype",
 		                                initialdata=QUOTES_SETTINGS)
@@ -149,7 +141,8 @@ class SettingsHandler(object):
 		if backend == 'SDL':
 			headline = _("Warning")
 			#i18n Warning popup shown in settings when SDL is selected as renderer.
-			message = _("The SDL renderer is meant as a fallback solution only and has serious graphical glitches. \n\nUse at own risk!")
+			message = _("The SDL renderer is meant as a fallback solution only "
+			            "and has serious graphical glitches. \n\nUse at own risk!")
 			horizons.main._modules.gui.show_popup(headline, message)
 
 	def update_slider_values(self, slider, factor=1, unit=''):
@@ -158,13 +151,13 @@ class SettingsHandler(object):
 		factor - value will be multiplied by factor
 		unit - this string will be added to the end
 		"""
+		slider_lbl = self.settings_dialog.findChild(name=slider + '_value')
+		slider_value = self.settings_dialog.findChild(name=slider).value * factor
 		if slider == "mousesensitivity" or slider == "scrollspeed":
 			#for floating wanted
-			self.settings_dialog.findChild(name=slider + '_value').text = \
-				u"%.2f%s" % (float(self.settings_dialog.findChild(name=slider).value * factor), unit)
+			slider_lbl.text = u"%.2f%s" % (float(slider_value), unit)
 		else:
-			self.settings_dialog.findChild(name=slider + '_value').text = \
-				u"%s%s" % (int(self.settings_dialog.findChild(name=slider).value * factor), unit)
+			slider_lbl.text = u"%s%s" % (int(slider_value), unit)
 
 
 	# Handlers for setting interaction

@@ -1,14 +1,11 @@
 <?xml version="1.0"?>
-<Container name="menu"  size="1024,768"  position_technique="automatic">
-<Icon name="background" />
-
-<Container size="800,580"  position="100,100">
-	<!-- TODO use background_image instead of Icon-->
-	<Icon image="content/gui/images/background/book.png" />
+<Container name="multiplayer_creategame" size="800,580" position_technique="center:center"
+	background_image="content/gui/images/background/book.png">
 
 	<Container size="320,500"  position="55,32"  name="left_side">
 		<Label text="Create game - Multiplayer"  position="70,10" name="headline" />
 		<Icon image="content/gui/images/background/hr.png"  position="52,30" />
+		<Icon name="map_preview_minimap" size="128,128" max_size="128,128" position="50, 100" is_focusable="0" />
 
 		<VBox position="50,250">
 			<HBox>
@@ -58,5 +55,4 @@
 		<OkButton  name="create"  helptext="Create this new game" />
 	</HBox>
 
-</Container>
 </Container>

@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -100,8 +100,8 @@ def start(_command_line_arguments):
 	horizons.globals.fife = Fife()
 
 	if command_line_arguments.generate_minimap: # we've been called as subprocess to generate a map preview
-		from horizons.gui.modules.singleplayermenu import MapPreview
-		MapPreview.generate_minimap( * json.loads(
+		from horizons.gui.modules.singleplayermenu import generate_random_minimap
+		generate_random_minimap( * json.loads(
 		  command_line_arguments.generate_minimap
 		  ) )
 		sys.exit(0)
@@ -293,10 +293,14 @@ def start(_command_line_arguments):
 
 def quit():
 	"""Quits the game"""
+	# joing preload thread before quiting in case active
+	preload_game_join(preloading)
 	horizons.globals.fife.quit()
 
 def start_singleplayer(options):
 	"""Starts a singleplayer game."""
+	_modules.gui.show_loading_screen()
+
 	global preloading
 	preload_game_join(preloading)
 
@@ -305,28 +309,26 @@ def start_singleplayer(options):
 	horizons.globals.fife.engine.pump()
 	horizons.globals.fife.set_cursor_image('default')
 
-	# hide whatever is displayed before the game starts
-	_modules.gui.hide()
-
 	# destruct old session (right now, without waiting for gc)
 	if _modules.session is not None and _modules.session.is_alive:
 		_modules.session.end()
 
 	if options.is_editor:
-		from horizons.editor.gui import IngameGui
+		from horizons.editor.session import EditorSession as session_class
 	else:
-		from horizons.gui.ingamegui import IngameGui
+		from horizons.spsession import SPSession as session_class
 
 	# start new session
-	from horizons.spsession import SPSession
-	_modules.session = SPSession(_modules.gui, horizons.globals.db, ingame_gui_class=IngameGui)
+	_modules.session = session_class(_modules.gui, horizons.globals.db)
 
 	from horizons.scenario import InvalidScenarioFileFormat # would create import loop at top
 	try:
 		_modules.session.load(options)
+		_modules.gui.close_all()
 	except InvalidScenarioFileFormat:
 		raise
 	except Exception:
+		_modules.gui.close_all()
 		# don't catch errors when we should fail fast (used by tests)
 		if os.environ.get('FAIL_FAST', False):
 			raise
@@ -351,17 +353,15 @@ def prepare_multiplayer(game, trader_enabled=True, pirate_enabled=True, natural_
 	"""Starts a multiplayer game server
 	TODO: actual game data parameter passing
 	"""
-	global preloading
+	_modules.gui.show_loading_screen()
 
+	global preloading
 	preload_game_join(preloading)
 
 	# remove cursor while loading
 	horizons.globals.fife.cursor.set(fife_module.CURSOR_NONE)
 	horizons.globals.fife.engine.pump()
 	horizons.globals.fife.set_cursor_image('default')
-
-	# hide whatever is displayed before the game starts
-	_modules.gui.hide()
 
 	# destruct old session (right now, without waiting for gc)
 	if _modules.session is not None and _modules.session.is_alive:
@@ -383,6 +383,7 @@ def prepare_multiplayer(game, trader_enabled=True, pirate_enabled=True, natural_
 	_modules.session.load(options)
 
 def start_multiplayer(game):
+	_modules.gui.close_all()
 	_modules.session.start()
 
 
@@ -400,7 +401,6 @@ def _start_map(map_name, ai_players=0, is_scenario=False,
 	if not map_file:
 		return False
 
-	_modules.gui.show_loading_screen()
 	options = StartGameOptions.create_start_singleplayer(map_file, is_scenario,
 		ai_players, trader_enabled, pirate_enabled, force_player_id, is_map)
 	start_singleplayer(options)
@@ -421,7 +421,6 @@ def _load_cmd_map(savegame, ai_players, force_player_id=None):
 	if not map_file:
 		return False
 
-	_modules.gui.show_loading_screen()
 	options = StartGameOptions.create_load_game(map_file, force_player_id)
 	start_singleplayer(options)
 	return True
@@ -462,20 +461,17 @@ def _load_last_quicksave(session=None, force_player_id=None):
 	@param session: value of session
 	@return: bool, whether loading succeded"""
 	save_files = SavegameManager.get_quicksaves()[0]
-	if session is not None:
+	if _modules.session is not None:
 		if not save_files:
-			session.gui.show_popup(_("No quicksaves found"),
-			                       _("You need to quicksave before you can quickload."))
+			_modules.session.gui.show_popup(_("No quicksaves found"),
+			                                _("You need to quicksave before you can quickload."))
 			return False
-		else:
-			session.ingame_gui.on_escape() # close widgets that might be open
 	else:
 		if not save_files:
 			print "Error: No quicksave found."
 			return False
 
 	save = max(save_files)
-	_modules.gui.show_loading_screen()
 	options = StartGameOptions.create_load_game(save, force_player_id)
 	start_singleplayer(options)
 	return True
@@ -492,10 +488,6 @@ def _edit_map(map_file):
 
 	options = StartGameOptions.create_editor_load(map_file)
 	start_singleplayer(options)
-
-	from horizons.editor.worldeditor import WorldEditor
-	_modules.session.world_editor = WorldEditor(_modules.session.world)
-	_modules.session.ingame_gui.setup()
 	return True
 
 def edit_map(map_name):

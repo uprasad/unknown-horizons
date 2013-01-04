@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -462,10 +462,10 @@ class BuildableSingleOnCoast(BuildableSingle):
 		   225
 		"""
 		coast_line_points_per_side = {
-		  45: sum( coastline[(x,0)] for x in xrange(0, cls.size[0]) ),
-		  135: sum( coastline[(0,y)] for y in xrange(0, cls.size[1]) ),
-		  225: sum( coastline[(x, cls.size[1]-1 )] for x in xrange(0, cls.size[0]) ),
-		  315: sum( coastline[(cls.size[0]-1,y)] for y in xrange(0, cls.size[1]) ),
+		   45: sum(coastline[(x, 0)] for x in xrange(0, cls.size[0]) ),
+		  135: sum(coastline[(0, y)] for y in xrange(0, cls.size[1]) ),
+		  225: sum(coastline[(x, cls.size[1] - 1)] for x in xrange(0, cls.size[0]) ),
+		  315: sum(coastline[(cls.size[0] - 1, y)] for y in xrange(0, cls.size[1]) ),
 		}
 
 		# return rotation with biggest value

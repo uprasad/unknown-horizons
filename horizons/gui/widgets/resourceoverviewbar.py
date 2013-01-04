@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -350,7 +350,7 @@ class ResourceOverviewBar(object):
 		gold = self.session.world.player.get_component(StorageComponent).inventory[RES.GOLD]
 		gold_available_lbl = self.gold_gui.child_finder("gold_available")
 		gold_available_lbl.text = unicode(gold)
-		# reposition according to magic forumula passed down from the elders in order to support centering
+		# reposition according to magic formula passed down from the elders in order to support centering
 		gold_available_lbl.resizeToContent() # this sets new size values
 		gold_available_lbl.position = (42 - (gold_available_lbl.size[0] // 2), 51)
 
@@ -380,7 +380,7 @@ class ResourceOverviewBar(object):
 			label = cur_gui.findChild(name="res_available")
 			label.text = unicode( inv[res] )
 
-			# reposition according to magic forumula passed down from the elders in order to support centering
+			# reposition according to magic formula passed down from the elders in order to support centering
 			cur_gui.adaptLayout() # update size values (e.g. if amount of digits changed)
 			cur_gui.show()
 			label.position = (24 - (label.size[0] // 2), 44)
@@ -425,7 +425,7 @@ class ResourceOverviewBar(object):
 
 	def _show_resource_selection_dialog(self, slot_num):
 		"""Shows gui for selecting a resource for slot slot_num"""
-		if isinstance(self.session.cursor, BuildingTool):
+		if isinstance(self.session.ingame_gui.cursor, BuildingTool):
 			return
 
 		self._hide_resource_selection_dialog()
@@ -436,8 +436,8 @@ class ResourceOverviewBar(object):
 		self._show_dummy_slot()
 
 		# set mousetool to get notified on clicks outside the resbar area
-		if not isinstance(self.session.cursor, ResBarMouseTool):
-			self.session.cursor = ResBarMouseTool(self.session, self.session.cursor,
+		if not isinstance(self.session.ingame_gui.cursor, ResBarMouseTool):
+			self.session.ingame_gui.cursor = ResBarMouseTool(self.session, self.session.ingame_gui.cursor,
 			                                      self.close_resource_selection_mode)
 
 
@@ -527,8 +527,8 @@ class ResourceOverviewBar(object):
 			ResourceBarResize.broadcast(self)
 		self.redraw()
 
-		if isinstance(self.session.cursor, ResBarMouseTool):
-			self.session.cursor.reset()
+		if isinstance(self.session.ingame_gui.cursor, ResBarMouseTool):
+			self.session.ingame_gui.cursor.reset()
 
 	def _hide_resource_selection_dialog(self):
 		if hasattr(self, "_res_selection_dialog"):
@@ -590,7 +590,7 @@ class ResourceOverviewBar(object):
 			for num, image in enumerate(images):
 				# keep in sync with comment there until we can use that data:
 				# ./content/gui/xml/ingame/hud/resource_overview_bar_stats.xml
-				box = HBox(padding=0, min_size=(70,0), name="resbar_stats_line_%s"%num)
+				box = HBox(padding=0, min_size=(70, 0), name="resbar_stats_line_%s"%num)
 				box.addChild(Icon(image=image))
 				box.addSpacer(Spacer())
 				box.addChild(Label(name="resbar_stats_entry_%s"%num))
@@ -673,14 +673,14 @@ class ResBarMouseTool(NavigationTool):
 		self.reset()
 		# this click should still count, especially in case the res
 		# selection dialog has been closed by other means than clicking
-		self.session.cursor.mousePressed(evt)
+		self.session.ingame_gui.cursor.mousePressed(evt)
 
 	def reset(self):
 		"""Enable old tool again"""
 		if self.old_tool:
-			self.session.cursor = self.old_tool
+			self.session.ingame_gui.cursor = self.old_tool
 		self.remove()
 		if self.old_tool:
 			self.old_tool.enable()
 		else:
-			self.session.set_cursor()
+			self.session.ingame_gui.set_cursor()

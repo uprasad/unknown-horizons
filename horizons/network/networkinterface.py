@@ -1,5 +1,5 @@
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -72,6 +72,7 @@ class NetworkInterface(object):
 
 		self._messagebus = SimpleMessageBus(message_types)
 		self.subscribe = self._messagebus.subscribe
+		self.unsubscribe = self._messagebus.unsubscribe
 		self.broadcast = self._messagebus.broadcast
 
 		# create a game_details_changed callback

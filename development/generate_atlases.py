@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # ###################################################
-# Copyright (C) 2012 The Unknown Horizons Team
+# Copyright (C) 2013 The Unknown Horizons Team
 # team@unknown-horizons.org
 # This file is part of Unknown Horizons.
 #
@@ -171,7 +171,7 @@ class AtlasGenerator(object):
 	# increment this when the structure of the atlases changes
 	current_version = 1
 
-	def __init__(self,  max_size):
+	def __init__(self, max_size):
 		self.version = self.current_version
 		self.max_size = max_size
 		self.books = []
