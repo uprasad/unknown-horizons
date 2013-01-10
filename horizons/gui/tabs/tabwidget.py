@@ -89,8 +89,6 @@ class TabWidget(object):
 		self.widget.size = (50, 55*len(self._tabs))
 		self.widget.adaptLayout()
 
-		self._apply_layout_hack()
-
 	def _show_tab(self, number):
 		"""Used as callback function for the TabButtons.
 		@param number: tab number that is to be shown.
@@ -117,18 +115,6 @@ class TabWidget(object):
 		# important to display the tabs correctly in front
 		self.widget.hide()
 		self.show()
-
-		self._apply_layout_hack()
-
-	def _apply_layout_hack(self):
-		# pychan layouting depends on time, it's usually in a better mood later.
-		# this introduces some flickering, but fixes #916
-		from horizons.extscheduler import ExtScheduler
-		def do_apply_hack():
-			# just query widget when executing, since if lazy loading is used, the widget
-			# does not exist yet in the outer function
-			self.current_tab.widget.adaptLayout()
-		ExtScheduler().add_new_object(do_apply_hack, self, run_in=0)
 
 	def _draw_widget(self):
 		"""Draws the widget, but does not show it automatically"""
