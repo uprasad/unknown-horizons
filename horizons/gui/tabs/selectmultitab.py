@@ -36,9 +36,7 @@ class SelectMultiTab(TabInterface):
 	max_column_entry_number = 4
 	def __init__(self, session=None, widget='overview_select_multi.xml',
 	             icon_path='icons/tabwidget/common/inventory'):
-		super(SelectMultiTab, self).__init__(widget=widget, icon_path=icon_path)
 		self.session = session
-		self.init_values()
 
 		# keep track of units that have stance
 		self.stance_unit_number = 0
@@ -59,10 +57,14 @@ class SelectMultiTab(TabInterface):
 			else:
 				self.type_number[i.id] += 1
 
+		self._scheduled_refresh = False
+
+		super(SelectMultiTab, self).__init__(widget=widget, icon_path=icon_path)
+
+	def init_widget(self):
 		if self.stance_unit_number != 0:
 			self.show_stance_widget()
 
-		self._scheduled_refresh = False
 		self.draw_selected_units_widget()
 
 	def add_entry(self, entry):
