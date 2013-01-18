@@ -87,7 +87,6 @@ class TabInterface(object):
 		active once the tab is about to be shown.
 		"""
 		self.widget = self.get_widget()
-		self.x_pos, self.y_pos = self.widget.position
 		self.widget.child_finder = PychanChildFinder(self.widget)
 		self.init_widget()
 
@@ -150,28 +149,6 @@ class TabInterface(object):
 		if self.__class__.lazy_loading and not hasattr(self, "_lazy_loading_loaded"):
 			self._setup_widget()
 			self._lazy_loading_loaded = True
-
-	def _get_x(self):
-		"""Returs the widget's x position"""
-		return self.widget.position[0]
-
-	def __set_x(self, value):
-		"""Sets the widget's x position"""
-		self.widget.position = (value, self.widget.position[1])
-
-	# Shortcut to set and retrieve the widget's current x position.
-	x_pos = property(_get_x, __set_x)
-
-	def _get_y(self):
-		"""Returns the widget's y position"""
-		return self.widget.position[1]
-
-	def _set_y(self, value):
-		"""Sets the widget's y position"""
-		self.widget.position = (self.widget.position[0], value)
-
-	# Shortcut to set and retrieve the widget's current y position.
-	y_pos = property(_get_y, _set_y)
 
 	def _get_position(self):
 		"""Returns the widget's position"""
