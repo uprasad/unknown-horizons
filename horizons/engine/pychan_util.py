@@ -21,6 +21,7 @@
 # ###################################################
 
 import functools
+import traceback
 
 from fife.extensions import pychan
 
@@ -42,7 +43,6 @@ def handle_gcn_exception(e, msg=None):
 	@param e: RuntimeError (python, not pychan)
 	@param msg: additional info as string
 	"""
-	import traceback
 	traceback.print_stack()
 	print 'Caught RuntimeError on gui interaction, assuming irrelevant gcn::exception.'
 	if msg:
@@ -54,7 +54,7 @@ def init_pychan():
 
 	# quick hack to allow up_image/down_image values to be unicode
 	# TODO solve this problem in a better way (e.g. passing str explicitly)
-	# or waiting for a fix of http://fife.trac.cvsdude.com/engine/ticket/701
+	# or waiting for a fix of http://fife.trac.cloudforge.com/engine/ticket/701
 	from fife.extensions.pychan.properties import ImageProperty
 
 	def patch_imageproperty(func):
@@ -74,7 +74,7 @@ def init_pychan():
 	from horizons.gui.widgets.toggleimagebutton import ToggleImageButton
 	# additionally, ImageButton is imported from widgets.imagebutton above
 	from horizons.gui.widgets.imagebutton import CancelButton, DeleteButton, MainmenuButton, OkButton
-	from horizons.gui.widgets.icongroup import TabBG, TilingHBox
+	from horizons.gui.widgets.icongroup import TabBG, TilingHBox, hr
 	from horizons.gui.widgets.stepslider import StepSlider
 	from horizons.gui.widgets.unitoverview import HealthWidget, StanceWidget, WeaponStorageWidget
 	from horizons.gui.widgets.container import AutoResizeContainer
@@ -85,7 +85,7 @@ def init_pychan():
 	           ProgressBar, StepSlider, TabBG, ToggleImageButton,
 	           HealthWidget, StanceWidget, WeaponStorageWidget,
 	           AutoResizeContainer, RenameLabel, RenameImageButton,
-	           TilingHBox,
+	           TilingHBox, hr,
 			 # This overwrites the ImageButton provided by FIFE!
 	           ImageButton,
 	           ]

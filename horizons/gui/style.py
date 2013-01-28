@@ -46,7 +46,8 @@ STYLES = {
 			'selection_color': BROWN[192],
 			'border_size': 0,
 			'margins': (0, 0),
-			'font': '14_black',
+			'font': 'default',
+			'vertical_scrollbar': 1,
 			'horizontal_scrollbar': 0,
 		},
 		'Button': {
@@ -55,7 +56,7 @@ STYLES = {
 			'margins': (10, 5),
 		},
 		#TODO combine the following two after the tuple notation bug is fixed:
-		# http://fife.trac.cvsdude.com/engine/ticket/656
+		# http://fife.trac.cloudforge.com/engine/ticket/656
 		'CheckBox': {
 			'background_color': WHITE[96],
 		},
@@ -95,25 +96,19 @@ STYLES = {
 
 'resource_bar': {
 		'default': {
-			'font': 'small_black',
+			'font': 'resourcebar',
 		},
 },
 
 'city_info': { # style for city info
 		'default': {
-			'font': '18',
+			'font': 'cityinfo',
 		},
 },
 
 'headline': { # style for headlines
 		'default': {
 			'font': 'headline',
-		},
-},
-
-'tooltip': { # style for tooltips
-		'default': {
-			'font': 'tooltip',
 		},
 },
 

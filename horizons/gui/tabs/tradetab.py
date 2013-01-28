@@ -55,7 +55,7 @@ class TradeTab(TabInterface):
 		@param instance: ship instance used for trading
 		"""
 		super(TradeTab, self).__init__(widget='tradetab.xml',
-		                               icon_path='content/gui/icons/tabwidget/warehouse/buysell_%s.png')
+		                               icon_path='icons/tabwidget/warehouse/buysell')
 		events = {}
 		for k, v in self.exchange_size_buttons.iteritems():
 			events[v] = Callback(self.set_exchange, k)
@@ -125,7 +125,7 @@ class TradeTab(TabInterface):
 
 	def __remove_changelisteners(self):
 		# never redraw on clicks immediately because of
-		# http://fife.trac.cvsdude.com/engine/ticket/387
+		# http://fife.trac.cloudforge.com/engine/ticket/387
 		# This way, there is a chance of clicks being noticed by pychan.
 		# The cost is to delay all updates, which in this case is 0.3 sec, therefore deemed bearable.
 

@@ -245,12 +245,13 @@ def start(_command_line_arguments):
 		__string_previewer.show()
 	elif command_line_arguments.create_mp_game:
 		_modules.gui.show_main()
-		_modules.gui.show_multi()
-		_modules.gui.create_default_mp_game()
+		_modules.gui.windows.show(_modules.gui.multiplayermenu)
+		_modules.gui.multiplayermenu._create_game()
+		_modules.gui.windows._windows[-1].act()
 	elif command_line_arguments.join_mp_game:
 		_modules.gui.show_main()
-		_modules.gui.show_multi()
-		_modules.gui.join_mp_game()
+		_modules.gui.windows.show(_modules.gui.multiplayermenu)
+		_modules.gui.multiplayermenu._join_game()
 	else: # no commandline parameter, show main screen
 
 		# initalize update checker

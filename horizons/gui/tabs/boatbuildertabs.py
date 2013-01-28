@@ -175,7 +175,7 @@ class BoatbuilderSelectTab(_BoatbuilderOverviewTab):
 		super(BoatbuilderSelectTab, self).__init__(
 				instance=instance,
 		          widget='boatbuilder_showcase.xml',
-		          icon_path='content/gui/icons/tabwidget/boatbuilder/{name}_%s.png'.format(name=iconname))
+		          icon_path='icons/tabwidget/boatbuilder/{name}'.format(name=iconname))
 		self.add_showcases(ships)
 		self.helptext = helptext
 		self.widget.findChild(name='headline').text = helptext
@@ -194,9 +194,9 @@ class BoatbuilderSelectTab(_BoatbuilderOverviewTab):
 		bg_icon = Icon(image='content/gui/images/background/square_80.png', name='bg_%s'%index)
 		widget.addChild(bg_icon)
 
-		icon_path = 'content/gui/images/objects/ships/76/{unit_id}.png'.format(unit_id=ship)
+		image = 'content/gui/images/objects/ships/76/{unit_id}.png'.format(unit_id=ship)
 		helptext = self.instance.session.db.get_ship_tooltip(ship)
-		unit_icon = Icon(image=icon_path, name='icon_%s'%index, position=(2, 2),
+		unit_icon = Icon(image=image, name='icon_%s'%index, position=(2, 2),
 		                 helptext=helptext)
 		widget.addChild(unit_icon)
 
@@ -213,8 +213,8 @@ class BoatbuilderSelectTab(_BoatbuilderOverviewTab):
 		widget.addChild(button)
 
 		#TODO since this code uses the boat builder as producer, the
-		# gold cost of ships is in consumed res is always 0 since it
-		# is paid from player inventory, not from the boat builder one.
+		# gold cost of ships in consumed res is always 0 since it is
+		# paid from player inventory, not from the boat builder one.
 		production = self.producer.create_production(prodline)
 		# consumed == negative, reverse to sort in *ascending* order:
 		costs = sorted(production.get_consumed_resources().iteritems(), key=itemgetter(1))

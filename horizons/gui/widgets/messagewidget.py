@@ -86,7 +86,7 @@ class MessageWidget(LivingObject):
 		"""Adds a message to the MessageWidget.
 		@param point: point where the action took place. Clicks on the message will then focus that spot.
 		@param id: message id string, needed to retrieve the message text from the content database.
-		@param type: message type; determines what happens on click
+		@param msg_type: message type; determines what happens on click
 		@param message_dict: dict with strings to replace in the message, e.g. {'player': 'Arthus'}
 		@param play_sound: whether to play the default message speech for string_id
 		@param check_duplicate: check for pseudo-duplicates (similar messages recently nearby)
@@ -175,7 +175,7 @@ class MessageWidget(LivingObject):
 					   Callback(self.session.view.center, message.x, message.y),
 					   Callback(self.session.ingame_gui.minimap.highlight, (message.x, message.y) )
 				   )
-			if message.type == "logbook":
+			if message.msg_type == "logbook":
 				# open logbook to relevant page
 				callback = Callback.ChainedCallbacks(
 					   callback, # this makes it so the order of callback assignment doesn't matter
@@ -195,9 +195,9 @@ class MessageWidget(LivingObject):
 		assert isinstance(index, int)
 		ExtScheduler().rem_call(self, self.hide_text) # stop hiding if a new text has been shown
 		label = self.text_widget.findChild(name='text')
-		text = self.active_messages[self.item+index].message
-		text = text.replace(r'\n', self.CHARS_PER_LINE*' ')
-		text = text.replace(r'[br]', self.CHARS_PER_LINE*' ')
+		text = self.active_messages[self.item + index].message
+		text = text.replace(r'\n', self.CHARS_PER_LINE * ' ')
+		text = text.replace('[br]', self.CHARS_PER_LINE * ' ')
 		text = textwrap.fill(text, self.CHARS_PER_LINE)
 
 		self.bg_middle = self.text_widget.findChild(name='msg_bg_middle')
@@ -291,8 +291,9 @@ class _IngameMessage(object):
 	@param x, y: int position on the map where the action took place.
 	@param id: message id string, needed to retrieve the message from the database.
 	@param created: tickid when the message was created. Keeps message order after load.
-	@param count: a unique message id number
+	@param msg_type: messages coupled with logbook entries use this to link to pages
 	@param message_dict: dict with strings to replace in the message, e.g. {'player': 'Arthus'}
+	@param icon_id: which icon to display. Loads preset for `id` if None.
 	"""
 	def __init__(self, point, id, created,
 	             msg_type=None, read=False, display=None, message=None, message_dict=None, icon_id=None):
@@ -300,11 +301,11 @@ class _IngameMessage(object):
 		if point is not None:
 			self.x, self.y = point.x, point.y
 		self.id = id
-		self.type = msg_type
+		self.msg_type = msg_type
 		self.read = read
 		self.created = created
 		self.display = display if display is not None else horizons.globals.db.get_msg_visibility(id)
-		icon = icon_id if icon_id else horizons.globals.db.get_msg_icon_id(id)
+		icon = icon_id if icon_id is not None else horizons.globals.db.get_msg_icon_id(id)
 		self.path = horizons.globals.db.get_msg_icon_path(icon)
 		if message is not None:
 			assert isinstance(message, unicode), "Message is not unicode: %s" % message

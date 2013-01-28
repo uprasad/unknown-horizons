@@ -68,7 +68,7 @@ class VERSION:
 	MIN_FIFE_REVISION = 4077
 
 	## +=1 this if you changed the savegame "api"
-	SAVEGAMEREVISION = 70
+	SAVEGAMEREVISION = 71
 
 	@staticmethod
 	def string():
@@ -391,7 +391,7 @@ class TIER:
 	CITIZENS = 3
 	MERCHANTS = 4
 	ARISTOCRATS = 5
-	CURRENT_MAX = 3 # counting starts at 0!
+	CURRENT_MAX = CITIZENS
 
 class SETTLER:
 	TAX_SETTINGS_MIN = 0.5

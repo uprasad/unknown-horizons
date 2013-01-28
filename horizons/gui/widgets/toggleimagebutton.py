@@ -19,6 +19,7 @@
 # 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 # ###################################################
 
+from fife.extensions.pychan.widgets import Icon
 from fife.extensions.pychan.widgets.common import Attr
 
 from horizons.gui.widgets.imagebutton import ImageButton
@@ -41,10 +42,11 @@ class ToggleImageButton(ImageButton):
 	INACTIVE = 1
 
 	def __init__(self, inactive_image="", **kwargs):
-		self.state = None
 		super(ToggleImageButton, self).__init__(**kwargs)
 		self.state = self.ACTIVE
-		self.inactive_image = inactive_image
+		self.old_images = (None, None, None)
+		if inactive_image:
+			self.inactive_image = inactive_image
 
 	def toggle(self):
 		if self.state == self.ACTIVE:
@@ -55,28 +57,49 @@ class ToggleImageButton(ImageButton):
 	def set_active(self):
 		"""Sets the button active. Restores up, down and hover image to
 		previous state."""
-		if self.state != self.ACTIVE:
-			self.up_image, self.down_image, self.hover_image = self.old_images
-			self.state = self.ACTIVE
+		if self.state == self.ACTIVE:
+			return
+		self.up_image, self.down_image, self.hover_image = self.old_images
+		self.state = self.ACTIVE
 
 	def set_inactive(self):
 		"""Sets the button inactive. Overrides up, down and hover image with
 		inactive image."""
-		if self.state != self.INACTIVE:
-			self.old_images = (self.up_image, self.down_image, self.hover_image)
-			self.up_image = self.inactive_image
-			self.down_image = self.inactive_image
-			self.hover_image = self.inactive_image
-			self.state = self.INACTIVE
+		if self.state == self.INACTIVE:
+			# running this with inactive state would overwrite all elements
+			# of old_images with inactive_image
+			return
+		self.old_images = (self.up_image, self.down_image, self.hover_image)
+		self.up_image = self.inactive_image
+		self.down_image = self.inactive_image
+		self.hover_image = self.inactive_image
+		self.state = self.INACTIVE
+
+	def _get_path(self):
+		return self.__path
 
 	def _set_path(self, path):
 		super(ToggleImageButton, self)._set_path(path)
 		image_path = self.IMAGE.format(path=path)
+
+		# Since inactive_image is no image attribute in pychan, it would
+		# not be validated upon setting self.inactive_image (which works
+		# for ImageButton.{up,down,hover}_image and Icon.image).
+		# Instead, we try to load an Icon with that image and manually
+		# set inactive_image to the path that worked, if there is any.
 		try:
-			self.inactive_image = image_path.format(mode='_bw')
+			image = image_path.format(mode='_bw')
+			Icon(image=image)
+			self.inactive_image = image
 		except RuntimeError:
-			# this one would not be replaced automatically by pychan
-			self.inactive_image = self.up_image
+			try:
+				image = image_path.format(mode='_gr')
+				Icon(image=image)
+				self.inactive_image = image
+			except RuntimeError:
+				self.inactive_image = self.up_image
+
+	path = property(_get_path, _set_path)
 
 	def _get_inactive_image(self):
 		return self.__inactiveimage
@@ -85,4 +108,3 @@ class ToggleImageButton(ImageButton):
 		self.__inactiveimage = inactive_image
 
 	inactive_image = property(_get_inactive_image, _set_inactive_image)
-

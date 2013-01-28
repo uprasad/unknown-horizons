@@ -22,13 +22,14 @@
 import hashlib
 import textwrap
 
-from fife.extensions.pychan.widgets import HBox, Icon, Label
+from fife.extensions.pychan.widgets import HBox, Label
 
 import horizons.main
 from horizons.component.ambientsoundcomponent import AmbientSoundComponent
 from horizons.constants import MULTIPLAYER
 from horizons.gui.modules import PlayerDataSelection
 from horizons.gui.util import load_uh_widget
+from horizons.gui.widgets.icongroup import hr as HRule
 from horizons.gui.widgets.imagebutton import OkButton, CancelButton
 from horizons.gui.widgets.minimap import Minimap
 from horizons.gui.windows import Window
@@ -57,7 +58,7 @@ class MultiplayerMenu(Window):
 		self._gui.mapEvents({
 			'cancel' : self._windows.close,
 			'join'   : self._join_game,
-			'create' : lambda: self._windows.show(CreateGame(self._windows)),
+			'create' : self._create_game,
 			'refresh': Callback(self._refresh, play_sound=True)
 		})
 
@@ -229,6 +230,9 @@ class MultiplayerMenu(Window):
 			                            own_version=NetworkInterface().get_clientversion()))
 			return
 
+		NetworkInterface().change_name(self._playerdata.get_player_name())
+		NetworkInterface().change_color(self._playerdata.get_player_color().id)
+
 		password = ""
 		if game.password:
 			# Repeatedly ask the player for the password
@@ -264,6 +268,10 @@ class MultiplayerMenu(Window):
 	def _prepare_game(self, game):
 		horizons.main.prepare_multiplayer(game)
 
+	def _create_game(self):
+		NetworkInterface().change_name(self._playerdata.get_player_name())
+		NetworkInterface().change_color(self._playerdata.get_player_color().id)
+		self._windows.show(CreateGame(self._windows)),
 
 class CreateGame(Window):
 	"""Interface for creating a multiplayer game"""
@@ -432,48 +440,45 @@ class GameLobby(Window):
 		players_vbox = self._gui.findChild(name="players_vbox")
 		players_vbox.removeAllChildren()
 
-		gicon = Icon(name="gslider", image="content/gui/images/background/hr.png")
-		players_vbox.addChild(gicon)
+		hr = HRule()
+		players_vbox.addChild(hr)
 
 		def _add_player_line(player):
-			pname = Label(name="pname_%s" % player['name'])
+			name = player['name']
+			pname = Label(name="pname_%s" % name)
 			pname.helptext = _("Click here to change your name and/or color")
-			pname.text = player['name']
+			pname.text = name
 			pname.min_size = pname.max_size = (130, 15)
 
-			if player['name'] == NetworkInterface().get_client_name():
+			if name == NetworkInterface().get_client_name():
 				pname.capture(Callback(self._show_change_player_details_popup, game))
 
-			pcolor = Label(name="pcolor_%s" % player['name'], text=u"   ")
+			pcolor = Label(name="pcolor_%s" % name, text=u"   ")
 			pcolor.helptext = _("Click here to change your name and/or color")
 			pcolor.background_color = player['color']
 			pcolor.min_size = pcolor.max_size = (15, 15)
 
-			if player['name'] == NetworkInterface().get_client_name():
+			if name == NetworkInterface().get_client_name():
 				pcolor.capture(Callback(self._show_change_player_details_popup, game))
 
-			pstatus = Label(name="pstatus_%s" % player['name'])
+			pstatus = Label(name="pstatus_%s" % name)
 			pstatus.text = "\t\t\t" + player['status']
 			pstatus.min_size = pstatus.max_size = (120, 15)
 
-			picon = Icon(name="picon_%s" % player['name'])
-			picon.image = "content/gui/images/background/hr.png"
+			picon = HRule(name="picon_%s" % name)
 
 			hbox = HBox()
-			hbox.addChild(pname)
-			hbox.addChild(pcolor)
-			hbox.addChild(pstatus)
+			hbox.addChildren(pname, pcolor, pstatus)
 
-			if NetworkInterface().get_client_name() == game.creator and player['name'] != game.creator:
-				pkick = CancelButton(name="pkick_%s" % player['name'])
-				pkick.helptext = _("Kick {player}").format(player=player['name'])
+			if NetworkInterface().get_client_name() == game.creator and name != game.creator:
+				pkick = CancelButton(name="pkick_%s" % name)
+				pkick.helptext = _("Kick {player}").format(player=name)
 				pkick.capture(Callback(NetworkInterface().kick, player['sid']))
 				pkick.path = "images/buttons/delete_small"
 				pkick.min_size = pkick.max_size = (20, 15)
 				hbox.addChild(pkick)
 
-			players_vbox.addChild(hbox)
-			players_vbox.addChild(picon)
+			players_vbox.addChildren(hbox, picon)
 
 		for player in game.get_player_list():
 			_add_player_line(player)

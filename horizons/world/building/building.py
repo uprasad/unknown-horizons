@@ -53,7 +53,7 @@ class BasicBuilding(ComponentHolder, ConcreteObject):
 	@param x, y: int position of the building.
 	@param rotation: value passed to getInstance
 	@param owner: Player that owns the building.
-	@param level: start in this increment
+	@param level: start in this tier
 	@param action_set_id: use this action set id. None means choose one at random
 	"""
 	def __init__(self, x, y, rotation, owner, island, level=None, **kwargs):
@@ -200,7 +200,7 @@ class BasicBuilding(ComponentHolder, ConcreteObject):
 			self.act(self._action, repeating=True)
 
 	def level_upgrade(self, lvl):
-		"""Upgrades building to another increment"""
+		"""Upgrades building to another tier"""
 		self.level = lvl
 		self.update_action_set_level(lvl)
 
@@ -228,6 +228,7 @@ class BasicBuilding(ComponentHolder, ConcreteObject):
 		facing_loc = fife.Location(session.view.layers[cls.layer])
 		instance_coords = list((x, y, 0))
 		layer_coords = list((x, y, 0))
+		width, length = cls.size
 
 		# NOTE:
 		# nobody actually knows how the code below works.
@@ -239,36 +240,36 @@ class BasicBuilding(ComponentHolder, ConcreteObject):
 		# then fix that generally.
 
 		if rotation == 45:
-			layer_coords[0] = x+cls.size[0]+3
+			layer_coords[0] = x + width + 3
 
-			if cls.size[0] == 2 and cls.size[1] == 4:
+			if width == 2 and length == 4:
 				# HACK: fix for 4x2 buildings
 				instance_coords[0] -= 1
 				instance_coords[1] += 1
 
 		elif rotation == 135:
-			instance_coords[1] = y + cls.size[1] - 1
-			layer_coords[1] = y-cls.size[1]-3
+			instance_coords[1] = y + length - 1
+			layer_coords[1] = y - length - 3
 
-			if cls.size[0] == 2 and cls.size[1] == 4:
+			if width == 2 and length == 4:
 				# HACK: fix for 4x2 buildings
 				instance_coords[0] += 1
 				instance_coords[1] -= 1
 
 		elif rotation == 225:
-			instance_coords = list(( x + cls.size[0] - 1, y + cls.size[1] - 1, 0))
-			layer_coords[0] = x-cls.size[0]-3
+			instance_coords = list(( x + width - 1, y + length - 1, 0))
+			layer_coords[0] = x - width - 3
 
-			if cls.size[0] == 2 and cls.size[1] == 4:
+			if width == 2 and length == 4:
 				# HACK: fix for 4x2 buildings
 				instance_coords[0] += 1
 				instance_coords[1] -= 1
 
 		elif rotation == 315:
-			instance_coords[0] = x + cls.size[0] - 1
-			layer_coords[1] = y+cls.size[1]+3
+			instance_coords[0] = x + width - 1
+			layer_coords[1] = y + length + 3
 
-			if cls.size[0] == 2 and cls.size[1] == 4:
+			if width == 2 and length == 4:
 				# HACK: fix for 4x2 buildings
 				instance_coords[0] += 1
 				instance_coords[1] -= 1
