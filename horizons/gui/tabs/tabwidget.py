@@ -20,10 +20,11 @@
 # ###################################################
 
 import logging
+from operator import attrgetter
 import traceback
 import weakref
 
-from fife.extensions.pychan.widgets import Container, Icon
+from fife.extensions.pychan.widgets import Container, Icon, VBox
 
 from horizons.gui.util import load_uh_widget
 from horizons.gui.widgets.imagebutton import ImageButton
@@ -50,11 +51,17 @@ class TabWidget(object):
 		self._tabs = [] if not tabs else tabs
 		self.current_tab = self._tabs[0] # Start with the first tab
 		self.widget = load_uh_widget("tab_base.xml")
-		self.widget.position_technique = 'right-239:top+209'
+		self.widget.position_technique = 'right:top+159'
+
+		self.buttons = VBox(position_technique='right-239:top+209')
+
+		self.tab_bg = self.widget.findChild(name='tab_background')
 		self.content = self.widget.findChild(name='content')
 		self._init_tabs()
 		# select a tab to show (first one is default)
-		if active_tab is not None:
+		if active_tab is None:
+			self._show_tab(0)
+		else:
 			self._show_tab(active_tab)
 
 	def _init_tabs(self):
@@ -68,6 +75,7 @@ class TabWidget(object):
 
 		# Load buttons
 		for index, tab in enumerate(self._tabs):
+			# TODO "the"?
 			# don't add a reference to the
 			tab.add_remove_listener(Callback(on_tab_removal, weakref.ref(self)))
 			container = Container(name="container_%s" % index)
@@ -85,9 +93,7 @@ class TabWidget(object):
 			container.size = background.size
 			container.addChild(background)
 			container.addChild(button)
-			self.content.addChild(container)
-		self.widget.size = (50, 55*len(self._tabs))
-		self.widget.adaptLayout()
+			self.buttons.addChild(container)
 
 	def _show_tab(self, number):
 		"""Used as callback function for the TabButtons.
@@ -98,41 +104,62 @@ class TabWidget(object):
 			traceback.print_stack()
 			self.log.warning("Invalid tab number %s, available tabs: %s", number, self._tabs)
 			return
+
+		old_number = "%s" % self._tabs.index(self.current_tab)
+		if number == old_number:
+			return
+
+		new_tab = self._tabs[number]
+
 		if self.current_tab.is_visible():
 			self.current_tab.hide()
-		new_tab = self._tabs[number]
-		old_bg = self.content.findChild(name = "bg_%s" % self._tabs.index(self.current_tab))
+
+		old_name = "bg_%s" % self._tabs.index(self.current_tab)
+		old_bg = self.buttons.findChild(name=old_name)
 		old_bg.image = self.current_tab.button_background_image
-		name = str(self._tabs.index(self.current_tab))
-		old_button = self.content.findChild(name=name)
+		old_button = self.buttons.findChild(name=old_number)
 		old_button.path = self.current_tab.path
 
-		new_bg = self.content.findChild(name = "bg_%s" % number)
+		new_bg = self.buttons.findChild(name = "bg_%s" % number)
+
 		new_bg.image = self.current_tab.button_background_image_active
-		new_button = self.content.findChild(name=str(number))
+		new_button = self.buttons.findChild(name=str(number))
 		new_button.path = new_tab.path_active
 		self.current_tab = new_tab
-		# important to display the tabs correctly in front
-		self.widget.hide()
-		self.show()
 
-	def _draw_widget(self):
-		"""Draws the widget, but does not show it automatically"""
-		self.current_tab.position = (self.widget.position[0] + self.widget.size[0] - 11,
-		                             self.widget.position[1] - 52)
-		self.current_tab.refresh()
+		self.content.removeAllChildren()
+		self.current_tab.ensure_loaded()
+		self.content.addChild(self.current_tab.widget)
+
+		# -- Here be hacks -- #
+		#
+		#
+		headline_text = getattr(self.current_tab.widget, 'headline', None)
+		if headline_text is None:
+			headline_text = u'{instance.name}'
+		if headline_text.startswith('{') and headline_text.endswith('}'):
+			template = headline_text[1:-1]
+			headline_text = attrgetter(template)(self.current_tab)
+		try:
+			headline = self.content.parent.findChild(name='headline')
+			headline.text = headline_text
+		except AttributeError:
+			pass
+		#
+		#
+		# -- Here be hacks -- #
+
+		self.content.parent.adaptLayout()  # resize AutoResizeContainer
+		self.tab_bg.amount = (self.content.parent.size[1] + 25) // 50
+		self.widget.adaptLayout()  # resize AutoResizeContainer
 
 	def show(self):
 		"""Show the current widget"""
-		self.current_tab.ensure_loaded()
-		# show before drawing so that position_technique properly sets
-		# button positions (which we want to draw our tabs relative to)
 		self.widget.show()
-		self._draw_widget()
-		self.current_tab.show()
+		self.buttons.show()
 		self.ingame_gui.minimap_to_front()
 
 	def hide(self, caller=None):
 		"""Hide the current widget"""
-		self.current_tab.hide()
+		self.buttons.hide()
 		self.widget.hide()
