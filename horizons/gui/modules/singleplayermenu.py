@@ -111,9 +111,6 @@ class SingleplayerMenu(Window):
 
 class GameSettingsWidget(object):
 	"""Toggle trader/pirates/disasters and change resource density."""
-
-	resource_densities = [0.5, 0.7, 1, 1.4, 2]
-
 	def __init__(self):
 		self._gui = load_uh_widget('game_settings.xml')
 
@@ -142,19 +139,20 @@ class GameSettingsWidget(object):
 			self._gui.findChild(name=u'lbl_' + setting).capture(Callback(toggle, setting, setting_save_name))
 
 		resource_density_slider = self._gui.findChild(name='resource_density_slider')
+		resource_density_slider.init_widget()
 		def on_resource_density_slider_change():
 			self._gui.findChild(name='resource_density_lbl').text = _('Resource density:') + u' ' + \
-				unicode(self.resource_densities[int(resource_density_slider.value)]) + u'x'
+				unicode(resource_density_slider.value) + u'x'
 			horizons.globals.fife.set_uh_setting("MapResourceDensity", resource_density_slider.value)
 			horizons.globals.fife.save_settings()
-		resource_density_slider.capture(on_resource_density_slider_change)
+		resource_density_slider.callback = on_resource_density_slider_change
 		resource_density_slider.value = horizons.globals.fife.get_uh_setting("MapResourceDensity")
 
 		on_resource_density_slider_change()
 
 	@property
 	def natural_resource_multiplier(self):
-		return self.resource_densities[int(self._gui.findChild(name='resource_density_slider').value)]
+		return self._gui.findChild(name='resource_density_slider').value
 
 	@property
 	def free_trader(self):
