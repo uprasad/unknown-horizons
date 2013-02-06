@@ -118,7 +118,10 @@ class MainSquareSettlerLevelTab(MainSquareTab):
 		val_label = self.widget.child_finder('tax_val_label')
 		setup_tax_slider(slider, val_label, self.settlement, self.__class__.LEVEL)
 		self.widget.child_finder('tax_val_label').text = unicode(self.settlement.tax_settings[self.__class__.LEVEL])
-		self.widget.child_finder('headline').text = _(self.instance.session.db.get_settler_name(self.__class__.LEVEL))
+
+	@property
+	def inhabitant_name(self):
+		return _(self.instance.session.db.get_settler_name(self.__class__.LEVEL))
 
 	@classmethod
 	def shown_for(cls, instance):
