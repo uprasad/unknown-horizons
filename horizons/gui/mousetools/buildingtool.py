@@ -221,6 +221,7 @@ class BuildingTool(NavigationTool):
 		self._related_buildings = set( filter(check_building, self._related_buildings) )
 
 	def load_gui(self):
+		"""TODO TODO Make this be a tab proper"""
 		if self.__class__.gui is None:
 			self.__class__.gui = load_uh_widget("place_building.xml")
 			self.__class__.gui.position_technique = "right-1:top+157"
