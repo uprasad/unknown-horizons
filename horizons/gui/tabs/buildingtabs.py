@@ -31,10 +31,6 @@ class TowerOverviewTab(OverviewTab): # defensive tower
 	widget = 'overview_tower.xml'
 	helptext = _("Tower overview")
 
-	def init_widget(self):
-		super(TowerOverviewTab, self).init_widget()
-		self.widget.findChild(name="headline").text = self.instance.settlement.get_component(NamedComponent).name
-
 class SignalFireOverviewTab(OverviewTab):
 	widget = 'overview_signalfire.xml'
 	helptext = _("Overview")
